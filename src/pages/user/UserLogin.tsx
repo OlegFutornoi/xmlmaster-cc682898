@@ -7,19 +7,25 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { AlertCircle } from "lucide-react";
 
 const UserLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    
+    console.log("User login attempt with:", { email, passwordLength: password.length });
     
     if (!email || !password) {
+      setError("Будь ласка, введіть email та пароль");
       toast({
         title: "Помилка входу",
         description: "Будь ласка, введіть email та пароль",
@@ -31,7 +37,10 @@ const UserLogin = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting user login...");
       const success = await login(email, password);
+      
+      console.log("User login result:", success);
       
       if (success) {
         toast({
@@ -40,13 +49,12 @@ const UserLogin = () => {
         });
         navigate("/user/dashboard");
       } else {
-        toast({
-          title: "Помилка входу",
-          description: "Невірний email або пароль",
-          variant: "destructive",
-        });
+        setError("Невірний email або пароль");
+        // Toast is shown in the login function
       }
     } catch (error) {
+      console.error("User login error:", error);
+      setError("Виникла помилка при вході в систему");
       toast({
         title: "Помилка входу",
         description: "Виникла помилка при вході в систему",
@@ -69,6 +77,12 @@ const UserLogin = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <div className="bg-destructive/15 p-3 rounded-md flex items-center text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -83,6 +82,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log("User login attempt with:", { email, passwordLength: password.length });
+      
       // Find user by email
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -91,6 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .single();
 
       if (userError || !userData) {
+        console.log("No user found with email:", email);
         toast({
           title: "Помилка входу",
           description: "Користувача з таким email не знайдено",
@@ -99,8 +101,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return false;
       }
 
+      console.log("User found:", { email: userData.email, passwordHashLength: userData.password_hash.length });
+
       // Check if user is active
       if (!userData.is_active) {
+        console.log("User account is inactive:", email);
         toast({
           title: "Доступ закрито",
           description: "Ваш обліковий запис ще не активовано адміністратором",
@@ -111,6 +116,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       // Verify password
       const passwordMatch = await bcrypt.compare(password, userData.password_hash);
+      console.log("Password comparison result:", passwordMatch);
+      
       if (!passwordMatch) {
         toast({
           title: "Помилка входу",
@@ -143,6 +150,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return true;
     } catch (error) {
       console.error('Login error:', error);
+      toast({
+        title: "Помилка входу",
+        description: "Сталася помилка при спробі входу в систему",
+        variant: "destructive",
+      });
       return false;
     }
   };

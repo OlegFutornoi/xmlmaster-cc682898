@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { AlertCircle } from "lucide-react";
 
 const AdminLogin = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("admin1");
+  const [password, setPassword] = useState("11111111");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { login, isAuthenticated } = useAdminAuth();
@@ -25,10 +27,12 @@ const AdminLogin = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     console.log("Login attempt with:", { username, password: password.replace(/./g, '*') });
     
     if (!username || !password) {
+      setError("Будь ласка, введіть ім'я користувача та пароль");
       toast({
         title: "Помилка входу",
         description: "Будь ласка, введіть ім'я користувача та пароль",
@@ -52,14 +56,12 @@ const AdminLogin = () => {
         });
         navigate("/admin/dashboard");
       } else {
-        toast({
-          title: "Помилка входу",
-          description: "Невірне ім'я користувача або пароль",
-          variant: "destructive",
-        });
+        setError("Невірне ім'я користувача або пароль");
+        // Toast is already shown in the login function
       }
     } catch (error) {
       console.error("Login error:", error);
+      setError("Виникла помилка при вході в систему");
       toast({
         title: "Помилка входу",
         description: "Виникла помилка при вході в систему",
@@ -82,6 +84,12 @@ const AdminLogin = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <div className="bg-destructive/15 p-3 rounded-md flex items-center text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="username">Ім'я користувача</Label>
                 <Input
@@ -103,6 +111,11 @@ const AdminLogin = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+              </div>
+              <div className="text-sm text-gray-500">
+                <p>Стандартні дані для входу:</p>
+                <p>Логін: admin1</p>
+                <p>Пароль: 11111111</p>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">

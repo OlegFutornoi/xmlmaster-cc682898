@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +73,8 @@ export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
+      console.log("Admin login attempt with:", { username, passwordLength: password.length });
+      
       // Find admin by username
       const { data: adminData, error: adminError } = await supabase
         .from('administrators')
@@ -81,7 +82,8 @@ export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
         .eq('username', username)
         .single();
 
-      if (adminError || !adminData) {
+      if (adminError) {
+        console.error('Admin lookup error:', adminError);
         toast({
           title: "Помилка входу",
           description: "Адміністратора з таким логіном не знайдено",
@@ -90,8 +92,28 @@ export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
         return false;
       }
 
-      // Verify password
+      if (!adminData) {
+        console.log("No admin found with username:", username);
+        toast({
+          title: "Помилка входу",
+          description: "Адміністратора з таким логіном не знайдено",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      console.log("Admin found:", { username: adminData.username, passwordHashLength: adminData.password_hash.length });
+
+      // For debugging purposes only - create a standard hash for admin1/11111111
+      // This should match what we have in the database
+      const testHash = await bcrypt.hash("11111111", 10);
+      console.log("Test hash for '11111111':", testHash);
+      console.log("Actual hash in DB:", adminData.password_hash);
+
+      // Verify password - ensure we're comparing the correct values
       const passwordMatch = await bcrypt.compare(password, adminData.password_hash);
+      console.log("Password comparison result:", passwordMatch);
+      
       if (!passwordMatch) {
         toast({
           title: "Помилка входу",
@@ -113,6 +135,11 @@ export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
       return true;
     } catch (error) {
       console.error('Admin login error:', error);
+      toast({
+        title: "Помилка входу",
+        description: "Сталася помилка при спробі входу в систему",
+        variant: "destructive",
+      });
       return false;
     }
   };
