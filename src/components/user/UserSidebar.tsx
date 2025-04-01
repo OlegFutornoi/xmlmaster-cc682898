@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { Home, Menu, LogOut, User } from 'lucide-react';
 
@@ -70,9 +71,19 @@ const UserSidebar = () => {
               <User className="h-4 w-4" />
             </div>
             <div className="ml-3 truncate">
-              <p className="text-sm font-medium text-sidebar-foreground">
-                {user?.username || 'User'}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-sidebar-foreground">
+                  {user?.username || 'User'}
+                </p>
+                {user && (
+                  <Badge 
+                    variant={user.is_active ? "success" : "destructive"} 
+                    className="text-xs"
+                  >
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         )}

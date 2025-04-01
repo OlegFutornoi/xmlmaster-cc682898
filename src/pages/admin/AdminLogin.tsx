@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +14,19 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login } = useAdminAuth();
+  const { login, isAuthenticated } = useAdminAuth();
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/admin/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log("Login attempt with:", { username, password: password.replace(/./g, '*') });
     
     if (!username || !password) {
       toast({
@@ -31,7 +40,10 @@ const AdminLogin = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting login...");
       const success = await login(username, password);
+      
+      console.log("Login result:", success);
       
       if (success) {
         toast({
@@ -47,6 +59,7 @@ const AdminLogin = () => {
         });
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Помилка входу",
         description: "Виникла помилка при вході в систему",
@@ -74,7 +87,7 @@ const AdminLogin = () => {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="admin"
+                  placeholder="admin1"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -85,7 +98,7 @@ const AdminLogin = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="1111"
+                  placeholder="11111111"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
