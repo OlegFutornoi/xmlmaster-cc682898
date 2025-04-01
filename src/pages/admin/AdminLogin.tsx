@@ -10,8 +10,8 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 import { AlertCircle } from "lucide-react";
 
 const AdminLogin = () => {
-  const [username, setUsername] = useState("admin1");
-  const [password, setPassword] = useState("11111111");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ const AdminLogin = () => {
     e.preventDefault();
     setError(null);
     
-    console.log("Login attempt with:", { username, password: password.replace(/./g, '*') });
+    console.log("Login attempt with:", { username, passwordLength: password.length });
     
     if (!username || !password) {
       setError("Будь ласка, введіть ім'я користувача та пароль");
@@ -95,7 +95,6 @@ const AdminLogin = () => {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="admin1"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -106,16 +105,10 @@ const AdminLogin = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="11111111"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-              </div>
-              <div className="text-sm text-gray-500">
-                <p>Стандартні дані для входу:</p>
-                <p>Логін: admin1</p>
-                <p>Пароль: 11111111</p>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
