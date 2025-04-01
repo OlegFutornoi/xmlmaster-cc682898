@@ -77,8 +77,8 @@ const UserSidebar = () => {
                 </p>
                 {user && (
                   <Badge 
-                    variant={user.is_active ? "success" : "destructive"} 
-                    className="text-xs"
+                    variant={user.is_active ? "secondary" : "destructive"} 
+                    className={`text-xs ${user.is_active ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
                   >
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Badge>
