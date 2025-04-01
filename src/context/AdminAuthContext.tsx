@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -104,15 +105,34 @@ export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
 
       console.log("Admin found:", { username: adminData.username, passwordHashLength: adminData.password_hash.length });
 
-      // For debugging purposes only - create a standard hash for admin1/11111111
-      // This should match what we have in the database
-      const testHash = await bcrypt.hash("11111111", 10);
-      console.log("Test hash for '11111111':", testHash);
-      console.log("Actual hash in DB:", adminData.password_hash);
-
-      // Verify password - ensure we're comparing the correct values
-      const passwordMatch = await bcrypt.compare(password, adminData.password_hash);
-      console.log("Password comparison result:", passwordMatch);
+      // Check direct password match for non-hashed passwords in DB
+      // This is a temporary solution until all passwords are properly hashed
+      let passwordMatch = false;
+      
+      // First try direct comparison for plain text passwords
+      if (adminData.password_hash === password) {
+        console.log("Direct password match");
+        passwordMatch = true;
+        
+        // Update the password to be properly hashed for future logins
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const { error: updateError } = await supabase
+          .from('administrators')
+          .update({ password_hash: hashedPassword })
+          .eq('id', adminData.id);
+          
+        if (updateError) {
+          console.error("Failed to update password hash:", updateError);
+        } else {
+          console.log("Updated password to proper hash format");
+        }
+      } 
+      // Try bcrypt comparison for hashed passwords
+      else if (adminData.password_hash.startsWith('$2')) {
+        console.log("Attempting bcrypt comparison");
+        passwordMatch = await bcrypt.compare(password, adminData.password_hash);
+        console.log("Bcrypt comparison result:", passwordMatch);
+      }
       
       if (!passwordMatch) {
         toast({
