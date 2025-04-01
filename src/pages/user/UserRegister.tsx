@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const UserRegister = () => {
   const [username, setUsername] = useState("");
@@ -42,14 +43,15 @@ const UserRegister = () => {
     setIsLoading(true);
     
     try {
+      // Register the user
       const success = await register(username, email, password);
       
       if (success) {
         toast({
           title: "Успішна реєстрація",
-          description: "Ви успішно зареєструвалися в системі",
+          description: "Ви успішно зареєструвалися. Очікуйте на підтвердження від адміністратора.",
         });
-        navigate("/user/dashboard");
+        navigate("/user/login");
       } else {
         toast({
           title: "Помилка реєстрації",
@@ -57,10 +59,11 @@ const UserRegister = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Помилка реєстрації",
-        description: "Виникла помилка при реєстрації",
+        description: error.message || "Виникла помилка при реєстрації",
         variant: "destructive",
       });
     } finally {

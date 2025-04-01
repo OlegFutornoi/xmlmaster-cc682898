@@ -1,161 +1,288 @@
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Trash2, UserCheck, UserX } from 'lucide-react';
 
 import AdminSidebar from '@/components/admin/AdminSidebar';
-import { useAdminAuth } from '@/context/AdminAuthContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DialogTrigger, DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogContent, Dialog } from '@/components/ui/dialog';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { supabase } from '@/integrations/supabase/client';
 
-const formSchema = z.object({
-  username: z.string().min(3, 'Ім\'я користувача повинно містити щонайменше 3 символи'),
-  password: z.string().min(4, 'Пароль повинен містити щонайменше 4 символи'),
-});
+type User = {
+  id: string;
+  username: string;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+  last_login: string | null;
+};
 
 const AdminUsers = () => {
-  const { admins, addAdmin, removeAdmin } = useAdminAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [adminToDelete, setAdminToDelete] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToToggleAccess, setUserToToggleAccess] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const rowsPerPage = 10;
+  const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
-  });
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
-    
+  const fetchUsers = async () => {
+    setLoading(true);
     try {
-      await addAdmin(values.username, values.password);
-      form.reset();
+      // Calculate range for pagination
+      const from = (page - 1) * rowsPerPage;
+      const to = from + rowsPerPage - 1;
+
+      const { data, error, count } = await supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (count !== null) {
+        setTotalPages(Math.ceil(count / rowsPerPage));
+      }
+      
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося отримати список користувачів',
+        variant: 'destructive',
+      });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleDeleteClick = (adminId: string) => {
-    setAdminToDelete(adminId);
+  useEffect(() => {
+    fetchUsers();
+  }, [page]);
+
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
     setIsDeleteDialogOpen(true);
   };
 
+  const handleToggleAccessClick = (user: User) => {
+    setUserToToggleAccess(user);
+    setIsAccessDialogOpen(true);
+  };
+
   const confirmDelete = async () => {
-    if (adminToDelete) {
-      await removeAdmin(adminToDelete);
+    if (!userToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userToDelete);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Успішно',
+        description: 'Користувача видалено',
+      });
+      
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося видалити користувача',
+        variant: 'destructive',
+      });
+    } finally {
       setIsDeleteDialogOpen(false);
-      setAdminToDelete(null);
+      setUserToDelete(null);
     }
+  };
+
+  const confirmToggleAccess = async () => {
+    if (!userToToggleAccess) return;
+    
+    try {
+      const newStatus = !userToToggleAccess.is_active;
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: newStatus })
+        .eq('id', userToToggleAccess.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Успішно',
+        description: newStatus 
+          ? 'Доступ користувача активовано' 
+          : 'Доступ користувача деактивовано',
+      });
+      
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user access:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося змінити статус користувача',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAccessDialogOpen(false);
+      setUserToToggleAccess(null);
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Ніколи';
+    return new Date(dateString).toLocaleString('uk-UA');
   };
 
   return (
     <div className="flex h-screen">
       <AdminSidebar />
       <div className="flex-1 overflow-auto p-8">
-        <h1 className="text-3xl font-bold mb-8">Управління адміністраторами</h1>
+        <h1 className="text-3xl font-bold mb-8">Управління користувачами</h1>
         
-        <div className="grid gap-8 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Додати нового адміністратора</CardTitle>
-              <CardDescription>
-                Створіть обліковий запис для нового адміністратора
-              </CardDescription>
-            </CardHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ім'я користувача</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Введіть ім'я користувача" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Пароль</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="Введіть пароль" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Додавання..." : "Додати адміністратора"}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Form>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Список адміністраторів</CardTitle>
-              <CardDescription>
-                Управління існуючими адміністраторами
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Ім'я користувача</TableHead>
-                    <TableHead className="text-right">Дії</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {admins.map((admin) => (
-                    <TableRow key={admin.id}>
-                      <TableCell className="font-medium">{admin.id}</TableCell>
-                      <TableCell>{admin.username}</TableCell>
-                      <TableCell className="text-right">
-                        {admin.id !== '1' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(admin.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        )}
-                      </TableCell>
+        <Card>
+          <CardHeader>
+            <CardTitle>Список користувачів</CardTitle>
+            <CardDescription>
+              Управління зареєстрованими користувачами
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center p-8">
+                <p>Завантаження...</p>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center p-8">
+                <p>Немає зареєстрованих користувачів</p>
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ім'я користувача</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Дата реєстрації</TableHead>
+                      <TableHead>Останній вхід</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead className="text-right">Дії</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.username}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{formatDate(user.created_at)}</TableCell>
+                        <TableCell>{formatDate(user.last_login)}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            user.is_active 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.is_active ? 'Активний' : 'Неактивний'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleAccessClick(user)}
+                              className={user.is_active ? 'text-yellow-600' : 'text-green-600'}
+                            >
+                              {user.is_active ? (
+                                <>
+                                  <UserX className="h-4 w-4 mr-1" />
+                                  Закрити
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="h-4 w-4 mr-1" />
+                                  Відкрити
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(user.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Видалити
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                {totalPages > 1 && (
+                  <div className="mt-4">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                        
+                        {[...Array(totalPages)].map((_, i) => (
+                          <PaginationItem key={i}>
+                            <PaginationLink
+                              isActive={page === i + 1}
+                              onClick={() => setPage(i + 1)}
+                            >
+                              {i + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
         
+        {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Видалити адміністратора?</DialogTitle>
+              <DialogTitle>Видалити користувача?</DialogTitle>
               <DialogDescription>
-                Ця дія видалить обліковий запис адміністратора. Цю дію неможливо відмінити.
+                Ця дія видалить обліковий запис користувача. Цю дію неможливо відмінити.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -164,6 +291,35 @@ const AdminUsers = () => {
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>
                 Видалити
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Access Toggle Dialog */}
+        <Dialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {userToToggleAccess?.is_active
+                  ? 'Закрити доступ користувачу?'
+                  : 'Відкрити доступ користувачу?'}
+              </DialogTitle>
+              <DialogDescription>
+                {userToToggleAccess?.is_active
+                  ? 'Користувач більше не зможе увійти в систему.'
+                  : 'Користувач отримає доступ до системи.'}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAccessDialogOpen(false)}>
+                Скасувати
+              </Button>
+              <Button 
+                variant={userToToggleAccess?.is_active ? 'destructive' : 'default'}
+                onClick={confirmToggleAccess}
+              >
+                {userToToggleAccess?.is_active ? 'Закрити доступ' : 'Відкрити доступ'}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import * as bcrypt from 'bcryptjs';
 
 interface Admin {
   id: string;
@@ -17,12 +19,6 @@ interface AdminAuthContextType {
   removeAdmin: (adminId: string) => Promise<boolean>;
   admins: Admin[];
 }
-
-// Initial admin credential
-const DEFAULT_ADMIN = {
-  username: 'admin',
-  password: '1111'
-};
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
@@ -41,53 +37,80 @@ interface AdminAuthProviderProps {
 export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [credentials, setCredentials] = useState({
-    username: DEFAULT_ADMIN.username,
-    password: DEFAULT_ADMIN.password
-  });
-  const [admins, setAdmins] = useState<Admin[]>([{ id: '1', username: DEFAULT_ADMIN.username }]);
+  const [admins, setAdmins] = useState<Admin[]>([]);
   const { toast } = useToast();
 
   // Check for saved admin on initial load
   useEffect(() => {
     const savedAdmin = localStorage.getItem('admin');
-    const savedCredentials = localStorage.getItem('adminCredentials');
-    const savedAdmins = localStorage.getItem('admins');
     
     if (savedAdmin) {
       setAdmin(JSON.parse(savedAdmin));
       setIsAuthenticated(true);
     }
     
-    if (savedCredentials) {
-      setCredentials(JSON.parse(savedCredentials));
-    } else {
-      // Save default credentials if none are stored
-      localStorage.setItem('adminCredentials', JSON.stringify(credentials));
+    // Fetch admins if authenticated
+    if (isAuthenticated) {
+      fetchAdmins();
     }
-    
-    if (savedAdmins) {
-      setAdmins(JSON.parse(savedAdmins));
-    } else {
-      // Save default admin if none are stored
-      localStorage.setItem('admins', JSON.stringify(admins));
+  }, [isAuthenticated]);
+
+  const fetchAdmins = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('administrators')
+        .select('id, username')
+        .order('username');
+
+      if (error) {
+        throw error;
+      }
+
+      setAdmins(data || []);
+    } catch (error) {
+      console.error('Error fetching admins:', error);
     }
-  }, []);
+  };
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // Check if the provided credentials match
-      if (credentials.username === username && credentials.password === password) {
-        const adminUser = admins.find(a => a.username === username);
-        
-        if (adminUser) {
-          setAdmin(adminUser);
-          setIsAuthenticated(true);
-          localStorage.setItem('admin', JSON.stringify(adminUser));
-          return true;
-        }
+      // Find admin by username
+      const { data: adminData, error: adminError } = await supabase
+        .from('administrators')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+      if (adminError || !adminData) {
+        toast({
+          title: "Помилка входу",
+          description: "Адміністратора з таким логіном не знайдено",
+          variant: "destructive",
+        });
+        return false;
       }
-      return false;
+
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, adminData.password_hash);
+      if (!passwordMatch) {
+        toast({
+          title: "Помилка входу",
+          description: "Невірний пароль",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      const loggedInAdmin = {
+        id: adminData.id,
+        username: adminData.username
+      };
+      
+      setAdmin(loggedInAdmin);
+      setIsAuthenticated(true);
+      localStorage.setItem('admin', JSON.stringify(loggedInAdmin));
+      await fetchAdmins();
+      return true;
     } catch (error) {
       console.error('Admin login error:', error);
       return false;
@@ -102,93 +125,152 @@ export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
 
   const changeCredentials = async (username: string, password: string): Promise<boolean> => {
     try {
-      const newCredentials = { username, password };
-      setCredentials(newCredentials);
-      localStorage.setItem('adminCredentials', JSON.stringify(newCredentials));
-      
-      // Update the main admin's username in the admins list
-      const updatedAdmins = admins.map(a => 
-        a.id === '1' ? { ...a, username } : a
-      );
-      setAdmins(updatedAdmins);
-      localStorage.setItem('admins', JSON.stringify(updatedAdmins));
-      
-      // Update the current admin if it's the main admin
-      if (admin && admin.id === '1') {
-        const updatedAdmin = { ...admin, username };
-        setAdmin(updatedAdmin);
-        localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+      if (!admin) {
+        throw new Error('Не авторизований');
+      }
+
+      // Check if username already exists (except for current admin)
+      if (username !== admin.username) {
+        const { data: existingAdmin, error: checkError } = await supabase
+          .from('administrators')
+          .select('id')
+          .eq('username', username)
+          .maybeSingle();
+  
+        if (checkError) {
+          console.error('Error checking admin:', checkError);
+          throw new Error('Помилка перевірки існуючих адміністраторів');
+        }
+  
+        if (existingAdmin) {
+          throw new Error('Адміністратор з таким логіном вже існує');
+        }
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Update admin credentials
+      const { error } = await supabase
+        .from('administrators')
+        .update({ 
+          username: username,
+          password_hash: passwordHash 
+        })
+        .eq('id', admin.id);
+
+      if (error) {
+        throw error;
       }
       
+      // Update local state
+      const updatedAdmin = { ...admin, username };
+      setAdmin(updatedAdmin);
+      localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+      
+      // Refresh admins list
+      await fetchAdmins();
+      
       toast({
-        title: "Credentials updated",
-        description: "Admin username and password have been updated successfully.",
+        title: "Дані оновлено",
+        description: "Логін та пароль успішно змінено.",
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Change credentials error:', error);
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося змінити дані",
+        variant: "destructive"
+      });
       return false;
     }
   };
 
   const addAdmin = async (username: string, password: string): Promise<boolean> => {
     try {
-      // Check if an admin with this username already exists
-      if (admins.some(a => a.username === username)) {
-        toast({
-          title: "Admin already exists",
-          description: "An admin with this username already exists.",
-          variant: "destructive"
-        });
-        return false;
+      // Check if username already exists
+      const { data: existingAdmin, error: checkError } = await supabase
+        .from('administrators')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking admin:', checkError);
+        throw new Error('Помилка перевірки існуючих адміністраторів');
       }
-      
-      const newAdmin = {
-        id: Date.now().toString(),
-        username,
-      };
-      
-      const updatedAdmins = [...admins, newAdmin];
-      setAdmins(updatedAdmins);
-      localStorage.setItem('admins', JSON.stringify(updatedAdmins));
+
+      if (existingAdmin) {
+        throw new Error('Адміністратор з таким логіном вже існує');
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Insert new admin
+      const { data, error } = await supabase
+        .from('administrators')
+        .insert([{ username, password_hash: passwordHash }])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      // Refresh admins list
+      await fetchAdmins();
       
       toast({
-        title: "Admin added",
-        description: `Admin "${username}" has been added successfully.`,
+        title: "Адміністратор доданий",
+        description: `Адміністратор "${username}" був успішно доданий.`,
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add admin error:', error);
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося додати адміністратора",
+        variant: "destructive"
+      });
       return false;
     }
   };
 
   const removeAdmin = async (adminId: string): Promise<boolean> => {
     try {
-      // Prevent removing the main admin
-      if (adminId === '1') {
-        toast({
-          title: "Cannot remove main admin",
-          description: "The main administrator cannot be removed.",
-          variant: "destructive"
-        });
-        return false;
+      // Prevent removing yourself
+      if (admin && adminId === admin.id) {
+        throw new Error('Ви не можете видалити власний обліковий запис');
       }
       
-      const updatedAdmins = admins.filter(a => a.id !== adminId);
-      setAdmins(updatedAdmins);
-      localStorage.setItem('admins', JSON.stringify(updatedAdmins));
+      const { error } = await supabase
+        .from('administrators')
+        .delete()
+        .eq('id', adminId);
+
+      if (error) {
+        throw error;
+      }
+      
+      // Refresh admins list
+      await fetchAdmins();
       
       toast({
-        title: "Admin removed",
-        description: "Administrator has been removed successfully.",
+        title: "Адміністратор видалений",
+        description: "Адміністратор був успішно видалений.",
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Remove admin error:', error);
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося видалити адміністратора",
+        variant: "destructive"
+      });
       return false;
     }
   };

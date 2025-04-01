@@ -23,12 +23,12 @@ const AdminSidebar = () => {
       icon: <Home className="h-5 w-5" />,
     },
     {
-      name: 'Administrators',
+      name: 'Користувачі',
       path: '/admin/users',
       icon: <Users className="h-5 w-5" />,
     },
     {
-      name: 'Settings',
+      name: 'Налаштування',
       path: '/admin/settings',
       icon: <Settings className="h-5 w-5" />,
     },
