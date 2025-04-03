@@ -130,7 +130,9 @@ export type Database = {
         Row: {
           created_at: string
           currency_id: string
+          duration_days: number | null
           id: string
+          is_permanent: boolean
           name: string
           price: number
           updated_at: string
@@ -138,7 +140,9 @@ export type Database = {
         Insert: {
           created_at?: string
           currency_id: string
+          duration_days?: number | null
           id?: string
+          is_permanent?: boolean
           name: string
           price: number
           updated_at?: string
@@ -146,7 +150,9 @@ export type Database = {
         Update: {
           created_at?: string
           currency_id?: string
+          duration_days?: number | null
           id?: string
+          is_permanent?: boolean
           name?: string
           price?: number
           updated_at?: string

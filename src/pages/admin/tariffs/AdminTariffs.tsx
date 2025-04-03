@@ -4,7 +4,7 @@ import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Plus } from 'lucide-react';
+import { DollarSign, Plus, Clock, CheckSquare } from 'lucide-react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -24,6 +24,8 @@ const AdminTariffs = () => {
             name, 
             price, 
             created_at,
+            duration_days,
+            is_permanent,
             currencies (
               code, 
               name
@@ -82,7 +84,20 @@ const AdminTariffs = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-2">
-                      <div className="flex justify-end mt-4">
+                      <div className="flex items-center text-sm text-muted-foreground mb-4">
+                        {plan.is_permanent ? (
+                          <div className="flex items-center">
+                            <CheckSquare className="mr-2 h-4 w-4" />
+                            <span>Постійний доступ</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <Clock className="mr-2 h-4 w-4" />
+                            <span>Термін дії: {plan.duration_days} днів</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-end">
                         <Button
                           variant="outline"
                           size="sm"

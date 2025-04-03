@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Edit, Trash, Check, X } from 'lucide-react';
@@ -69,7 +70,9 @@ const TariffPlanForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    currency_id: ''
+    currency_id: '',
+    duration_days: '',
+    is_permanent: false
   });
   
   const [newItem, setNewItem] = useState({
@@ -151,7 +154,9 @@ const TariffPlanForm = () => {
           setFormData({
             name: data.name,
             price: data.price,
-            currency_id: data.currency_id
+            currency_id: data.currency_id,
+            duration_days: data.duration_days || '',
+            is_permanent: data.is_permanent || false
           });
           
           const { data: itemsData, error: itemsError } = await supabase
@@ -193,6 +198,13 @@ const TariffPlanForm = () => {
     }));
   };
   
+  const handleCheckboxChange = (checked) => {
+    setFormData(prev => ({
+      ...prev,
+      is_permanent: checked
+    }));
+  };
+  
   const handleCurrencyChange = (value) => {
     setFormData(prev => ({
       ...prev,
@@ -205,7 +217,17 @@ const TariffPlanForm = () => {
       toast({
         variant: "destructive",
         title: "Помилка",
-        description: "Будь ласка, заповніть всі поля."
+        description: "Будь ласка, заповніть всі обов'язкові поля."
+      });
+      return;
+    }
+    
+    // Validate duration_days if not permanent
+    if (!formData.is_permanent && (!formData.duration_days || parseInt(formData.duration_days) <= 0)) {
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Будь ласка, вкажіть термін дії тарифу в днях або виберіть опцію 'Постійний доступ'."
       });
       return;
     }
@@ -223,7 +245,9 @@ const TariffPlanForm = () => {
             {
               name: formData.name,
               price: parseFloat(formData.price),
-              currency_id: formData.currency_id
+              currency_id: formData.currency_id,
+              duration_days: formData.is_permanent ? null : parseInt(formData.duration_days),
+              is_permanent: formData.is_permanent
             }
           ])
           .select();
@@ -252,7 +276,9 @@ const TariffPlanForm = () => {
           .update({
             name: formData.name,
             price: parseFloat(formData.price),
-            currency_id: formData.currency_id
+            currency_id: formData.currency_id,
+            duration_days: formData.is_permanent ? null : parseInt(formData.duration_days),
+            is_permanent: formData.is_permanent
           })
           .eq('id', id);
           
@@ -498,6 +524,31 @@ const TariffPlanForm = () => {
                       value={formData.price}
                       onChange={handleInputChange}
                       placeholder="100.00"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Checkbox 
+                        id="is_permanent" 
+                        checked={formData.is_permanent} 
+                        onCheckedChange={handleCheckboxChange}
+                      />
+                      <Label htmlFor="is_permanent" className="cursor-pointer">
+                        Постійний доступ
+                      </Label>
+                    </div>
+                    <Label htmlFor="duration_days">Термін дії (днів)</Label>
+                    <Input
+                      id="duration_days"
+                      name="duration_days"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={formData.duration_days}
+                      onChange={handleInputChange}
+                      placeholder="30"
+                      disabled={formData.is_permanent}
                     />
                   </div>
                 </div>
