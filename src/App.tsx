@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import UserLogin from "./pages/user/UserLogin";
 import UserRegister from "./pages/user/UserRegister";
 import UserDashboard from "./pages/user/UserDashboard";
+import UserHome from "./pages/user/UserHome";
 import UserTariffs from "./pages/user/UserTariffs";
 import UserStores from "./pages/user/UserStores";
 import UserSettings from "./pages/user/UserSettings";
@@ -99,6 +100,14 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <AdminCurrencies />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/tariffs/new" 
+                element={
+                  <AdminRoute>
+                    <TariffPlanForm />
                   </AdminRoute>
                 } 
               />

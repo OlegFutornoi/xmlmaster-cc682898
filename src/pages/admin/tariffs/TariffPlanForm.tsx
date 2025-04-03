@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,6 +47,7 @@ const TariffPlanForm = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
   const [formValues, setFormValues] = useState<TariffPlanFormValues>({
     name: '',
     price: 0,
@@ -86,11 +88,11 @@ const TariffPlanForm = () => {
     };
 
     fetchCurrencies();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const fetchTariffPlan = async () => {
-      if (id) {
+      if (id && id !== 'new') {
         setIsLoading(true);
         try {
           const { data, error } = await supabase
@@ -125,11 +127,14 @@ const TariffPlanForm = () => {
         } finally {
           setIsLoading(false);
         }
+      } else {
+        // For new tariff plans, just initialize with default values and skip loading
+        setIsLoading(false);
       }
     };
 
     fetchTariffPlan();
-  }, [id]);
+  }, [id, toast]);
 
   const validationSchema = z.object({
     name: z.string({ required_error: "Вкажіть назву тарифу" }).min(2, "Назва повинна мати мінімум 2 символи"),
@@ -157,7 +162,7 @@ const TariffPlanForm = () => {
 
   useEffect(() => {
     form.reset(formValues);
-  }, [formValues]);
+  }, [formValues, form]);
 
   const onSubmit = async (values: z.infer<typeof validationSchema>) => {
     setIsLoading(true);
@@ -171,7 +176,7 @@ const TariffPlanForm = () => {
       };
 
       let response;
-      if (id) {
+      if (id && id !== 'new') {
         response = await supabase
           .from('tariff_plans')
           .update(tariffPlanData)
@@ -221,7 +226,7 @@ const TariffPlanForm = () => {
 
       <Card className="flex-1">
         <CardHeader>
-          <CardTitle>{id ? 'Редагувати тариф' : 'Створити тариф'}</CardTitle>
+          <CardTitle>{id && id !== 'new' ? 'Редагувати тариф' : 'Створити тариф'}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>

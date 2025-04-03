@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Home, 
@@ -192,11 +191,6 @@ const UserSidebar = () => {
               >
                 {item.icon}
                 {!isCollapsed && <span className="ml-3">{item.name}</span>}
-                {!isCollapsed && isDisabled && (
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    Заблоковано
-                  </Badge>
-                )}
               </Link>
             );
           })}
