@@ -1,0 +1,297 @@
+
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, Clock, Info } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { uk } from 'date-fns/locale';
+
+const UserTariffs = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [tariffPlans, setTariffPlans] = useState([]);
+  const [activeSubscription, setActiveSubscription] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch active subscription
+  useEffect(() => {
+    const fetchActiveSubscription = async () => {
+      if (user) {
+        try {
+          const { data: subscription, error } = await supabase
+            .from('user_tariff_subscriptions')
+            .select(`
+              id,
+              start_date,
+              end_date,
+              is_active,
+              tariff_plans (
+                id,
+                name,
+                price,
+                is_permanent,
+                duration_days,
+                currencies (name, code)
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error fetching subscription:', error);
+          } else {
+            setActiveSubscription(subscription);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+    };
+
+    fetchActiveSubscription();
+  }, [user]);
+
+  // Fetch available tariff plans
+  useEffect(() => {
+    const fetchTariffPlans = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('tariff_plans')
+          .select(`
+            id, 
+            name, 
+            price, 
+            duration_days,
+            is_permanent,
+            currencies (
+              code, 
+              name
+            )
+          `)
+          .order('price', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching tariff plans:', error);
+        } else {
+          setTariffPlans(data || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTariffPlans();
+  }, []);
+
+  const subscribeToPlan = async (planId) => {
+    if (!user) {
+      toast({
+        title: "Помилка",
+        description: "Ви не авторизовані",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const selectedPlan = tariffPlans.find(plan => plan.id === planId);
+      
+      if (!selectedPlan) {
+        toast({
+          title: "Помилка",
+          description: "Тариф не знайдено",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Calculate end date based on duration_days or set to null if permanent
+      let endDate = null;
+      if (!selectedPlan.is_permanent) {
+        const startDate = new Date();
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+      }
+
+      // First, deactivate any existing subscriptions
+      if (activeSubscription) {
+        const { error: updateError } = await supabase
+          .from('user_tariff_subscriptions')
+          .update({ is_active: false })
+          .eq('id', activeSubscription.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+      }
+
+      // Then, create a new subscription
+      const { data, error } = await supabase
+        .from('user_tariff_subscriptions')
+        .insert([
+          { 
+            user_id: user.id, 
+            tariff_plan_id: planId,
+            end_date: endDate
+          }
+        ])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Успішно",
+        description: "Тариф активовано",
+      });
+
+      // Redirect to dashboard
+      navigate('/user/dashboard');
+      
+      // Refresh the subscription
+      const { data: subscription, error: fetchError } = await supabase
+        .from('user_tariff_subscriptions')
+        .select(`
+          id,
+          start_date,
+          end_date,
+          is_active,
+          tariff_plans (
+            id,
+            name,
+            price,
+            is_permanent,
+            duration_days,
+            currencies (name, code)
+          )
+        `)
+        .eq('id', data[0].id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching new subscription:', fetchError);
+      } else {
+        setActiveSubscription(subscription);
+      }
+    } catch (error) {
+      console.error('Error subscribing to plan:', error);
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося активувати тариф",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold mb-8">Тарифи</h1>
+      
+      {activeSubscription && (
+        <Card className="mb-8 bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="text-green-500" />
+              Активний тариф
+            </CardTitle>
+            <CardDescription>
+              {activeSubscription.tariff_plans.name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4 justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Ціна:</p>
+                <p className="font-medium">
+                  {activeSubscription.tariff_plans.price} {activeSubscription.tariff_plans.currencies.code}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Тип доступу:</p>
+                <p className="font-medium">
+                  {activeSubscription.tariff_plans.is_permanent 
+                    ? "Постійний доступ" 
+                    : `${activeSubscription.tariff_plans.duration_days} днів`}
+                </p>
+              </div>
+              {!activeSubscription.tariff_plans.is_permanent && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Дійсний до:</p>
+                  <p className="font-medium">
+                    {format(new Date(activeSubscription.end_date), "dd MMMM yyyy", { locale: uk })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <p>Завантаження тарифів...</p>
+        ) : (
+          tariffPlans.map((plan) => (
+            <Card key={plan.id} className="flex flex-col h-full">
+              <CardHeader>
+                <CardTitle>{plan.name}</CardTitle>
+                <CardDescription>
+                  {plan.price === 0 
+                    ? "Демонстраційний" 
+                    : `${plan.price} ${plan.currencies?.code || ""}`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <div className="flex items-center gap-2 mb-4">
+                  {plan.is_permanent ? (
+                    <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
+                      Постійний доступ
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {plan.duration_days} днів
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="text-sm text-gray-600">
+                  <Info className="w-4 h-4 inline-block mr-1" />
+                  {plan.price === 0 
+                    ? `Демонстраційний тариф на ${plan.duration_days} днів` 
+                    : plan.is_permanent 
+                      ? "Цей тариф надає постійний доступ до всіх функцій" 
+                      : `Цей тариф дійсний протягом ${plan.duration_days} днів`}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => subscribeToPlan(plan.id)} 
+                  className="w-full"
+                  disabled={activeSubscription?.tariff_plans.id === plan.id}
+                >
+                  {activeSubscription?.tariff_plans.id === plan.id 
+                    ? "Активний" 
+                    : "Вибрати"}
+                </Button>
+              </CardFooter>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default UserTariffs;

@@ -6,7 +6,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white">
       <div className="text-center max-w-3xl px-4">
-        <h1 className="text-4xl font-bold mb-4 text-blue-700">XML Marketplace Connector</h1>
+        <h1 className="text-4xl font-bold mb-4 text-blue-700">XML Master</h1>
         <p className="text-xl text-gray-600 mb-8">
           Ефективний інструмент для обробки XML файлів постачальників та інтеграції з вашим інтернет-магазином
         </p>
