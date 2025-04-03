@@ -6,10 +6,27 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Info } from 'lucide-react';
+import { CheckCircle, Clock, Info, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { 
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose
+} from '@/components/ui/sheet';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const UserTariffs = () => {
   const { user } = useAuth();
@@ -18,6 +35,8 @@ const UserTariffs = () => {
   const [tariffPlans, setTariffPlans] = useState([]);
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPlanDetails, setSelectedPlanDetails] = useState(null);
+  const [tariffItems, setTariffItems] = useState([]);
 
   // Fetch active subscription
   useEffect(() => {
@@ -46,6 +65,11 @@ const UserTariffs = () => {
 
           if (error) {
             console.error('Error fetching subscription:', error);
+            toast({
+              title: "Помилка",
+              description: "Не вдалося завантажити дані про підписку",
+              variant: "destructive",
+            });
           } else {
             setActiveSubscription(subscription);
           }
@@ -56,7 +80,7 @@ const UserTariffs = () => {
     };
 
     fetchActiveSubscription();
-  }, [user]);
+  }, [user, toast]);
 
   // Fetch available tariff plans
   useEffect(() => {
@@ -80,6 +104,11 @@ const UserTariffs = () => {
 
         if (error) {
           console.error('Error fetching tariff plans:', error);
+          toast({
+            title: "Помилка",
+            description: "Не вдалося завантажити тарифні плани",
+            variant: "destructive",
+          });
         } else {
           setTariffPlans(data || []);
         }
@@ -91,7 +120,51 @@ const UserTariffs = () => {
     };
 
     fetchTariffPlans();
-  }, []);
+  }, [toast]);
+
+  // Fetch tariff items for a specific plan
+  const fetchTariffItems = async (planId) => {
+    try {
+      const { data, error } = await supabase
+        .from('tariff_plan_items')
+        .select(`
+          id,
+          is_active,
+          tariff_item_id,
+          tariff_items (id, description)
+        `)
+        .eq('tariff_plan_id', planId)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching tariff items:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error:', error);
+      return [];
+    }
+  };
+
+  // Open plan details sheet
+  const openPlanDetails = async (planId) => {
+    try {
+      const items = await fetchTariffItems(planId);
+      const plan = tariffPlans.find(p => p.id === planId);
+      
+      setSelectedPlanDetails(plan);
+      setTariffItems(items);
+    } catch (error) {
+      console.error('Error loading plan details:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося завантажити деталі тарифу",
+        variant: "destructive",
+      });
+    }
+  };
 
   const subscribeToPlan = async (planId) => {
     if (!user) {
@@ -275,10 +348,67 @@ const UserTariffs = () => {
                       : `Цей тариф дійсний протягом ${plan.duration_days} днів`}
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="flex flex-col sm:flex-row gap-2">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button 
+                      variant="outline"
+                      onClick={() => openPlanDetails(plan.id)}
+                    >
+                      Деталі
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>{selectedPlanDetails?.name}</SheetTitle>
+                      <SheetDescription>
+                        {selectedPlanDetails?.price === 0
+                          ? "Демонстраційний"
+                          : `${selectedPlanDetails?.price} ${selectedPlanDetails?.currencies?.code || ""}`}
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium mb-2">Доступ:</h4>
+                      <Badge className={selectedPlanDetails?.is_permanent 
+                        ? "bg-purple-100 text-purple-800 hover:bg-purple-200" 
+                        : "bg-blue-100 text-blue-800 hover:bg-blue-200"}>
+                        {selectedPlanDetails?.is_permanent 
+                          ? "Постійний доступ" 
+                          : `${selectedPlanDetails?.duration_days} днів`}
+                      </Badge>
+                      
+                      <h4 className="text-sm font-medium mb-2 mt-4">Доступні функції:</h4>
+                      {tariffItems.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Опис функції</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {tariffItems.map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell>{item.tariff_items.description}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Немає доступних функцій</p>
+                      )}
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                      <SheetClose asChild>
+                        <Button>Закрити</Button>
+                      </SheetClose>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+                
                 <Button 
                   onClick={() => subscribeToPlan(plan.id)} 
-                  className="w-full"
+                  className="w-full sm:w-auto"
                   disabled={activeSubscription?.tariff_plans.id === plan.id}
                 >
                   {activeSubscription?.tariff_plans.id === plan.id 

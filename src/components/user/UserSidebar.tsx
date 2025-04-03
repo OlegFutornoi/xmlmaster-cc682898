@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -180,12 +181,13 @@ const UserSidebar = () => {
                   isActive
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                     : isDisabled
-                    ? 'text-gray-400 cursor-not-allowed'
+                    ? 'text-gray-400 opacity-70'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 } ${isCollapsed ? 'justify-center' : ''}`}
                 onClick={(e) => {
                   if (isDisabled) {
                     e.preventDefault();
+                    navigate('/user/dashboard/tariffs');
                   }
                 }}
               >
