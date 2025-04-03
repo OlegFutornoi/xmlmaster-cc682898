@@ -30,6 +30,137 @@ export type Database = {
         }
         Relationships: []
       }
+      currencies: {
+        Row: {
+          code: string
+          created_at: string
+          exchange_rate: number
+          id: string
+          is_active: boolean
+          is_base: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          exchange_rate: number
+          id?: string
+          is_active?: boolean
+          is_base?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          exchange_rate?: number
+          id?: string
+          is_active?: boolean
+          is_base?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tariff_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tariff_plan_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          tariff_item_id: string
+          tariff_plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          tariff_item_id: string
+          tariff_plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          tariff_item_id?: string
+          tariff_plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariff_plan_items_tariff_item_id_fkey"
+            columns: ["tariff_item_id"]
+            isOneToOne: false
+            referencedRelation: "tariff_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_plan_items_tariff_plan_id_fkey"
+            columns: ["tariff_plan_id"]
+            isOneToOne: false
+            referencedRelation: "tariff_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tariff_plans: {
+        Row: {
+          created_at: string
+          currency_id: string
+          id: string
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_id: string
+          id?: string
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string
+          id?: string
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariff_plans_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string

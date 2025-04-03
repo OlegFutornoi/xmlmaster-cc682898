@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAdminAuth } from '@/context/AdminAuthContext';
-import { Home, Menu, LogOut, Settings, Users, User } from 'lucide-react';
+import { Home, Menu, LogOut, Settings, Users, User, DollarSign } from 'lucide-react';
 
 const AdminSidebar = () => {
   const { admin, logout } = useAdminAuth();
@@ -26,6 +26,11 @@ const AdminSidebar = () => {
       name: 'Користувачі',
       path: '/admin/users',
       icon: <Users className="h-5 w-5" />,
+    },
+    {
+      name: 'Тарифи',
+      path: '/admin/tariffs',
+      icon: <DollarSign className="h-5 w-5" />,
     },
     {
       name: 'Налаштування',

@@ -24,6 +24,11 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminRoute from "./components/auth/AdminRoute";
 
+// Tariff pages
+import AdminTariffs from "./pages/admin/tariffs/AdminTariffs";
+import AdminCurrencies from "./pages/admin/tariffs/AdminCurrencies";
+import TariffPlanForm from "./pages/admin/tariffs/TariffPlanForm";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -73,6 +78,32 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <AdminUsers />
+                  </AdminRoute>
+                } 
+              />
+              
+              {/* Tariff routes */}
+              <Route 
+                path="/admin/tariffs" 
+                element={
+                  <AdminRoute>
+                    <AdminTariffs />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/tariffs/currencies" 
+                element={
+                  <AdminRoute>
+                    <AdminCurrencies />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/tariffs/:id" 
+                element={
+                  <AdminRoute>
+                    <TariffPlanForm />
                   </AdminRoute>
                 } 
               />
