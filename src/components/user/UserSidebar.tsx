@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Home, 
@@ -210,8 +210,8 @@ const UserSidebar = () => {
                 </p>
                 {user && (
                   <Badge 
-                    variant={user.is_active ? "secondary" : "destructive"} 
-                    className={`text-xs ${user.is_active ? "bg-green-500 hover:bg-green-600 text-white" : ""}`}
+                    variant={user.is_active ? "success" : "destructive"} 
+                    className="text-xs"
                   >
                     {user.is_active ? 'Активний' : 'Неактивний'}
                   </Badge>
