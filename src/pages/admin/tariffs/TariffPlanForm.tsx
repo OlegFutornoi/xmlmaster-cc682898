@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -468,7 +469,7 @@ const TariffPlanForm = () => {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="flex flex-col md:flex-row w-full">
-                <div className="md:w-64 p-4 border-r md:h-auto">
+                <div className="md:w-64 p-4 border-r md:min-h-[800px]">
                   <TabsList className="flex flex-col h-auto w-full bg-transparent justify-start items-start space-y-1 p-0">
                     <TabsTrigger 
                       value="basic" 
@@ -488,290 +489,286 @@ const TariffPlanForm = () => {
                 </div>
                 
                 <div className="flex-1">
-                  <TabsContent value="basic" className="p-6 w-full">
-                    <div className="space-y-6">
+                  <TabsContent value="basic" className="p-6 w-full space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Назва тарифу</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Введіть назву тарифу"
+                              {...field}
+                              className="max-w-md"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Вкажіть коротку та зрозумілу назву тарифного плану
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="name"
+                        name="price"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Назва тарифу</FormLabel>
+                            <FormLabel>Ціна</FormLabel>
                             <FormControl>
-                              <Input
-                                placeholder="Введіть назву тарифу"
-                                {...field}
-                                className="max-w-md"
-                              />
+                              <div className="flex items-center max-w-xs">
+                                <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <Input
+                                  type="number"
+                                  placeholder="0.00"
+                                  {...field}
+                                  onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
                             </FormControl>
                             <FormDescription>
-                              Вкажіть коротку та зрозумілу назву тарифного плану
+                              Вкажіть 0 для безкоштовного тарифу
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="price"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Ціна</FormLabel>
+                      <FormField
+                        control={form.control}
+                        name="currency_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Валюта</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              disabled={isLoading}
+                            >
                               <FormControl>
-                                <div className="flex items-center max-w-xs">
-                                  <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    {...field}
-                                    onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                                    min="0"
-                                    step="0.01"
-                                  />
-                                </div>
+                                <SelectTrigger className="max-w-xs">
+                                  <SelectValue placeholder="Оберіть валюту" />
+                                </SelectTrigger>
                               </FormControl>
+                              <SelectContent>
+                                {currencies.map((currency) => (
+                                  <SelectItem key={currency.id} value={currency.id}>
+                                    {currency.code} - {currency.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <Separator className="my-6" />
+                    
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-medium">Термін дії тарифу</h3>
+                      
+                      <FormField
+                        control={form.control}
+                        name="is_permanent"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Постійний доступ</FormLabel>
                               <FormDescription>
-                                Вкажіть 0 для безкоштовного тарифу
+                                Якщо обрано, користувачі отримають необмежений доступ до функцій тарифу без терміну дії
                               </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="currency_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Валюта</FormLabel>
-                              <Select
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                disabled={isLoading}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="max-w-xs">
-                                    <SelectValue placeholder="Оберіть валюту" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {currencies.map((currency) => (
-                                    <SelectItem key={currency.id} value={currency.id}>
-                                      {currency.code} - {currency.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <Separator className="my-6" />
-                      
-                      <div className="space-y-6">
-                        <h3 className="text-lg font-medium">Термін дії тарифу</h3>
-                        
-                        <FormField
-                          control={form.control}
-                          name="is_permanent"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <div className="space-y-1 leading-none">
-                                <FormLabel>Постійний доступ</FormLabel>
-                                <FormDescription>
-                                  Якщо обрано, користувачі отримають необмежений доступ до функцій тарифу без терміну дії
-                                </FormDescription>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
+                            </div>
+                          </FormItem>
+                        )}
+                      />
 
-                        <FormField
-                          control={form.control}
-                          name="duration_days"
-                          render={({ field }) => (
-                            <FormItem className="max-w-xs">
-                              <FormLabel>Термін дії (днів)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                                  <Input
-                                    type="number"
-                                    placeholder="Кількість днів"
-                                    {...field}
-                                    value={field.value === null ? '' : field.value}
-                                    onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                    disabled={form.watch('is_permanent')}
-                                    min="1"
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormDescription>
-                                Кількість днів дії тарифу після активації
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="duration_days"
+                        render={({ field }) => (
+                          <FormItem className="max-w-xs">
+                            <FormLabel>Термін дії (днів)</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <Input
+                                  type="number"
+                                  placeholder="Кількість днів"
+                                  {...field}
+                                  value={field.value === null ? '' : field.value}
+                                  onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                                  disabled={form.watch('is_permanent')}
+                                  min="1"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormDescription>
+                              Кількість днів дії тарифу після активації
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="features" className="p-6 w-full">
-                    <div className="space-y-6">
-                      <div className="flex flex-col space-y-4">
-                        <h3 className="text-lg font-medium">Додати нову функцію</h3>
-                        
-                        <Card className="border-dashed">
-                          <CardContent className="pt-6">
-                            <div className="flex space-x-2">
-                              <Textarea
-                                placeholder="Опис нової функції тарифу"
-                                value={newItemDescription}
-                                onChange={(e) => setNewItemDescription(e.target.value)}
-                                className="flex-grow resize-none"
+                  <TabsContent value="features" className="p-6 w-full space-y-6">
+                    <div className="flex flex-col space-y-4">
+                      <h3 className="text-lg font-medium">Додати нову функцію</h3>
+                      
+                      <Card className="border-dashed">
+                        <CardContent className="pt-6">
+                          <div className="flex space-x-2">
+                            <Textarea
+                              placeholder="Опис нової функції тарифу"
+                              value={newItemDescription}
+                              onChange={(e) => setNewItemDescription(e.target.value)}
+                              className="flex-grow resize-none"
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={addNewItem}
+                              variant="secondary"
+                              className="shrink-0 self-stretch"
+                            >
+                              <Plus className="h-5 w-5" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <h3 className="text-lg font-medium mt-4">Додати існуючу функцію</h3>
+                      
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="space-y-4">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="search"
+                                placeholder="Пошук функцій..."
+                                className="pl-8"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                               />
-                              <Button 
-                                type="button" 
-                                onClick={addNewItem}
-                                variant="secondary"
-                                className="shrink-0 self-stretch"
-                              >
-                                <Plus className="h-5 w-5" />
-                              </Button>
                             </div>
-                          </CardContent>
-                        </Card>
-                        
-                        <h3 className="text-lg font-medium mt-4">Додати існуючу функцію</h3>
-                        
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="space-y-4">
-                              <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  type="search"
-                                  placeholder="Пошук функцій..."
-                                  className="pl-8"
-                                  value={searchTerm}
-                                  onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                            
+                            <ScrollArea className="h-60 rounded border">
+                              <div className="p-4 space-y-2">
+                                {filteredExistingItems.length === 0 ? (
+                                  <p className="text-center text-muted-foreground py-4">
+                                    Не знайдено функцій відповідно до пошуку
+                                  </p>
+                                ) : (
+                                  filteredExistingItems.map((item) => (
+                                    <div 
+                                      key={item.id} 
+                                      className={`
+                                        flex items-center justify-between p-2 rounded-md hover:bg-accent cursor-pointer
+                                        ${planItems.some(i => i.tariff_item_id === item.id) ? 'bg-accent/50' : ''}
+                                      `}
+                                      onClick={() => {
+                                        if (!planItems.some(i => i.tariff_item_id === item.id)) {
+                                          const newPlanItem = {
+                                            id: '',
+                                            tariff_item_id: item.id,
+                                            is_active: true
+                                          };
+                                          setPlanItems([...planItems, newPlanItem]);
+                                          
+                                          toast({
+                                            title: 'Функцію додано',
+                                            description: 'Функцію успішно додано до тарифу',
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <span>{item.description}</span>
+                                      {planItems.some(i => i.tariff_item_id === item.id) && (
+                                        <Badge variant="secondary">
+                                          <Check className="h-3.5 w-3.5 mr-1" />
+                                          Додано
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ))
+                                )}
                               </div>
-                              
-                              <ScrollArea className="h-60 rounded border">
-                                <div className="p-4 space-y-2">
-                                  {filteredExistingItems.length === 0 ? (
-                                    <p className="text-center text-muted-foreground py-4">
-                                      Не знайдено функцій відповідно до пошуку
-                                    </p>
-                                  ) : (
-                                    filteredExistingItems.map((item) => (
-                                      <div 
-                                        key={item.id} 
-                                        className={`
-                                          flex items-center justify-between p-2 rounded-md hover:bg-accent cursor-pointer
-                                          ${planItems.some(i => i.tariff_item_id === item.id) ? 'bg-accent/50' : ''}
-                                        `}
-                                        onClick={() => {
-                                          if (!planItems.some(i => i.tariff_item_id === item.id)) {
-                                            const newPlanItem = {
-                                              id: '',
-                                              tariff_item_id: item.id,
-                                              is_active: true
-                                            };
-                                            setPlanItems([...planItems, newPlanItem]);
-                                            
-                                            toast({
-                                              title: 'Функцію додано',
-                                              description: 'Функцію успішно додано до тарифу',
-                                            });
-                                          }
-                                        }}
+                            </ScrollArea>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <h3 className="text-lg font-medium mt-4">Функції тарифу ({planItems.length})</h3>
+                      
+                      <Card>
+                        <CardContent className="pt-6">
+                          {planItems.length > 0 ? (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Опис</TableHead>
+                                  <TableHead className="w-[100px] text-center">Активна</TableHead>
+                                  <TableHead className="w-[80px] text-right">Дії</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {planItems.map((item, index) => (
+                                  <TableRow key={index} className="group">
+                                    <TableCell>{getItemDescription(item.tariff_item_id)}</TableCell>
+                                    <TableCell className="text-center">
+                                      <Button
+                                        type="button"
+                                        variant={item.is_active ? "outline" : "ghost"}
+                                        size="sm"
+                                        onClick={() => toggleItemActive(index)}
                                       >
-                                        <span>{item.description}</span>
-                                        {planItems.some(i => i.tariff_item_id === item.id) && (
-                                          <Badge variant="secondary">
-                                            <Check className="h-3.5 w-3.5 mr-1" />
-                                            Додано
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        
-                        <h3 className="text-lg font-medium mt-4">Функції тарифу ({planItems.length})</h3>
-                        
-                        <Card>
-                          <CardContent className="pt-6">
-                            {planItems.length > 0 ? (
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Опис</TableHead>
-                                    <TableHead className="w-[100px] text-center">Активна</TableHead>
-                                    <TableHead className="w-[80px] text-right">Дії</TableHead>
+                                        {item.is_active ? 
+                                          <Check className="h-4 w-4 text-green-500" /> : 
+                                          <X className="h-4 w-4 text-red-500" />}
+                                      </Button>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeItem(index)}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {planItems.map((item, index) => (
-                                    <TableRow key={index} className="group">
-                                      <TableCell>{getItemDescription(item.tariff_item_id)}</TableCell>
-                                      <TableCell className="text-center">
-                                        <Button
-                                          type="button"
-                                          variant={item.is_active ? "outline" : "ghost"}
-                                          size="sm"
-                                          onClick={() => toggleItemActive(index)}
-                                        >
-                                          {item.is_active ? 
-                                            <Check className="h-4 w-4 text-green-500" /> : 
-                                            <X className="h-4 w-4 text-red-500" />}
-                                        </Button>
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeItem(index)}
-                                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <List className="h-12 w-12 text-muted-foreground mb-4" />
-                                <p className="text-muted-foreground">
-                                  Ще немає функцій у цьому тарифі
-                                </p>
-                                <p className="text-muted-foreground text-sm">
-                                  Додайте функції з існуючого списку або створіть нові
-                                </p>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                              <List className="h-12 w-12 text-muted-foreground mb-4" />
+                              <p className="text-muted-foreground">
+                                Ще немає функцій у цьому тарифі
+                              </p>
+                              <p className="text-muted-foreground text-sm">
+                                Додайте функції з існуючого списку або створіть нові
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
                   </TabsContent>
                 </div>

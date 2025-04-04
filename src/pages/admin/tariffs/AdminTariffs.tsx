@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,13 @@ const AdminTariffs = () => {
 
       if (subsError) {
         console.error('Помилка деактивації підписок:', subsError);
-        // Продовжуємо видалення навіть якщо є помилка з підписками
+        toast({
+          title: "Помилка",
+          description: "Не вдалося деактивувати підписки: " + subsError.message,
+          variant: "destructive",
+        });
+        setIsDeleting(false);
+        return;
       }
       
       // Видаляємо пов'язані записи з tariff_plan_items
@@ -92,7 +97,13 @@ const AdminTariffs = () => {
 
       if (itemsError) {
         console.error('Помилка видалення пов\'язаних елементів:', itemsError);
-        throw itemsError;
+        toast({
+          title: "Помилка",
+          description: "Не вдалося видалити пов'язані елементи: " + itemsError.message,
+          variant: "destructive",
+        });
+        setIsDeleting(false);
+        return;
       }
 
       // Потім видаляємо сам тарифний план
@@ -103,7 +114,13 @@ const AdminTariffs = () => {
 
       if (planError) {
         console.error('Помилка видалення тарифного плану:', planError);
-        throw planError;
+        toast({
+          title: "Помилка",
+          description: "Не вдалося видалити тарифний план: " + planError.message,
+          variant: "destructive",
+        });
+        setIsDeleting(false);
+        return;
       }
 
       toast({
@@ -111,8 +128,8 @@ const AdminTariffs = () => {
         description: "Тарифний план видалено",
       });
 
-      // Оновлюємо список тарифних планів
-      fetchTariffPlans();
+      // Оновлюємо список тарифних планів, видаляючи план локально
+      setTariffPlans(prevPlans => prevPlans.filter(plan => plan.id !== id));
     } catch (error) {
       console.error('Помилка видалення тарифного плану:', error);
       toast({

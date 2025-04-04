@@ -204,9 +204,22 @@ const UserTariffs = () => {
 
         if (updateError) {
           console.error('Error deactivating current subscription:', updateError);
-          throw updateError;
+          toast({
+            title: "Помилка",
+            description: "Не вдалося деактивувати поточну підписку: " + updateError.message,
+            variant: "destructive",
+          });
+          setIsSubscribing(false);
+          return;
         }
       }
+
+      console.log('Inserting new subscription with data:', {
+        user_id: user.id,
+        tariff_plan_id: planId,
+        end_date: endDate,
+        is_active: true
+      });
 
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
@@ -215,11 +228,18 @@ const UserTariffs = () => {
           tariff_plan_id: planId,
           end_date: endDate,
           is_active: true
-        });
+        })
+        .select();
 
       if (error) {
         console.error('Error creating subscription:', error);
-        throw error;
+        toast({
+          title: "Помилка",
+          description: "Не вдалося активувати тариф: " + error.message,
+          variant: "destructive",
+        });
+        setIsSubscribing(false);
+        return;
       }
 
       console.log('Subscription created successfully:', data);
