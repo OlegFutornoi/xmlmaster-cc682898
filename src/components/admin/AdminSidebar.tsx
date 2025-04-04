@@ -99,7 +99,7 @@ const AdminSidebar = () => {
           }`}
         >
           <LogOut className="h-5 w-5" />
-          {!isCollapsed && <span className="ml-2">Logout</span>}
+          {!isCollapsed && <span className="ml-2">Вихід</span>}
         </Button>
       </div>
     </div>

@@ -4,49 +4,108 @@ import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Plus, Clock, CheckSquare } from 'lucide-react';
+import { DollarSign, Plus, Clock, CheckSquare, Trash2 } from 'lucide-react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AdminTariffs = () => {
   const [tariffPlans, setTariffPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [planToDelete, setPlanToDelete] = useState(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const fetchTariffPlans = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('tariff_plans')
+        .select(`
+          id, 
+          name, 
+          price, 
+          created_at,
+          duration_days,
+          is_permanent,
+          currencies (
+            code, 
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Помилка завантаження тарифних планів:', error);
+        toast({
+          title: "Помилка",
+          description: "Не вдалося завантажити тарифні плани",
+          variant: "destructive",
+        });
+      } else {
+        setTariffPlans(data || []);
+      }
+    } catch (error) {
+      console.error('Помилка:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTariffPlans = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('tariff_plans')
-          .select(`
-            id, 
-            name, 
-            price, 
-            created_at,
-            duration_days,
-            is_permanent,
-            currencies (
-              code, 
-              name
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching tariff plans:', error);
-        } else {
-          setTariffPlans(data || []);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchTariffPlans();
   }, []);
+
+  const handleDeletePlan = async (id) => {
+    try {
+      // Спочатку видаляємо пов'язані записи з tariff_plan_items
+      const { error: itemsError } = await supabase
+        .from('tariff_plan_items')
+        .delete()
+        .eq('tariff_plan_id', id);
+
+      if (itemsError) {
+        throw itemsError;
+      }
+
+      // Потім видаляємо сам тарифний план
+      const { error: planError } = await supabase
+        .from('tariff_plans')
+        .delete()
+        .eq('id', id);
+
+      if (planError) {
+        throw planError;
+      }
+
+      toast({
+        title: "Успішно",
+        description: "Тарифний план видалено",
+        variant: "success",
+      });
+
+      // Оновлюємо список тарифних планів
+      fetchTariffPlans();
+    } catch (error) {
+      console.error('Помилка видалення тарифного плану:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося видалити тарифний план",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="flex h-screen">
@@ -106,6 +165,34 @@ const AdminTariffs = () => {
                         >
                           Деталі
                         </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Ця дія не може бути скасована. Буде видалено тарифний план "{plan.name}" та всі пов'язані з ним дані.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeletePlan(plan.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Видалити
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </CardContent>
                   </Card>

@@ -37,6 +37,7 @@ const UserTariffs = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlanDetails, setSelectedPlanDetails] = useState(null);
   const [tariffItems, setTariffItems] = useState([]);
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   // Fetch active subscription
   useEffect(() => {
@@ -176,6 +177,7 @@ const UserTariffs = () => {
       return;
     }
 
+    setIsSubscribing(true);
     try {
       const selectedPlan = tariffPlans.find(plan => plan.id === planId);
       
@@ -211,14 +213,12 @@ const UserTariffs = () => {
       // Then, create a new subscription
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
-        .insert([
-          { 
-            user_id: user.id, 
-            tariff_plan_id: planId,
-            end_date: endDate
-          }
-        ])
-        .select();
+        .insert({
+          user_id: user.id,
+          tariff_plan_id: planId,
+          end_date: endDate,
+          is_active: true
+        });
 
       if (error) {
         throw error;
@@ -227,11 +227,9 @@ const UserTariffs = () => {
       toast({
         title: "Успішно",
         description: "Тариф активовано",
+        variant: "success"
       });
 
-      // Redirect to dashboard
-      navigate('/user/dashboard');
-      
       // Refresh the subscription
       const { data: subscription, error: fetchError } = await supabase
         .from('user_tariff_subscriptions')
@@ -249,14 +247,18 @@ const UserTariffs = () => {
             currencies (name, code)
           )
         `)
-        .eq('id', data[0].id)
-        .single();
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
 
       if (fetchError) {
         console.error('Error fetching new subscription:', fetchError);
       } else {
         setActiveSubscription(subscription);
       }
+      
+      // Redirect to dashboard
+      navigate('/user/dashboard');
     } catch (error) {
       console.error('Error subscribing to plan:', error);
       toast({
@@ -264,6 +266,8 @@ const UserTariffs = () => {
         description: error.message || "Не вдалося активувати тариф",
         variant: "destructive",
       });
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -409,11 +413,14 @@ const UserTariffs = () => {
                 <Button 
                   onClick={() => subscribeToPlan(plan.id)} 
                   className="w-full sm:w-auto"
-                  disabled={activeSubscription?.tariff_plans.id === plan.id}
+                  disabled={activeSubscription?.tariff_plans.id === plan.id || isSubscribing}
+                  variant={activeSubscription?.tariff_plans.id === plan.id ? "outline" : "default"}
                 >
-                  {activeSubscription?.tariff_plans.id === plan.id 
-                    ? "Активний" 
-                    : "Вибрати"}
+                  {isSubscribing 
+                    ? "Обробка..." 
+                    : activeSubscription?.tariff_plans.id === plan.id 
+                      ? "Активний" 
+                      : "Вибрати"}
                 </Button>
               </CardFooter>
             </Card>
