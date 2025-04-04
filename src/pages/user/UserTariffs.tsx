@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -309,7 +310,7 @@ const UserTariffs = () => {
           <p>Завантаження тарифів...</p>
         ) : (
           tariffPlans.map((plan) => (
-            <Card key={plan.id} className="flex flex-col h-full">
+            <Card key={plan.id} className="flex flex-col h-full transition-all duration-200 hover:shadow-md">
               <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
                 <CardDescription>
@@ -341,12 +342,13 @@ const UserTariffs = () => {
                       : `Цей тариф дійсний протягом ${plan.duration_days} днів`}
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col sm:flex-row gap-2">
+              <CardFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button 
                       variant="outline"
                       onClick={() => openPlanDetails(plan.id)}
+                      className="w-full sm:w-auto"
                     >
                       Деталі
                       <ExternalLink className="ml-2 h-4 w-4" />

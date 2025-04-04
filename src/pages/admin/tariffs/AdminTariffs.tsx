@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,8 @@ const AdminTariffs = () => {
 
   const handleDeletePlan = async (id) => {
     try {
+      console.log('Видалення тарифного плану з ID:', id);
+      
       // Спочатку видаляємо пов'язані записи з tariff_plan_items
       const { error: itemsError } = await supabase
         .from('tariff_plan_items')
@@ -75,7 +78,19 @@ const AdminTariffs = () => {
         .eq('tariff_plan_id', id);
 
       if (itemsError) {
+        console.error('Помилка видалення пов\'язаних елементів:', itemsError);
         throw itemsError;
+      }
+
+      // Деактивуємо пов'язані підписки
+      const { error: subsError } = await supabase
+        .from('user_tariff_subscriptions')
+        .update({ is_active: false })
+        .eq('tariff_plan_id', id);
+
+      if (subsError) {
+        console.error('Помилка деактивації підписок:', subsError);
+        // Продовжуємо видалення навіть якщо є помилка з підписками
       }
 
       // Потім видаляємо сам тарифний план
@@ -85,6 +100,7 @@ const AdminTariffs = () => {
         .eq('id', id);
 
       if (planError) {
+        console.error('Помилка видалення тарифного плану:', planError);
         throw planError;
       }
 
@@ -99,7 +115,7 @@ const AdminTariffs = () => {
       console.error('Помилка видалення тарифного плану:', error);
       toast({
         title: "Помилка",
-        description: "Не вдалося видалити тарифний план",
+        description: "Не вдалося видалити тарифний план: " + error.message,
         variant: "destructive",
       });
     }
