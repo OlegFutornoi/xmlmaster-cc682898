@@ -445,7 +445,7 @@ const TariffPlanForm = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
+    <div className="container mx-auto px-4 py-6 max-w-full">
       <Button
         variant="ghost"
         onClick={() => navigate('/admin/tariffs')}
@@ -469,7 +469,7 @@ const TariffPlanForm = () => {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="flex flex-col md:flex-row w-full">
-                <div className="md:w-64 p-4 border-r md:min-h-[800px]">
+                <div className="md:w-64 p-4 border-r md:min-h-[600px]">
                   <TabsList className="flex flex-col h-auto w-full bg-transparent justify-start items-start space-y-1 p-0">
                     <TabsTrigger 
                       value="basic" 
@@ -488,8 +488,8 @@ const TariffPlanForm = () => {
                   </TabsList>
                 </div>
                 
-                <div className="flex-1">
-                  <TabsContent value="basic" className="p-6 w-full space-y-6">
+                <div className="flex-1 w-full">
+                  <TabsContent value="basic" className="p-6 w-full space-y-6 mt-0">
                     <FormField
                       control={form.control}
                       name="name"
@@ -625,7 +625,7 @@ const TariffPlanForm = () => {
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="features" className="p-6 w-full space-y-6">
+                  <TabsContent value="features" className="p-6 w-full space-y-6 mt-0">
                     <div className="flex flex-col space-y-4">
                       <h3 className="text-lg font-medium">Додати нову функцію</h3>
                       

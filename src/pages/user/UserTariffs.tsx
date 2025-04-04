@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -214,21 +215,18 @@ const UserTariffs = () => {
         }
       }
 
-      console.log('Inserting new subscription with data:', {
+      const subscriptionData = {
         user_id: user.id,
         tariff_plan_id: planId,
         end_date: endDate,
         is_active: true
-      });
+      };
+
+      console.log('Inserting new subscription with data:', subscriptionData);
 
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
-        .insert({
-          user_id: user.id,
-          tariff_plan_id: planId,
-          end_date: endDate,
-          is_active: true
-        })
+        .insert(subscriptionData)
         .select();
 
       if (error) {
@@ -249,6 +247,7 @@ const UserTariffs = () => {
         description: "Тариф активовано",
       });
 
+      // Отримуємо активну підписку після створення нової
       const { data: subscription, error: fetchError } = await supabase
         .from('user_tariff_subscriptions')
         .select(`
