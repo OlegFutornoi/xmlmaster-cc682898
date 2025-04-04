@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -92,7 +91,6 @@ const AdminTariffs = () => {
       toast({
         title: "Успішно",
         description: "Тарифний план видалено",
-        variant: "success",
       });
 
       // Оновлюємо список тарифних планів

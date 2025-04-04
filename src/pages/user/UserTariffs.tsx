@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -39,7 +38,6 @@ const UserTariffs = () => {
   const [tariffItems, setTariffItems] = useState([]);
   const [isSubscribing, setIsSubscribing] = useState(false);
 
-  // Fetch active subscription
   useEffect(() => {
     const fetchActiveSubscription = async () => {
       if (user) {
@@ -83,7 +81,6 @@ const UserTariffs = () => {
     fetchActiveSubscription();
   }, [user, toast]);
 
-  // Fetch available tariff plans
   useEffect(() => {
     const fetchTariffPlans = async () => {
       setIsLoading(true);
@@ -123,7 +120,6 @@ const UserTariffs = () => {
     fetchTariffPlans();
   }, [toast]);
 
-  // Fetch tariff items for a specific plan
   const fetchTariffItems = async (planId) => {
     try {
       const { data, error } = await supabase
@@ -149,7 +145,6 @@ const UserTariffs = () => {
     }
   };
 
-  // Open plan details sheet
   const openPlanDetails = async (planId) => {
     try {
       const items = await fetchTariffItems(planId);
@@ -190,7 +185,6 @@ const UserTariffs = () => {
         return;
       }
 
-      // Calculate end date based on duration_days or set to null if permanent
       let endDate = null;
       if (!selectedPlan.is_permanent) {
         const startDate = new Date();
@@ -198,7 +192,6 @@ const UserTariffs = () => {
         endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
       }
 
-      // First, deactivate any existing subscriptions
       if (activeSubscription) {
         const { error: updateError } = await supabase
           .from('user_tariff_subscriptions')
@@ -210,7 +203,6 @@ const UserTariffs = () => {
         }
       }
 
-      // Then, create a new subscription
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
         .insert({
@@ -227,10 +219,8 @@ const UserTariffs = () => {
       toast({
         title: "Успішно",
         description: "Тариф активовано",
-        variant: "success"
       });
 
-      // Refresh the subscription
       const { data: subscription, error: fetchError } = await supabase
         .from('user_tariff_subscriptions')
         .select(`
@@ -256,8 +246,7 @@ const UserTariffs = () => {
       } else {
         setActiveSubscription(subscription);
       }
-      
-      // Redirect to dashboard
+
       navigate('/user/dashboard');
     } catch (error) {
       console.error('Error subscribing to plan:', error);

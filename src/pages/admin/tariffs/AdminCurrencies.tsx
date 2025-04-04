@@ -33,7 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash, Check, X } from 'lucide-react';
+import { Plus, Edit, Trash, Check, X, DollarSign } from 'lucide-react';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +52,7 @@ const AdminCurrencies = () => {
   const [newCurrency, setNewCurrency] = useState({
     code: '',
     name: '',
-    exchange_rate: 0,
+    exchange_rate: '0',
     is_active: true
   });
   const [editCurrency, setEditCurrency] = useState(null);
@@ -127,7 +127,7 @@ const AdminCurrencies = () => {
         setNewCurrency({
           code: '',
           name: '',
-          exchange_rate: 0,
+          exchange_rate: '0',
           is_active: true
         });
         fetchCurrencies();
@@ -153,7 +153,7 @@ const AdminCurrencies = () => {
         .update({
           code: editCurrency.code.toUpperCase(),
           name: editCurrency.name,
-          exchange_rate: parseFloat(editCurrency.exchange_rate),
+          exchange_rate: parseFloat(editCurrency.exchange_rate.toString()),
           is_active: editCurrency.is_active
         })
         .eq('id', editCurrency.id);
