@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -43,6 +42,7 @@ const UserTariffs = () => {
     const fetchActiveSubscription = async () => {
       if (user) {
         try {
+          console.log('Fetching active subscription for user:', user.id);
           const { data: subscription, error } = await supabase
             .from('user_tariff_subscriptions')
             .select(`
@@ -71,6 +71,7 @@ const UserTariffs = () => {
               variant: "destructive",
             });
           } else {
+            console.log('Active subscription:', subscription);
             setActiveSubscription(subscription);
           }
         } catch (error) {
@@ -175,6 +176,7 @@ const UserTariffs = () => {
 
     setIsSubscribing(true);
     try {
+      console.log('Subscribing to plan:', planId, 'for user:', user.id);
       const selectedPlan = tariffPlans.find(plan => plan.id === planId);
       
       if (!selectedPlan) {
@@ -194,12 +196,14 @@ const UserTariffs = () => {
       }
 
       if (activeSubscription) {
+        console.log('Deactivating current subscription:', activeSubscription.id);
         const { error: updateError } = await supabase
           .from('user_tariff_subscriptions')
           .update({ is_active: false })
           .eq('id', activeSubscription.id);
 
         if (updateError) {
+          console.error('Error deactivating current subscription:', updateError);
           throw updateError;
         }
       }
@@ -214,9 +218,12 @@ const UserTariffs = () => {
         });
 
       if (error) {
+        console.error('Error creating subscription:', error);
         throw error;
       }
 
+      console.log('Subscription created successfully:', data);
+      
       toast({
         title: "Успішно",
         description: "Тариф активовано",

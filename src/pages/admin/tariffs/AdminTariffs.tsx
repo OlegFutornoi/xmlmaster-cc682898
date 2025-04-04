@@ -24,6 +24,7 @@ const AdminTariffs = () => {
   const [tariffPlans, setTariffPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [planToDelete, setPlanToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -68,21 +69,11 @@ const AdminTariffs = () => {
   }, []);
 
   const handleDeletePlan = async (id) => {
+    setIsDeleting(true);
     try {
       console.log('Видалення тарифного плану з ID:', id);
       
-      // Спочатку видаляємо пов'язані записи з tariff_plan_items
-      const { error: itemsError } = await supabase
-        .from('tariff_plan_items')
-        .delete()
-        .eq('tariff_plan_id', id);
-
-      if (itemsError) {
-        console.error('Помилка видалення пов\'язаних елементів:', itemsError);
-        throw itemsError;
-      }
-
-      // Деактивуємо пов'язані підписки
+      // Спочатку деактивуємо пов'язані підписки
       const { error: subsError } = await supabase
         .from('user_tariff_subscriptions')
         .update({ is_active: false })
@@ -91,6 +82,17 @@ const AdminTariffs = () => {
       if (subsError) {
         console.error('Помилка деактивації підписок:', subsError);
         // Продовжуємо видалення навіть якщо є помилка з підписками
+      }
+      
+      // Видаляємо пов'язані записи з tariff_plan_items
+      const { error: itemsError } = await supabase
+        .from('tariff_plan_items')
+        .delete()
+        .eq('tariff_plan_id', id);
+
+      if (itemsError) {
+        console.error('Помилка видалення пов\'язаних елементів:', itemsError);
+        throw itemsError;
       }
 
       // Потім видаляємо сам тарифний план
@@ -118,6 +120,8 @@ const AdminTariffs = () => {
         description: "Не вдалося видалити тарифний план: " + error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -185,6 +189,7 @@ const AdminTariffs = () => {
                             <Button
                               variant="destructive"
                               size="sm"
+                              disabled={isDeleting}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -201,8 +206,9 @@ const AdminTariffs = () => {
                               <AlertDialogAction 
                                 onClick={() => handleDeletePlan(plan.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                disabled={isDeleting}
                               >
-                                Видалити
+                                {isDeleting ? "Видалення..." : "Видалити"}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
