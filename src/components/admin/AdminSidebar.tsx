@@ -47,7 +47,7 @@ const AdminSidebar = () => {
     >
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
-          <div className="font-bold text-sidebar-primary text-lg">Кабінет Адміна</div>
+          <div className="font-bold text-sidebar-primary text-lg">XmlMaster</div>
         )}
         <Button
           variant="ghost"
