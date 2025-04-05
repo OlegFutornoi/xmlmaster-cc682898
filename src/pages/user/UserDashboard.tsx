@@ -1,5 +1,5 @@
 
-import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import UserSidebar from '@/components/user/UserSidebar';
 import { useAuth } from '@/context/AuthContext';
 import UserHome from './UserHome';
@@ -47,7 +47,7 @@ const UserDashboard = () => {
     };
 
     fetchSubscription();
-  }, [user, location.pathname]); // Використовуємо location.pathname для відстеження змін URL
+  }, [user, location.pathname]);
 
   if (isLoading) {
     return <div>Завантаження...</div>;
