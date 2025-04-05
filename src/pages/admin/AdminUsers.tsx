@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Trash2, UserCheck, UserX } from 'lucide-react';
 
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import UserInfoDrawer from '@/components/admin/UserInfoDrawer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,6 +30,9 @@ const AdminUsers = () => {
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState('');
+  const [isUserInfoOpen, setIsUserInfoOpen] = useState(false);
   const rowsPerPage = 10;
   const { toast } = useToast();
 
@@ -78,6 +82,12 @@ const AdminUsers = () => {
   const handleToggleAccessClick = (user: User) => {
     setUserToToggleAccess(user);
     setIsAccessDialogOpen(true);
+  };
+
+  const handleUserNameClick = (userId: string, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
+    setIsUserInfoOpen(true);
   };
 
   const confirmDelete = async () => {
@@ -191,7 +201,14 @@ const AdminUsers = () => {
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell>{user.username}</TableCell>
+                        <TableCell>
+                          <button 
+                            onClick={() => handleUserNameClick(user.id, user.username)}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {user.username}
+                          </button>
+                        </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{formatDate(user.created_at)}</TableCell>
                         <TableCell>{formatDate(user.last_login)}</TableCell>
@@ -324,6 +341,14 @@ const AdminUsers = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* User Info Drawer */}
+        <UserInfoDrawer 
+          userId={selectedUserId}
+          userName={selectedUserName}
+          isOpen={isUserInfoOpen}
+          onClose={() => setIsUserInfoOpen(false)}
+        />
       </div>
     </div>
   );
