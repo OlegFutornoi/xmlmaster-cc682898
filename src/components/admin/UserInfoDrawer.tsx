@@ -360,7 +360,7 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+      <SheetContent className="w-[90vw] max-w-[800px] sm:max-w-[800px] overflow-y-auto">
         <SheetHeader className="mb-4">
           <SheetTitle>Інформація про користувача</SheetTitle>
           <SheetDescription>
@@ -370,9 +370,9 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
 
         <div className="space-y-6">
           <div>
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-2">
               <h3 className="text-lg font-medium">Тарифні плани</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Dialog open={addPlanDialogOpen} onOpenChange={(open) => {
                   setAddPlanDialogOpen(open);
                   if (open) fetchAvailablePlans();
