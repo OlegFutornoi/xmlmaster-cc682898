@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .from('tariff_plans')
         .select('*')
         .eq('price', 0)
-        .order('duration_days', { ascending: true, nullsLast: true });
+        .order('duration_days', { ascending: true, nullsFirst: false });
 
       if (freePlansError) {
         console.error('Error fetching free plans:', freePlansError);
