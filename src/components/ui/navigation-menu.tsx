@@ -1,9 +1,7 @@
-
 import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
 import { ChevronDown } from "lucide-react"
-import { Link as RouterLink } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
 
@@ -81,19 +79,6 @@ NavigationMenuContent.displayName = NavigationMenuPrimitive.Content.displayName
 
 const NavigationMenuLink = NavigationMenuPrimitive.Link
 
-// Новий компонент для використання з React Router
-const NavigationMenuRouterLink = React.forwardRef<
-  HTMLAnchorElement,
-  React.ComponentPropsWithoutRef<typeof RouterLink>
->(({ className, ...props }, ref) => (
-  <RouterLink
-    ref={ref}
-    className={cn(navigationMenuTriggerStyle(), className)}
-    {...props}
-  />
-))
-NavigationMenuRouterLink.displayName = "NavigationMenuRouterLink"
-
 const NavigationMenuViewport = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Viewport>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Viewport>
@@ -140,5 +125,4 @@ export {
   NavigationMenuLink,
   NavigationMenuIndicator,
   NavigationMenuViewport,
-  NavigationMenuRouterLink,
 }
