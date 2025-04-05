@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { UserCheck, UserX, Calendar, Trash2 } from 'lucide-react';
+import { UserCheck, UserX, Calendar, Trash2, Plus } from 'lucide-react';
 
 import {
   Sheet,
@@ -30,7 +30,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface UserSubscription {
   id: string;
@@ -47,6 +56,18 @@ interface UserSubscription {
       code: string;
       name: string;
     }
+  }
+}
+
+interface TariffPlan {
+  id: string;
+  name: string;
+  price: number;
+  is_permanent: boolean;
+  duration_days: number | null;
+  currency: {
+    code: string;
+    name: string;
   }
 }
 
@@ -69,6 +90,10 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
   const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
+  const [addPlanDialogOpen, setAddPlanDialogOpen] = useState(false);
+  const [availablePlans, setAvailablePlans] = useState<TariffPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [loadingPlans, setLoadingPlans] = useState(false);
   const { toast } = useToast();
   const itemsPerPage = 3;
 
@@ -120,6 +145,43 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailablePlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const { data: plansData, error } = await supabase
+        .from('tariff_plans')
+        .select(`
+          id,
+          name,
+          price,
+          is_permanent,
+          duration_days,
+          currency:currencies(code, name)
+        `)
+        .order('price', { ascending: true });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setAvailablePlans(plansData as TariffPlan[]);
+      
+      // Встановлюємо перший план як вибраний за замовчуванням
+      if (plansData && plansData.length > 0) {
+        setSelectedPlanId(plansData[0].id);
+      }
+    } catch (error) {
+      console.error('Помилка завантаження доступних тарифних планів:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося отримати інформацію про доступні тарифні плани',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingPlans(false);
     }
   };
 
@@ -204,6 +266,93 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
     }
   };
 
+  const handleAddPlan = async () => {
+    if (!userId || !selectedPlanId) return;
+    
+    try {
+      // Знаходимо вибраний план
+      const selectedPlan = availablePlans.find(plan => plan.id === selectedPlanId);
+      
+      if (!selectedPlan) {
+        throw new Error('Вибраний тарифний план не знайдено');
+      }
+      
+      const startDate = new Date();
+      let endDate = null;
+      
+      // Розраховуємо дату закінчення
+      if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
+        endDate = new Date();
+        endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+      }
+      
+      // Додаємо підписку для користувача
+      const { error } = await supabase
+        .from('user_tariff_subscriptions')
+        .insert([
+          {
+            user_id: userId,
+            tariff_plan_id: selectedPlanId,
+            start_date: startDate.toISOString(),
+            end_date: endDate ? endDate.toISOString() : null,
+            is_active: true // Відразу активуємо
+          }
+        ]);
+
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Успішно',
+        description: 'Тарифний план додано та активовано',
+      });
+      
+      // Оновлюємо список підписок
+      fetchUserSubscriptions();
+    } catch (error) {
+      console.error('Помилка додавання тарифного плану:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося додати тарифний план',
+        variant: 'destructive',
+      });
+    } finally {
+      setAddPlanDialogOpen(false);
+    }
+  };
+  
+  const handleDeleteAllInactive = async () => {
+    if (!userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_tariff_subscriptions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('is_active', false);
+
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Успішно',
+        description: 'Всі неактивні тарифні плани видалено',
+      });
+      
+      // Оновлюємо список підписок
+      fetchUserSubscriptions();
+    } catch (error) {
+      console.error('Помилка видалення неактивних підписок:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося видалити неактивні тарифні плани',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Безстроково';
     return format(new Date(dateString), 'd MMMM yyyy', { locale: uk });
@@ -221,7 +370,99 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
 
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-medium mb-3">Тарифні плани</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-medium">Тарифні плани</h3>
+              <div className="flex gap-2">
+                <Dialog open={addPlanDialogOpen} onOpenChange={(open) => {
+                  setAddPlanDialogOpen(open);
+                  if (open) fetchAvailablePlans();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Додати план
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Додати тарифний план</DialogTitle>
+                      <DialogDescription>
+                        Виберіть тарифний план для користувача {userName}
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    {loadingPlans ? (
+                      <div className="flex justify-center py-4">
+                        <p>Завантаження тарифних планів...</p>
+                      </div>
+                    ) : (
+                      <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="plan">Тарифний план</Label>
+                          <Select 
+                            value={selectedPlanId} 
+                            onValueChange={(value) => setSelectedPlanId(value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Виберіть тарифний план" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availablePlans.map((plan) => (
+                                <SelectItem key={plan.id} value={plan.id}>
+                                  {plan.name} - {plan.price} {plan.currency.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {selectedPlanId && (
+                          <div className="text-sm">
+                            <p className="font-semibold">Деталі плану:</p>
+                            {(() => {
+                              const plan = availablePlans.find(p => p.id === selectedPlanId);
+                              return plan ? (
+                                <div className="space-y-1 mt-2">
+                                  <p>Ціна: {plan.price} {plan.currency.code}</p>
+                                  <p>Тривалість: {plan.is_permanent ? 
+                                    'Безстроковий' : 
+                                    `${plan.duration_days} днів`}
+                                  </p>
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <DialogFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setAddPlanDialogOpen(false)}
+                      >
+                        Скасувати
+                      </Button>
+                      <Button 
+                        onClick={handleAddPlan} 
+                        disabled={!selectedPlanId || loadingPlans}
+                      >
+                        Додати
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleDeleteAllInactive}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Видалити неактивні
+                </Button>
+              </div>
+            </div>
             
             {loading ? (
               <div className="flex justify-center p-6">

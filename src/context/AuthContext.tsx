@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -77,6 +78,56 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       console.error('Error checking user status:', error);
       return false;
+    }
+  };
+
+  // Функція для пошуку та призначення демо-плану
+  const assignDemoTariffPlan = async (userId: string) => {
+    try {
+      // Спочатку шукаємо тарифні плани з ціною 0
+      const { data: freePlans, error: freePlansError } = await supabase
+        .from('tariff_plans')
+        .select('*')
+        .eq('price', 0)
+        .order('duration_days', { ascending: true, nullsLast: true });
+
+      if (freePlansError) {
+        console.error('Error fetching free plans:', freePlansError);
+        return;
+      }
+
+      // Якщо є безкоштовні плани, вибираємо перший (з найменшим терміном дії)
+      if (freePlans && freePlans.length > 0) {
+        const demoPlan = freePlans[0];
+        
+        // Розраховуємо дату закінчення демо-доступу
+        const startDate = new Date();
+        let endDate = null;
+        
+        if (!demoPlan.is_permanent && demoPlan.duration_days) {
+          endDate = new Date();
+          endDate.setDate(endDate.getDate() + demoPlan.duration_days);
+        }
+        
+        // Додаємо підписку для користувача
+        await supabase
+          .from('user_tariff_subscriptions')
+          .insert([
+            {
+              user_id: userId,
+              tariff_plan_id: demoPlan.id,
+              start_date: startDate.toISOString(),
+              end_date: endDate ? endDate.toISOString() : null,
+              is_active: true
+            }
+          ]);
+          
+        console.log('Demo plan assigned successfully');
+      } else {
+        console.log('No free plans found to assign as demo');
+      }
+    } catch (error) {
+      console.error('Error assigning demo plan:', error);
     }
   };
 
@@ -180,7 +231,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Insert new user
+      // Insert new user (immediately active)
       const { data, error } = await supabase
         .from('users')
         .insert([
@@ -188,7 +239,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             username, 
             email, 
             password_hash: passwordHash,
-            is_active: false // Users start as inactive until approved by admin
+            is_active: true // Користувачі тепер одразу активні
           }
         ])
         .select();
@@ -196,6 +247,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (error) {
         console.error('Error registering user:', error);
         throw new Error('Помилка при створенні облікового запису');
+      }
+
+      if (data && data.length > 0) {
+        // Призначаємо демо-план для нового користувача
+        await assignDemoTariffPlan(data[0].id);
       }
 
       return true;

@@ -1,5 +1,5 @@
 
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import UserSidebar from '@/components/user/UserSidebar';
 import { useAuth } from '@/context/AuthContext';
 import UserHome from './UserHome';
@@ -14,20 +14,8 @@ const UserDashboard = () => {
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Додаємо залежність від пошукового параметра, щоб компонент перемонтувався після зміни URL
-  const [location, setLocation] = useState(window.location.pathname);
-
-  // Оновлюємо стан розташування при зміні URL
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setLocation(window.location.pathname);
-    };
-
-    window.addEventListener('popstate', handleLocationChange);
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, []);
+  // Використовуємо хук useLocation для відстеження змін URL
+  const location = useLocation();
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -59,7 +47,7 @@ const UserDashboard = () => {
     };
 
     fetchSubscription();
-  }, [user, location]); // Додаємо location в залежності
+  }, [user, location.pathname]); // Використовуємо location.pathname для відстеження змін URL
 
   if (isLoading) {
     return <div>Завантаження...</div>;
