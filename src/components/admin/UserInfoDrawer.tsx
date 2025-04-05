@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { UserCheck, UserX, Calendar } from 'lucide-react';
+import { UserCheck, UserX, Calendar, Trash2 } from 'lucide-react';
 
 import {
   Sheet,
@@ -23,6 +23,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface UserSubscription {
   id: string;
@@ -59,6 +67,8 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
+  const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const itemsPerPage = 3;
 
@@ -147,6 +157,53 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
     }
   };
 
+  const handleDeleteClick = (subscriptionId: string) => {
+    setSubscriptionToDelete(subscriptionId);
+    setConfirmDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSubscription = async () => {
+    if (!subscriptionToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_tariff_subscriptions')
+        .delete()
+        .eq('id', subscriptionToDelete);
+
+      if (error) {
+        throw error;
+      }
+
+      // Оновлюємо стан локально і оновлюємо список підписок
+      setSubscriptions(prevSubscriptions => 
+        prevSubscriptions.filter(sub => sub.id !== subscriptionToDelete)
+      );
+      
+      toast({
+        title: 'Успішно',
+        description: 'Тарифний план видалено',
+      });
+      
+      // Перезавантажуємо дані, якщо список став порожній або для оновлення пагінації
+      if (subscriptions.length === 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        fetchUserSubscriptions();
+      }
+    } catch (error) {
+      console.error('Помилка видалення підписки:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося видалити тарифний план',
+        variant: 'destructive',
+      });
+    } finally {
+      setConfirmDeleteDialogOpen(false);
+      setSubscriptionToDelete(null);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Безстроково';
     return format(new Date(dateString), 'd MMMM yyyy', { locale: uk });
@@ -173,7 +230,7 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
             ) : subscriptions.length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p>Користувач не має активних тарифних планів</p>
+                  <p>Користувач не має тарифних планів</p>
                 </CardContent>
               </Card>
             ) : (
@@ -209,25 +266,37 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
                         <div className="mt-3 text-base">
                           Ціна: {subscription.tariff_plan.price} {subscription.tariff_plan.currency.code}
                         </div>
-                        <div className="mt-4">
+                        <div className="mt-4 flex gap-2">
                           <Button
                             variant={subscription.is_active ? "warning" : "success"}
                             size="sm"
                             onClick={() => handleToggleSubscription(subscription.id, subscription.is_active)}
-                            className="w-full"
+                            className="flex-1"
                           >
                             {subscription.is_active ? (
                               <>
                                 <UserX className="h-4 w-4 mr-1" />
-                                Деактивувати план
+                                Деактивувати
                               </>
                             ) : (
                               <>
                                 <UserCheck className="h-4 w-4 mr-1" />
-                                Активувати план
+                                Активувати
                               </>
                             )}
                           </Button>
+                          
+                          {!subscription.is_active && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(subscription.id)}
+                              className="flex-1"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Видалити
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -279,6 +348,26 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
           </div>
         </div>
       </SheetContent>
+      
+      {/* Діалог підтвердження видалення */}
+      <Dialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити тарифний план?</DialogTitle>
+            <DialogDescription>
+              Ви впевнені, що хочете видалити цей тарифний план? Цю дію неможливо відмінити.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteDialogOpen(false)}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteSubscription}>
+              Видалити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 };

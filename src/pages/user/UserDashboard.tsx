@@ -13,6 +13,21 @@ const UserDashboard = () => {
   const { user } = useAuth();
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Додаємо залежність від пошукового параметра, щоб компонент перемонтувався після зміни URL
+  const [location, setLocation] = useState(window.location.pathname);
+
+  // Оновлюємо стан розташування при зміні URL
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setLocation(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -44,7 +59,7 @@ const UserDashboard = () => {
     };
 
     fetchSubscription();
-  }, [user]);
+  }, [user, location]); // Додаємо location в залежності
 
   if (isLoading) {
     return <div>Завантаження...</div>;

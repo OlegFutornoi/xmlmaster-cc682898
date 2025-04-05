@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -90,7 +89,7 @@ const UserSidebar = () => {
     const interval = setInterval(fetchSubscription, 60000); // Check every minute
     
     return () => clearInterval(interval);
-  }, [user, location.pathname]);
+  }, [user, location.pathname]); // Додано явну залежність від location.pathname
 
   const handleLogout = () => {
     logout();
