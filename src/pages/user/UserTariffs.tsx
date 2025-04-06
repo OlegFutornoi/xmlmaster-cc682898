@@ -175,9 +175,12 @@ const UserTariffs = () => {
       }
 
       return data?.map(item => ({
-        limitation_type: item.limitation_types,
+        limitation_type: {
+          name: item.limitation_types.name,
+          description: item.limitation_types.description
+        },
         value: item.value
-      })) || [];
+      })) as PlanLimitation[] || [];
     } catch (error) {
       console.error('Error:', error);
       return [];

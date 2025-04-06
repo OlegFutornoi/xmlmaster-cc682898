@@ -268,7 +268,12 @@ const TariffPlanForm = () => {
                 id: item.id,
                 limitation_type_id: item.limitation_type_id,
                 value: item.value,
-                limitation_type: item.limitation_types as unknown as LimitationType
+                limitation_type: {
+                  id: item.limitation_types.id,
+                  name: item.limitation_types.name, 
+                  description: item.limitation_types.description,
+                  is_numeric: item.limitation_types.is_numeric
+                }
               })) || [];
               
               setPlanLimitations(typedLimitations);

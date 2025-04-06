@@ -1,3 +1,4 @@
+
 // Компонент для додавання тарифного плану користувачу
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,10 +159,14 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
       if (error) {
         console.error('Error fetching plan limitations:', error);
       } else {
+        // Правильно перетворюємо дані, щоб limitation_type був об'єктом, а не масивом
         const transformedData = data?.map(item => ({
-          limitation_type: item.limitation_types,
+          limitation_type: {
+            name: item.limitation_types.name,
+            description: item.limitation_types.description
+          },
           value: item.value
-        })) || [];
+        })) as PlanLimitation[] || [];
         
         setPlanLimitations(transformedData);
       }
@@ -339,3 +344,4 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
     </Dialog>
   );
 };
+
