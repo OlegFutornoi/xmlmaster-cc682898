@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -51,12 +52,19 @@ interface Limitation {
   value: number;
 }
 
+interface LimitationType {
+  id: string;
+  name: string;
+  description: string;
+  is_numeric: boolean;
+}
+
 const TariffPlanForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currencies, setCurrencies] = useState([]);
-  const [limitationTypes, setLimitationTypes] = useState([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
+  const [limitationTypes, setLimitationTypes] = useState<LimitationType[]>([]);
   const [limitations, setLimitations] = useState<Limitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -176,10 +184,10 @@ const TariffPlanForm = () => {
               id: item.id,
               limitation_type_id: item.limitation_type_id,
               limitation_type: {
-                id: item.limitation_types ? item.limitation_types.id || '' : '',
-                name: item.limitation_types ? item.limitation_types.name || '' : '',
-                description: item.limitation_types ? item.limitation_types.description || '' : '',
-                is_numeric: item.limitation_types ? item.limitation_types.is_numeric || true : true,
+                id: item.limitation_types?.id || '',
+                name: item.limitation_types?.name || '',
+                description: item.limitation_types?.description || '',
+                is_numeric: item.limitation_types?.is_numeric || true,
               },
               value: item.value,
             }));
@@ -206,7 +214,11 @@ const TariffPlanForm = () => {
         const { data: newPlan, error: createError } = await supabase
           .from('tariff_plans')
           .insert({
-            ...values,
+            name: values.name,
+            price: values.price,
+            currency_id: values.currency_id,
+            duration_days: values.duration_days,
+            is_permanent: values.is_permanent,
           })
           .select()
           .single();
@@ -235,7 +247,13 @@ const TariffPlanForm = () => {
       } else {
         const { error: updateError } = await supabase
           .from('tariff_plans')
-          .update(values)
+          .update({
+            name: values.name,
+            price: values.price,
+            currency_id: values.currency_id,
+            duration_days: values.duration_days,
+            is_permanent: values.is_permanent,
+          })
           .eq('id', id);
 
         if (updateError) throw updateError;

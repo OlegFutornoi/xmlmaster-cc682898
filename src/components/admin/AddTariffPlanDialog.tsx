@@ -43,11 +43,13 @@ interface TariffPlan {
   };
 }
 
+interface LimitationType {
+  name: string;
+  description: string;
+}
+
 interface PlanLimitation {
-  limitation_type: {
-    name: string;
-    description: string;
-  };
+  limitation_type: LimitationType;
   value: number;
 }
 
@@ -162,8 +164,8 @@ const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTari
       } else {
         const transformedData = data?.map(item => ({
           limitation_type: {
-            name: item.limitation_types ? item.limitation_types.name || '' : '',
-            description: item.limitation_types ? item.limitation_types.description || '' : '',
+            name: item.limitation_types?.name || '',
+            description: item.limitation_types?.description || '',
           },
           value: item.value,
         })) || [];
