@@ -1,4 +1,3 @@
-
 // Компонент для створення та редагування тарифних планів
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -83,7 +82,7 @@ interface LimitationType {
 }
 
 interface PlanLimitation {
-  id: string;
+  id?: string;
   limitation_type_id: string;
   value: number;
   limitation_type?: LimitationType;
@@ -107,7 +106,6 @@ const TariffPlanForm = () => {
   const [activeTab, setActiveTab] = useState('basic');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Для обмежень
   const [limitationTypes, setLimitationTypes] = useState<LimitationType[]>([]);
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const [newLimitationTypeId, setNewLimitationTypeId] = useState('');
@@ -136,7 +134,7 @@ const TariffPlanForm = () => {
         if (error) {
           console.error('Error fetching currencies:', error);
           toast({
-            title: 'Помилка',
+            title: 'Помилк��',
             description: 'Не вдалося завантажити список валют',
             variant: 'destructive',
           });
@@ -248,7 +246,6 @@ const TariffPlanForm = () => {
               setPlanItems(itemsData || []);
             }
             
-            // Завантаження обмежень тарифного плану
             const { data: limitationsData, error: limitationsError } = await extendedSupabase
               .from('tariff_plan_limitations')
               .select(`
@@ -267,13 +264,12 @@ const TariffPlanForm = () => {
             if (limitationsError) {
               console.error('Error fetching tariff plan limitations:', limitationsError);
             } else {
-              // Перетворюємо отримані дані у формат PlanLimitation
-              const typedLimitations = limitationsData.map(item => ({
+              const typedLimitations: PlanLimitation[] = limitationsData?.map(item => ({
                 id: item.id,
                 limitation_type_id: item.limitation_type_id,
                 value: item.value,
-                limitation_type: item.limitation_types
-              }));
+                limitation_type: item.limitation_types as unknown as LimitationType
+              })) || [];
               
               setPlanLimitations(typedLimitations);
             }
@@ -427,7 +423,6 @@ const TariffPlanForm = () => {
     return item ? item.description : 'Невідома функція';
   };
 
-  // Функції для роботи з обмеженнями
   const addLimitation = () => {
     if (!newLimitationTypeId) {
       toast({
@@ -528,7 +523,6 @@ const TariffPlanForm = () => {
           console.error('Error deleting existing plan items:', deleteError);
         }
         
-        // Видаляємо існуючі обмеження
         const { error: deleteLimitationsError } = await extendedSupabase
           .from('tariff_plan_limitations')
           .delete()
@@ -550,7 +544,6 @@ const TariffPlanForm = () => {
         planId = data[0].id;
       }
       
-      // Зберігаємо функції тарифу
       if (planItems.length > 0) {
         const itemsToInsert = planItems.map(item => ({
           tariff_plan_id: planId,
@@ -572,7 +565,6 @@ const TariffPlanForm = () => {
         }
       }
       
-      // Зберігаємо обмеження тарифу
       if (planLimitations.length > 0) {
         const limitationsToInsert = planLimitations.map(limitation => ({
           tariff_plan_id: planId,
@@ -611,7 +603,6 @@ const TariffPlanForm = () => {
     }
   };
 
-  // Фільтруємо типи обмежень, які ще не були додані до тарифу
   const availableLimitationTypes = limitationTypes.filter(
     type => !planLimitations.some(limitation => limitation.limitation_type_id === type.id)
   );
@@ -767,7 +758,7 @@ const TariffPlanForm = () => {
                             <div className="space-y-1 leading-none">
                               <FormLabel>Постійний доступ</FormLabel>
                               <FormDescription>
-                                Якщо обрано, користувачі отримають необмежений доступ до функцій тарифу без терміну дії
+                                Якщо обрано, користувачі отримають необмежений доступ до функцій тарифу бе�� терміну дії
                               </FormDescription>
                             </div>
                           </FormItem>
@@ -900,7 +891,7 @@ const TariffPlanForm = () => {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Опис</TableHead>
-                                  <TableHead className="w-[100px] text-center">Активна</TableHead>
+                                  <TableHead className="w-[100px] text-center">Акт��вна</TableHead>
                                   <TableHead className="w-[80px] text-right">Дії</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -951,7 +942,6 @@ const TariffPlanForm = () => {
                     </div>
                   </TabsContent>
                   
-                  {/* Нова вкладка з обмеженнями */}
                   <TabsContent value="limitations" className="p-6 w-full space-y-6 mt-0">
                     <div className="flex flex-col space-y-4">
                       <h3 className="text-lg font-medium">Додати нове обмеження</h3>

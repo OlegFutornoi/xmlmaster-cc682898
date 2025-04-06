@@ -1,4 +1,3 @@
-
 // Компонент для додавання тарифного плану користувачу
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -97,19 +96,17 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
         throw error;
       }
 
-      // Трансформуємо отримані дані для відповідності інтерфейсу TariffPlan
       const transformedData = data.map(plan => ({
         id: plan.id,
         name: plan.name,
         price: plan.price,
         duration_days: plan.duration_days,
         is_permanent: plan.is_permanent,
-        currency: plan.currencies // Перейменовуємо currencies на currency
+        currency: plan.currencies
       })) as TariffPlan[];
       
       setTariffPlans(transformedData);
       
-      // Встановлюємо перший план як вибраний за замовчуванням
       if (transformedData && transformedData.length > 0) {
         setSelectedPlanId(transformedData[0].id);
       }
@@ -161,7 +158,12 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
       if (error) {
         console.error('Error fetching plan limitations:', error);
       } else {
-        setPlanLimitations(data || []);
+        const transformedData = data?.map(item => ({
+          limitation_type: item.limitation_types,
+          value: item.value
+        })) || [];
+        
+        setPlanLimitations(transformedData);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -180,27 +182,24 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Отримуємо дані про вибраний тарифний план для правильного обчислення дати закінчення
       const selectedPlan = tariffPlans.find(plan => plan.id === selectedPlanId);
       
       if (!selectedPlan) {
         throw new Error('Тарифний план не знайдено');
       }
 
-      // Встановлюємо дату закінчення для непостійних тарифів
       let endDate = null;
       if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
         const startDate = new Date();
         endDate = addDays(startDate, selectedPlan.duration_days);
       }
 
-      // Створюємо нову підписку (неактивну за замовчуванням)
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
         .insert({
           user_id: userId,
           tariff_plan_id: selectedPlanId,
-          is_active: false,  // неактивний за замовчуванням
+          is_active: false,
           end_date: endDate
         })
         .select();

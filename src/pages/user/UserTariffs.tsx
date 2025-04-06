@@ -1,4 +1,3 @@
-
 // Компонент для відображення та управління тарифами користувача
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -135,7 +134,7 @@ const UserTariffs = () => {
     fetchTariffPlans();
   }, [toast]);
 
-  const fetchTariffItems = async (planId) => {
+  const fetchTariffItems = async (planId: string) => {
     try {
       const { data, error } = await supabase
         .from('tariff_plan_items')
@@ -160,7 +159,7 @@ const UserTariffs = () => {
     }
   };
 
-  const fetchPlanLimitations = async (planId) => {
+  const fetchPlanLimitations = async (planId: string) => {
     try {
       const { data, error } = await extendedSupabase
         .from('tariff_plan_limitations')
@@ -175,14 +174,17 @@ const UserTariffs = () => {
         return [];
       }
 
-      return data || [];
+      return data?.map(item => ({
+        limitation_type: item.limitation_types,
+        value: item.value
+      })) || [];
     } catch (error) {
       console.error('Error:', error);
       return [];
     }
   };
 
-  const openPlanDetails = async (planId) => {
+  const openPlanDetails = async (planId: string) => {
     try {
       const items = await fetchTariffItems(planId);
       const limitations = await fetchPlanLimitations(planId);
@@ -201,7 +203,7 @@ const UserTariffs = () => {
     }
   };
 
-  const subscribeToPlan = async (planId) => {
+  const subscribeToPlan = async (planId: string) => {
     if (!user) {
       toast({
         title: "Помилка",
