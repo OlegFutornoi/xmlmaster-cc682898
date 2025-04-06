@@ -214,7 +214,6 @@ const TariffPlanForm = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
-      // Перевірка обов'язкових полів
       if (!values.name || !values.currency_id || values.price === undefined) {
         toast({
           title: "Помилка",
@@ -410,7 +409,6 @@ const TariffPlanForm = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Вкладка з основною інформацією */}
               <TabsContent value="info" className="space-y-6">
                 <div className="bg-white p-6 rounded-lg border shadow-sm">
                   <FormField
@@ -536,7 +534,6 @@ const TariffPlanForm = () => {
                 </div>
               </TabsContent>
 
-              {/* Вкладка з функціями */}
               <TabsContent value="functions" className="space-y-6">
                 <div className="bg-white p-6 rounded-lg border shadow-sm">
                   <h3 className="text-lg font-semibold mb-4">Функції тарифного плану</h3>
@@ -544,7 +541,6 @@ const TariffPlanForm = () => {
                     Налаштуйте функції, які будуть доступні користувачам цього тарифного плану.
                   </p>
                   
-                  {/* Тут буде форма для функцій тарифу */}
                   <div className="p-8 text-center text-gray-500">
                     <Package className="mx-auto h-12 w-12 opacity-30 mb-2" />
                     <p>Функціональність буде додана в майбутніх оновленнях</p>
@@ -552,7 +548,6 @@ const TariffPlanForm = () => {
                 </div>
               </TabsContent>
 
-              {/* Вкладка з обмеженнями */}
               <TabsContent value="limitations" className="space-y-6">
                 <div className="bg-white p-6 rounded-lg border shadow-sm">
                   <div className="flex justify-between items-center mb-4">

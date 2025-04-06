@@ -1,4 +1,3 @@
-
 // Компонент для відображення та управління тарифами користувача
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -175,7 +174,6 @@ const UserTariffs = () => {
         return [];
       }
 
-      // Виправляємо перетворення даних - використовуємо правильний доступ до об'єкта, а не масиву
       return data?.map(item => ({
         limitation_type: {
           name: item.limitation_types?.name || '',
@@ -293,7 +291,6 @@ const UserTariffs = () => {
         description: "Тариф активовано",
       });
 
-      // Отримуємо активну підписку після створення нової
       const { data: subscription, error: fetchError } = await supabase
         .from('user_tariff_subscriptions')
         .select(`
