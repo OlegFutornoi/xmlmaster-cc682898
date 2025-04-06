@@ -1,10 +1,11 @@
 
+// Компонент для відображення інформації про користувача та керування тарифними планами
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { UserCheck, UserX, Calendar, Trash2 } from 'lucide-react';
+import { UserCheck, UserX, Calendar, Trash2, Plus, Trash } from 'lucide-react';
 
 import {
   Sheet,
@@ -31,6 +32,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { AddTariffPlanDialog } from './AddTariffPlanDialog';
 
 interface UserSubscription {
   id: string;
@@ -69,6 +77,8 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
   const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
+  const [isAddTariffDialogOpen, setIsAddTariffDialogOpen] = useState(false);
+  const [confirmDeleteInactiveDialogOpen, setConfirmDeleteInactiveDialogOpen] = useState(false);
   const { toast } = useToast();
   const itemsPerPage = 3;
 
@@ -125,6 +135,25 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
 
   const handleToggleSubscription = async (subscriptionId: string, isCurrentlyActive: boolean) => {
     try {
+      // Якщо активуємо підписку, спочатку деактивуємо всі активні підписки
+      if (!isCurrentlyActive) {
+        const { error: deactivateError } = await supabase
+          .from('user_tariff_subscriptions')
+          .update({ is_active: false })
+          .eq('user_id', userId)
+          .eq('is_active', true);
+
+        if (deactivateError) {
+          throw deactivateError;
+        }
+
+        // Оновлюємо всі активні підписки в локальному стані
+        setSubscriptions(prevSubscriptions =>
+          prevSubscriptions.map(sub => ({ ...sub, is_active: false }))
+        );
+      }
+
+      // Тепер змінюємо статус вибраної підписки
       const { error } = await supabase
         .from('user_tariff_subscriptions')
         .update({ is_active: !isCurrentlyActive })
@@ -160,6 +189,10 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
   const handleDeleteClick = (subscriptionId: string) => {
     setSubscriptionToDelete(subscriptionId);
     setConfirmDeleteDialogOpen(true);
+  };
+
+  const handleDeleteInactiveClick = () => {
+    setConfirmDeleteInactiveDialogOpen(true);
   };
 
   const handleDeleteSubscription = async () => {
@@ -204,14 +237,57 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
     }
   };
 
+  const handleDeleteAllInactive = async () => {
+    if (!userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_tariff_subscriptions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('is_active', false);
+
+      if (error) {
+        throw error;
+      }
+
+      // Оновлюємо стан локально, залишаємо тільки активні підписки
+      setSubscriptions(prevSubscriptions => 
+        prevSubscriptions.filter(sub => sub.is_active)
+      );
+      
+      toast({
+        title: 'Успішно',
+        description: 'Неактивні тарифні плани видалено',
+      });
+      
+      // Оновлюємо дані для коректної пагінації
+      fetchUserSubscriptions();
+    } catch (error) {
+      console.error('Помилка видалення неактивних підписок:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося видалити неактивні тарифні плани',
+        variant: 'destructive',
+      });
+    } finally {
+      setConfirmDeleteInactiveDialogOpen(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Безстроково';
     return format(new Date(dateString), 'd MMMM yyyy', { locale: uk });
   };
 
+  const handleTariffAdded = () => {
+    fetchUserSubscriptions();
+    setIsAddTariffDialogOpen(false);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+      <SheetContent className="w-[400px] sm:w-[640px] lg:w-[800px] overflow-y-auto">
         <SheetHeader className="mb-4">
           <SheetTitle>Інформація про користувача</SheetTitle>
           <SheetDescription>
@@ -221,7 +297,44 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
 
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-medium mb-3">Тарифні плани</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium">Тарифні плани</h3>
+              <div className="flex gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => setIsAddTariffDialogOpen(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Додати тарифний план</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={handleDeleteInactiveClick}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Видалити неактивні</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
             
             {loading ? (
               <div className="flex justify-center p-6">
@@ -368,6 +481,36 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Діалог підтвердження видалення неактивних планів */}
+      <Dialog open={confirmDeleteInactiveDialogOpen} onOpenChange={setConfirmDeleteInactiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Видалити всі неактивні тарифні плани?</DialogTitle>
+            <DialogDescription>
+              Ви впевнені, що хочете видалити всі неактивні тарифні плани цього користувача? Цю дію неможливо відмінити.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteInactiveDialogOpen(false)}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAllInactive}>
+              Видалити всі неактивні
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Діалог додавання тарифного плану */}
+      {userId && (
+        <AddTariffPlanDialog 
+          isOpen={isAddTariffDialogOpen}
+          onClose={() => setIsAddTariffDialogOpen(false)}
+          userId={userId}
+          onTariffAdded={handleTariffAdded}
+        />
+      )}
     </Sheet>
   );
 };
