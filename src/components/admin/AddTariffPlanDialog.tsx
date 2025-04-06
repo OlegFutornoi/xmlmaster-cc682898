@@ -79,11 +79,21 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
         throw error;
       }
 
-      setTariffPlans(data as TariffPlan[]);
+      // Трансформуємо отримані дані для відповідності інтерфейсу TariffPlan
+      const transformedData = data.map(plan => ({
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        duration_days: plan.duration_days,
+        is_permanent: plan.is_permanent,
+        currency: plan.currencies // Перейменовуємо currencies на currency
+      })) as TariffPlan[];
+      
+      setTariffPlans(transformedData);
       
       // Встановлюємо перший план як вибраний за замовчуванням
-      if (data && data.length > 0) {
-        setSelectedPlanId(data[0].id);
+      if (transformedData && transformedData.length > 0) {
+        setSelectedPlanId(transformedData[0].id);
       }
     } catch (error) {
       console.error('Помилка завантаження тарифних планів:', error);
