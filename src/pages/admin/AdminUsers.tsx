@@ -232,12 +232,12 @@ const AdminUsers = () => {
                               {user.is_active ? (
                                 <>
                                   <UserX className="h-4 w-4 mr-1" />
-                                  Закрити
+                                  
                                 </>
                               ) : (
                                 <>
                                   <UserCheck className="h-4 w-4 mr-1" />
-                                  Відкрити
+                                  
                                 </>
                               )}
                             </Button>
@@ -247,7 +247,7 @@ const AdminUsers = () => {
                               onClick={() => handleDeleteClick(user.id)}
                             >
                               <Trash2 className="h-4 w-4 mr-1" />
-                              Видалити
+                              
                             </Button>
                           </div>
                         </TableCell>
