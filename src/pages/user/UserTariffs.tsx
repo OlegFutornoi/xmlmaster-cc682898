@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління тарифами користувача
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -176,8 +177,8 @@ const UserTariffs = () => {
 
       return data?.map(item => ({
         limitation_type: {
-          name: item.limitation_types.name,
-          description: item.limitation_types.description
+          name: item.limitation_types[0]?.name || '',
+          description: item.limitation_types[0]?.description || '',
         },
         value: item.value
       })) as PlanLimitation[] || [];
@@ -191,6 +192,9 @@ const UserTariffs = () => {
     try {
       const items = await fetchTariffItems(planId);
       const limitations = await fetchPlanLimitations(planId);
+      
+      console.log('Fetched limitations:', limitations);
+      
       const plan = tariffPlans.find(p => p.id === planId);
       
       setSelectedPlanDetails(plan);
@@ -474,7 +478,9 @@ const UserTariffs = () => {
                             <TableBody>
                               {planLimitations.map((limitation, index) => (
                                 <TableRow key={index}>
-                                  <TableCell>{limitation.limitation_type.description || limitation.limitation_type.name}</TableCell>
+                                  <TableCell>
+                                    {limitation.limitation_type.description || limitation.limitation_type.name}
+                                  </TableCell>
                                   <TableCell className="text-right">{limitation.value}</TableCell>
                                 </TableRow>
                               ))}

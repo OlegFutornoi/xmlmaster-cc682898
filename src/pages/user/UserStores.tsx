@@ -1,8 +1,8 @@
 
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, PlusCircle, Store } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Building2, PlusCircle, Store, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface UserStore {
   id: string;
@@ -39,6 +40,9 @@ const UserStores = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [storesLimit, setStoresLimit] = useState<number | null>(null);
   const [canCreateStore, setCanCreateStore] = useState(false);
+  const [storeToDelete, setStoreToDelete] = useState<UserStore | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     console.log('UserStores component mounted');
@@ -118,7 +122,7 @@ const UserStores = () => {
         setStoresLimit(storesLimitValue);
         
         // Перевіряємо, чи може користувач створити ще один магазин
-        setCanCreateStore(storesLimitValue > 0 && (stores.length < storesLimitValue));
+        setCanCreateStore(storesLimitValue > stores.length);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
         setStoresLimit(0);
@@ -129,10 +133,10 @@ const UserStores = () => {
     }
   };
 
+  // Оновлюємо стан canCreateStore коли змінюється кількість магазинів або ліміт
   useEffect(() => {
-    // Оновлюємо стан canCreateStore коли змінюється кількість магазинів
     if (storesLimit !== null) {
-      setCanCreateStore(storesLimit > 0 && (stores.length < storesLimit));
+      setCanCreateStore(storesLimit > stores.length);
     }
   }, [stores.length, storesLimit]);
 
@@ -199,6 +203,47 @@ const UserStores = () => {
     }
   };
 
+  const handleDeleteStore = async () => {
+    if (!storeToDelete || !user) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('user_stores')
+        .delete()
+        .eq('id', storeToDelete.id)
+        .eq('user_id', user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Успішно',
+        description: 'Магазин успішно видалено',
+      });
+      
+      setIsDeleteDialogOpen(false);
+      setStoreToDelete(null);
+      fetchUserStores();
+      fetchUserLimitations();
+    } catch (error) {
+      console.error('Error deleting store:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося видалити магазин',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = (store: UserStore) => {
+    setStoreToDelete(store);
+    setIsDeleteDialogOpen(true);
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
@@ -262,6 +307,16 @@ const UserStores = () => {
                   Керувати магазином
                 </Button>
               </CardContent>
+              <CardFooter className="flex justify-end pt-0">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => openDeleteDialog(store)}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>
@@ -288,6 +343,7 @@ const UserStores = () => {
         </Card>
       )}
 
+      {/* Діалог створення магазину */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -320,6 +376,29 @@ const UserStores = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Діалог підтвердження видалення */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити магазин?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ви впевнені, що хочете видалити магазин "{storeToDelete?.name}"? 
+              Ця дія не може бути скасована.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteStore}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Видалення...' : 'Видалити'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

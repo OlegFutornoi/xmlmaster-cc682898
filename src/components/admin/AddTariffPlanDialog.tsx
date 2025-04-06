@@ -1,10 +1,10 @@
+
 // Компонент для додавання тарифного плану користувачу
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays } from 'date-fns';
-
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -21,7 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+
+// Інтерфейси для типізації 
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  created_at: string;
+}
 
 interface TariffPlan {
   id: string;
@@ -43,186 +51,200 @@ interface PlanLimitation {
   value: number;
 }
 
-interface AddTariffPlanDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  userId: string;
-  onTariffAdded: () => void;
-}
-
-export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
-  isOpen,
-  onClose,
-  userId,
-  onTariffAdded,
-}) => {
+// Компонент для додавання тарифного плану користувачу
+const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () => void }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [tariffPlans, setTariffPlans] = useState<TariffPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tariffItems, setTariffItems] = useState<any[]>([]);
+  const [activeSubscription, setActiveSubscription] = useState<any>(null);
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const { toast } = useToast();
 
+  // Завантажуємо тарифні плани
   useEffect(() => {
-    if (isOpen) {
-      fetchTariffPlans();
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (selectedPlanId) {
-      fetchTariffItems(selectedPlanId);
-      fetchPlanLimitations(selectedPlanId);
-    }
-  }, [selectedPlanId]);
-
-  const fetchTariffPlans = async () => {
-    setLoading(true);
-    try {
+    const fetchTariffPlans = async () => {
       const { data, error } = await supabase
         .from('tariff_plans')
         .select(`
-          id,
-          name,
-          price,
-          duration_days,
+          id, 
+          name, 
+          price, 
+          duration_days, 
           is_permanent,
-          currencies:currency_id (code, name)
+          currencies:currency_id (
+            name, 
+            code
+          )
         `)
         .order('price', { ascending: true });
 
       if (error) {
-        throw error;
+        console.error('Error fetching tariff plans:', error);
+      } else {
+        setTariffPlans(
+          data?.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            duration_days: item.duration_days,
+            is_permanent: item.is_permanent,
+            currency: {
+              name: item.currencies.name,
+              code: item.currencies.code
+            }
+          })) || []
+        );
       }
+    };
 
-      const transformedData = data.map(plan => ({
-        id: plan.id,
-        name: plan.name,
-        price: plan.price,
-        duration_days: plan.duration_days,
-        is_permanent: plan.is_permanent,
-        currency: plan.currencies
-      })) as TariffPlan[];
+    // Завантажуємо активну підписку користувача
+    const fetchActiveSubscription = async () => {
+      if (!user) return;
       
-      setTariffPlans(transformedData);
-      
-      if (transformedData && transformedData.length > 0) {
-        setSelectedPlanId(transformedData[0].id);
-      }
-    } catch (error) {
-      console.error('Помилка завантаження тарифних планів:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося завантажити тарифні плани',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTariffItems = async (planId: string) => {
-    try {
       const { data, error } = await supabase
-        .from('tariff_plan_items')
+        .from('user_tariff_subscriptions')
         .select(`
           id,
+          start_date,
+          end_date,
           is_active,
-          tariff_item_id,
-          tariff_items (id, description)
+          tariff_plans (
+            id,
+            name,
+            price,
+            is_permanent,
+            duration_days,
+            currencies:currency_id (name, code)
+          )
         `)
-        .eq('tariff_plan_id', planId)
-        .eq('is_active', true);
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
 
       if (error) {
-        console.error('Error fetching tariff items:', error);
+        console.error('Error fetching subscription:', error);
       } else {
-        setTariffItems(data || []);
+        setActiveSubscription(data);
       }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
+    };
 
-  const fetchPlanLimitations = async (planId: string) => {
-    try {
+    if (isOpen) {
+      fetchTariffPlans();
+      fetchActiveSubscription();
+    }
+  }, [isOpen, user]);
+
+  // Отримуємо обмеження для вибраного тарифного плану
+  useEffect(() => {
+    if (!selectedPlanId) {
+      setPlanLimitations([]);
+      return;
+    }
+
+    const fetchPlanLimitations = async () => {
       const { data, error } = await extendedSupabase
         .from('tariff_plan_limitations')
         .select(`
           value,
           limitation_types:limitation_type_id (name, description)
         `)
-        .eq('tariff_plan_id', planId);
+        .eq('tariff_plan_id', selectedPlanId);
 
       if (error) {
         console.error('Error fetching plan limitations:', error);
       } else {
         const transformedData = data?.map(item => ({
           limitation_type: {
-            name: item.limitation_types.name,
-            description: item.limitation_types.description
+            name: item.limitation_types[0]?.name || '',
+            description: item.limitation_types[0]?.description || '',
           },
-          value: item.value
-        })) as PlanLimitation[] || [];
+          value: item.value,
+        })) || [];
         
         setPlanLimitations(transformedData);
       }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
+    };
 
-  const handleAddTariff = async () => {
+    fetchPlanLimitations();
+  }, [selectedPlanId]);
+
+  // Обробник додавання тарифного плану користувачу
+  const handleAssignTariffPlan = async () => {
     if (!selectedPlanId) {
       toast({
-        title: 'Помилка',
-        description: 'Будь ласка, виберіть тарифний план',
-        variant: 'destructive',
+        title: "Помилка",
+        description: "Будь ласка, виберіть тарифний план",
+        variant: "destructive",
       });
       return;
     }
 
     setIsSubmitting(true);
+    
     try {
       const selectedPlan = tariffPlans.find(plan => plan.id === selectedPlanId);
       
       if (!selectedPlan) {
-        throw new Error('Тарифний план не знайдено');
+        toast({
+          title: "Помилка",
+          description: "Тариф не знайдено",
+          variant: "destructive",
+        });
+        return;
       }
 
       let endDate = null;
-      if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
+      if (!selectedPlan.is_permanent) {
         const startDate = new Date();
-        endDate = addDays(startDate, selectedPlan.duration_days);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
       }
 
-      const { data, error } = await supabase
+      if (activeSubscription) {
+        // Деактивуємо поточну підписку
+        const { error: updateError } = await supabase
+          .from('user_tariff_subscriptions')
+          .update({ is_active: false })
+          .eq('id', activeSubscription.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+      }
+
+      // Створюємо нову підписку
+      const { error } = await supabase
         .from('user_tariff_subscriptions')
         .insert({
-          user_id: userId,
+          user_id: user.id,
           tariff_plan_id: selectedPlanId,
-          is_active: false,
-          end_date: endDate
-        })
-        .select();
+          end_date: endDate,
+          is_active: true
+        });
 
       if (error) {
         throw error;
       }
 
       toast({
-        title: 'Успішно',
-        description: 'Тарифний план додано',
+        title: "Успішно",
+        description: "Тарифний план призначено користувачу",
       });
       
-      onTariffAdded();
+      setIsOpen(false);
+      setSelectedPlanId('');
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+      
     } catch (error) {
-      console.error('Помилка додавання тарифного плану:', error);
+      console.error('Error assigning tariff plan:', error);
       toast({
-        title: 'Помилка',
-        description: 'Не вдалося додати тарифний план',
-        variant: 'destructive',
+        title: "Помилка",
+        description: "Не вдалося призначити тарифний план",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -230,115 +252,79 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          Призначити тарифний план
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Додати тарифний план</DialogTitle>
+          <DialogTitle>Призначити тарифний план</DialogTitle>
           <DialogDescription>
-            Виберіть тарифний план для користувача
+            Виберіть тарифний план для користувача {user.email}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="mt-4 space-y-4">
-          {loading ? (
-            <div className="text-center py-4">
-              <p>Завантаження тарифних планів...</p>
-            </div>
-          ) : tariffPlans.length === 0 ? (
-            <div className="text-center py-4">
-              <p>Немає доступних тарифних планів</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tariff-plan">Тарифний план</Label>
-                <Select 
-                  value={selectedPlanId} 
-                  onValueChange={setSelectedPlanId}
-                >
-                  <SelectTrigger id="tariff-plan">
-                    <SelectValue placeholder="Виберіть тарифний план" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tariffPlans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id}>
-                        {plan.name} - {plan.price} {plan.currency.code} 
-                        {plan.is_permanent 
-                          ? ' (безстроково)' 
-                          : ` (${plan.duration_days} днів)`
-                        }
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {selectedPlanId && (
-                <div className="border p-3 rounded-md bg-muted/30">
-                  <h4 className="font-medium mb-2">Інформація про тарифний план</h4>
-                  {(() => {
-                    const plan = tariffPlans.find(p => p.id === selectedPlanId);
-                    if (!plan) return null;
-                    
-                    return (
-                      <div className="space-y-1 text-sm">
-                        <p><span className="font-medium">Назва:</span> {plan.name}</p>
-                        <p>
-                          <span className="font-medium">Ціна:</span> {plan.price} {plan.currency.code}
-                        </p>
-                        <p>
-                          <span className="font-medium">Тривалість:</span> {plan.is_permanent 
-                            ? 'Безстроково' 
-                            : `${plan.duration_days} днів`
-                          }
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {selectedPlanId && tariffItems.length > 0 && (
-                <div className="border p-3 rounded-md bg-muted/30">
-                  <h4 className="font-medium mb-2">Доступні функції:</h4>
-                  <ul className="list-disc pl-5 text-sm space-y-1">
-                    {tariffItems.map(item => (
-                      <li key={item.id}>
-                        {item.tariff_items.description}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {selectedPlanId && planLimitations.length > 0 && (
-                <div className="border p-3 rounded-md bg-muted/30">
-                  <h4 className="font-medium mb-2">Обмеження магазину:</h4>
-                  <ul className="list-none text-sm space-y-1">
-                    {planLimitations.map((limitation, index) => (
-                      <li key={index}>
-                        {limitation.limitation_type.description || limitation.limitation_type.name} - {limitation.value}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+        {activeSubscription && (
+          <div className="bg-blue-50 p-4 rounded-md mb-4">
+            <p className="font-medium text-blue-800">Поточний тарифний план:</p>
+            <p>{activeSubscription.tariff_plans.name}</p>
+            <p className="text-sm text-blue-600 mt-1">
+              {activeSubscription.tariff_plans.is_permanent 
+                ? "Постійний доступ" 
+                : `Дійсний до: ${new Date(activeSubscription.end_date).toLocaleDateString()}`}
+            </p>
+          </div>
+        )}
+        
+        <div className="py-4">
+          <div className="mb-4">
+            <label htmlFor="tariff-plan" className="block text-sm font-medium text-gray-700 mb-1">
+              Тарифний план
+            </label>
+            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+              <SelectTrigger id="tariff-plan">
+                <SelectValue placeholder="Виберіть тарифний план" />
+              </SelectTrigger>
+              <SelectContent>
+                {tariffPlans.map((plan) => (
+                  <SelectItem key={plan.id} value={plan.id}>
+                    {plan.name} ({plan.price} {plan.currency.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {planLimitations.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Обмеження:</h4>
+              <ul className="text-sm space-y-1">
+                {planLimitations.map((limitation, idx) => (
+                  <li key={idx}>
+                    {limitation.limitation_type.description || limitation.limitation_type.name}: {limitation.value}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Скасувати
-          </Button>
+          <DialogClose asChild>
+            <Button variant="outline">Скасувати</Button>
+          </DialogClose>
           <Button 
-            onClick={handleAddTariff} 
-            disabled={!selectedPlanId || loading || isSubmitting}
+            onClick={handleAssignTariffPlan}
+            disabled={isSubmitting || !selectedPlanId}
           >
-            {isSubmitting ? 'Додавання...' : 'Додати тарифний план'}
+            {isSubmitting ? 'Обробка...' : 'Призначити'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
+
+export default AddTariffPlanDialog;
