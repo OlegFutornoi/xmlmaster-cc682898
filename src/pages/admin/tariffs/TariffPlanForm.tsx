@@ -24,7 +24,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Trash2 } from 'lucide-react';
-import { extendedSupabase, supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
@@ -149,7 +150,6 @@ const TariffPlanForm = () => {
     }
   }, [id, form, toast]);
 
-  // Fetch limitations for this plan
   useEffect(() => {
     if (id && id !== 'new') {
       const fetchPlanLimitations = async () => {
@@ -176,10 +176,10 @@ const TariffPlanForm = () => {
               id: item.id,
               limitation_type_id: item.limitation_type_id,
               limitation_type: {
-                id: item.limitation_types?.id || '',
-                name: item.limitation_types?.name || '',
-                description: item.limitation_types?.description || '',
-                is_numeric: item.limitation_types?.is_numeric || true,
+                id: item.limitation_types ? item.limitation_types.id || '' : '',
+                name: item.limitation_types ? item.limitation_types.name || '' : '',
+                description: item.limitation_types ? item.limitation_types.description || '' : '',
+                is_numeric: item.limitation_types ? item.limitation_types.is_numeric || true : true,
               },
               value: item.value,
             }));
@@ -203,11 +203,9 @@ const TariffPlanForm = () => {
     setIsSubmitting(true);
     try {
       if (id === 'new') {
-        // Create new tariff plan
         const { data: newPlan, error: createError } = await supabase
           .from('tariff_plans')
           .insert({
-            id: uuidv4(),
             ...values,
           })
           .select()
@@ -215,13 +213,11 @@ const TariffPlanForm = () => {
 
         if (createError) throw createError;
 
-        // Create limitations for the new plan
         await Promise.all(
           limitations.map(async (limitation) => {
             const { error: limitationError } = await supabase
               .from('tariff_plan_limitations')
               .insert({
-                id: uuidv4(),
                 tariff_plan_id: newPlan.id,
                 limitation_type_id: limitation.limitation_type_id,
                 value: limitation.value,
@@ -237,7 +233,6 @@ const TariffPlanForm = () => {
         });
         navigate('/admin/tariffs');
       } else {
-        // Update existing tariff plan
         const { error: updateError } = await supabase
           .from('tariff_plans')
           .update(values)
@@ -245,11 +240,9 @@ const TariffPlanForm = () => {
 
         if (updateError) throw updateError;
 
-        // Update or create limitations
         await Promise.all(
           limitations.map(async (limitation) => {
             if (limitation.id) {
-              // Update existing limitation
               const { error: limitationError } = await supabase
                 .from('tariff_plan_limitations')
                 .update({
@@ -260,11 +253,9 @@ const TariffPlanForm = () => {
 
               if (limitationError) throw limitationError;
             } else {
-              // Create new limitation
               const { error: limitationError } = await supabase
                 .from('tariff_plan_limitations')
                 .insert({
-                  id: uuidv4(),
                   tariff_plan_id: id,
                   limitation_type_id: limitation.limitation_type_id,
                   value: limitation.value,
@@ -478,7 +469,6 @@ const TariffPlanForm = () => {
                         <div>
                           <Label htmlFor={`limitation-type-${index}`}>Тип обмеження</Label>
                           <Select
-                            id={`limitation-type-${index}`}
                             value={limitation.limitation_type_id}
                             onValueChange={(value) => handleLimitationChange(index, 'limitation_type_id', value)}
                           >

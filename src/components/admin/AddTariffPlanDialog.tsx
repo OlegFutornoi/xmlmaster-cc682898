@@ -51,9 +51,15 @@ interface PlanLimitation {
   value: number;
 }
 
+interface AddTariffPlanDialogProps {
+  userId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onTariffAdded?: () => void;
+}
+
 // Компонент для додавання тарифного плану користувачу
-const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () => void }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTariffPlanDialogProps) => {
   const [tariffPlans, setTariffPlans] = useState<TariffPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,7 +106,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
 
     // Завантажуємо активну підписку користувача
     const fetchActiveSubscription = async () => {
-      if (!user) return;
+      if (!userId) return;
       
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
@@ -118,7 +124,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
             currencies:currency_id (name, code)
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .maybeSingle();
 
@@ -133,7 +139,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
       fetchTariffPlans();
       fetchActiveSubscription();
     }
-  }, [isOpen, user]);
+  }, [isOpen, userId]);
 
   // Отримуємо обмеження для вибраного тарифного плану
   useEffect(() => {
@@ -156,8 +162,8 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
       } else {
         const transformedData = data?.map(item => ({
           limitation_type: {
-            name: item.limitation_types[0]?.name || '',
-            description: item.limitation_types[0]?.description || '',
+            name: item.limitation_types ? item.limitation_types.name || '' : '',
+            description: item.limitation_types ? item.limitation_types.description || '' : '',
           },
           value: item.value,
         })) || [];
@@ -198,7 +204,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
       if (!selectedPlan.is_permanent) {
         const startDate = new Date();
         endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+        endDate.setDate(endDate.getDate() + (selectedPlan.duration_days || 0));
       }
 
       if (activeSubscription) {
@@ -217,7 +223,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
       const { error } = await supabase
         .from('user_tariff_subscriptions')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           tariff_plan_id: selectedPlanId,
           end_date: endDate,
           is_active: true
@@ -232,11 +238,11 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
         description: "Тарифний план призначено користувачу",
       });
       
-      setIsOpen(false);
+      onClose();
       setSelectedPlanId('');
       
-      if (onSuccess) {
-        onSuccess();
+      if (onTariffAdded) {
+        onTariffAdded();
       }
       
     } catch (error) {
@@ -252,17 +258,12 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Призначити тарифний план
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Призначити тарифний план</DialogTitle>
           <DialogDescription>
-            Виберіть тарифний план для користувача {user.email}
+            Виберіть тарифний план для користувача
           </DialogDescription>
         </DialogHeader>
         
@@ -284,7 +285,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
               Тарифний план
             </label>
             <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-              <SelectTrigger id="tariff-plan">
+              <SelectTrigger>
                 <SelectValue placeholder="Виберіть тарифний план" />
               </SelectTrigger>
               <SelectContent>
@@ -312,9 +313,7 @@ const AddTariffPlanDialog = ({ user, onSuccess }: { user: User, onSuccess?: () =
         </div>
         
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Скасувати</Button>
-          </DialogClose>
+          <Button variant="outline" onClick={onClose}>Скасувати</Button>
           <Button 
             onClick={handleAssignTariffPlan}
             disabled={isSubmitting || !selectedPlanId}

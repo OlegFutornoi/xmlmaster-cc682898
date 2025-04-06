@@ -1,4 +1,3 @@
-
 // Компонент для відображення інформації про користувача та керування тарифними планами
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -38,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AddTariffPlanDialog } from './AddTariffPlanDialog';
+import AddTariffPlanDialog from './AddTariffPlanDialog';
 
 interface UserSubscription {
   id: string;
@@ -135,7 +134,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
 
   const handleToggleSubscription = async (subscriptionId: string, isCurrentlyActive: boolean) => {
     try {
-      // Якщо активуємо підписку, спочатку деактивуємо всі активні підписки
       if (!isCurrentlyActive) {
         const { error: deactivateError } = await supabase
           .from('user_tariff_subscriptions')
@@ -147,13 +145,11 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
           throw deactivateError;
         }
 
-        // Оновлюємо всі активні підписки в локальному стані
         setSubscriptions(prevSubscriptions =>
           prevSubscriptions.map(sub => ({ ...sub, is_active: false }))
         );
       }
 
-      // Тепер змінюємо статус вибраної підписки
       const { error } = await supabase
         .from('user_tariff_subscriptions')
         .update({ is_active: !isCurrentlyActive })
@@ -163,7 +159,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         throw error;
       }
 
-      // Оновлюємо стан локально
       setSubscriptions(prevSubscriptions =>
         prevSubscriptions.map(sub =>
           sub.id === subscriptionId ? { ...sub, is_active: !isCurrentlyActive } : sub
@@ -208,7 +203,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         throw error;
       }
 
-      // Оновлюємо стан локально і оновлюємо список підписок
       setSubscriptions(prevSubscriptions => 
         prevSubscriptions.filter(sub => sub.id !== subscriptionToDelete)
       );
@@ -218,7 +212,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         description: 'Тарифний план видалено',
       });
       
-      // Перезавантажуємо дані, якщо список став порожній або для оновлення пагінації
       if (subscriptions.length === 1 && page > 1) {
         setPage(page - 1);
       } else {
@@ -251,7 +244,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         throw error;
       }
 
-      // Оновлюємо стан локально, залишаємо тільки активні підписки
       setSubscriptions(prevSubscriptions => 
         prevSubscriptions.filter(sub => sub.is_active)
       );
@@ -261,7 +253,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         description: 'Неактивні тарифні плани видалено',
       });
       
-      // Оновлюємо дані для коректної пагінації
       fetchUserSubscriptions();
     } catch (error) {
       console.error('Помилка видалення неактивних підписок:', error);
@@ -450,7 +441,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
             )}
           </div>
           
-          {/* Підготовлений контейнер для майбутньої інформації про платежі */}
           <div className="border-t pt-4">
             <h3 className="text-lg font-medium mb-3">Платежі</h3>
             <Card>
@@ -462,7 +452,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         </div>
       </SheetContent>
       
-      {/* Діалог підтвердження видалення */}
       <Dialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -482,13 +471,12 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         </DialogContent>
       </Dialog>
       
-      {/* Діалог підтвердження видалення неактивних планів */}
       <Dialog open={confirmDeleteInactiveDialogOpen} onOpenChange={setConfirmDeleteInactiveDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Видалити всі неактивні тарифні плани?</DialogTitle>
             <DialogDescription>
-              Ви впевнені, що хочете видалити всі неактивні тарифні плани цього користувача? Цю дію неможливо відмінити.
+              Ви впевнені, що хочете видалити всі неактивні тарифні плани цього користувача? Цю ��ію неможливо відмінити.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -502,7 +490,6 @@ const UserInfoDrawer: React.FC<UserInfoDrawerProps> = ({
         </DialogContent>
       </Dialog>
       
-      {/* Діалог додавання тарифного плану */}
       {userId && (
         <AddTariffPlanDialog 
           isOpen={isAddTariffDialogOpen}
