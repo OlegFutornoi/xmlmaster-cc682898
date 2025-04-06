@@ -1,4 +1,5 @@
 
+// Компонент для відображення та управління тарифами користувача
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, Info, ExternalLink, BoxesIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { 
@@ -160,7 +162,7 @@ const UserTariffs = () => {
 
   const fetchPlanLimitations = async (planId) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await extendedSupabase
         .from('tariff_plan_limitations')
         .select(`
           value,

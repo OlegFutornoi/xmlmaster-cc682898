@@ -2,6 +2,7 @@
 // Компонент для додавання тарифного плану користувачу
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays } from 'date-fns';
 
@@ -149,7 +150,7 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
 
   const fetchPlanLimitations = async (planId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await extendedSupabase
         .from('tariff_plan_limitations')
         .select(`
           value,

@@ -1,4 +1,5 @@
 
+// Компонент для створення та редагування тарифних планів
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -57,6 +58,7 @@ import {
   BoxesIcon,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -185,7 +187,7 @@ const TariffPlanForm = () => {
   useEffect(() => {
     const fetchLimitationTypes = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await extendedSupabase
           .from('limitation_types')
           .select('id, name, description, is_numeric')
           .order('name', { ascending: true });
@@ -247,7 +249,7 @@ const TariffPlanForm = () => {
             }
             
             // Завантаження обмежень тарифного плану
-            const { data: limitationsData, error: limitationsError } = await supabase
+            const { data: limitationsData, error: limitationsError } = await extendedSupabase
               .from('tariff_plan_limitations')
               .select(`
                 id, 
@@ -266,12 +268,14 @@ const TariffPlanForm = () => {
               console.error('Error fetching tariff plan limitations:', limitationsError);
             } else {
               // Перетворюємо отримані дані у формат PlanLimitation
-              setPlanLimitations(limitationsData.map(item => ({
+              const typedLimitations = limitationsData.map(item => ({
                 id: item.id,
                 limitation_type_id: item.limitation_type_id,
                 value: item.value,
                 limitation_type: item.limitation_types
-              })));
+              }));
+              
+              setPlanLimitations(typedLimitations);
             }
           }
         } catch (error) {
@@ -525,7 +529,7 @@ const TariffPlanForm = () => {
         }
         
         // Видаляємо існуючі обмеження
-        const { error: deleteLimitationsError } = await supabase
+        const { error: deleteLimitationsError } = await extendedSupabase
           .from('tariff_plan_limitations')
           .delete()
           .eq('tariff_plan_id', planId);
@@ -576,7 +580,7 @@ const TariffPlanForm = () => {
           value: limitation.value
         }));
         
-        const { error: limitationsError } = await supabase
+        const { error: limitationsError } = await extendedSupabase
           .from('tariff_plan_limitations')
           .insert(limitationsToInsert);
           

@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 
@@ -50,7 +51,7 @@ const UserStores = () => {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await extendedSupabase
         .from('user_stores')
         .select('*')
         .eq('user_id', user.id)
@@ -98,7 +99,7 @@ const UserStores = () => {
       }
 
       // Отримуємо обмеження для активного тарифу користувача
-      const { data: limitationData, error: limitationError } = await supabase
+      const { data: limitationData, error: limitationError } = await extendedSupabase
         .from('tariff_plan_limitations')
         .select(`
           value,
@@ -165,7 +166,7 @@ const UserStores = () => {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await extendedSupabase
         .from('user_stores')
         .insert({
           user_id: user.id,
