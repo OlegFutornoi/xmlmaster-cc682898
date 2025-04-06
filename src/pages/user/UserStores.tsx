@@ -122,7 +122,8 @@ const UserStores = () => {
         setStoresLimit(storesLimitValue);
         
         // Перевіряємо, чи може користувач створити ще один магазин
-        setCanCreateStore(storesLimitValue > stores.length);
+        // Виправляємо логіку тут: порівнюємо з фактичною кількістю
+        setCanCreateStore(stores.length < storesLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
         setStoresLimit(0);
@@ -136,7 +137,8 @@ const UserStores = () => {
   // Оновлюємо стан canCreateStore коли змінюється кількість магазинів або ліміт
   useEffect(() => {
     if (storesLimit !== null) {
-      setCanCreateStore(storesLimit > stores.length);
+      // Виправляємо логіку тут також
+      setCanCreateStore(stores.length < storesLimit);
     }
   }, [stores.length, storesLimit]);
 
@@ -292,7 +294,17 @@ const UserStores = () => {
       ) : stores.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stores.map(store => (
-            <Card key={store.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
+            <Card key={store.id} className="overflow-hidden transition-all duration-200 hover:shadow-md relative">
+              {/* Кнопка видалення перенесена у верхній правий кут */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => openDeleteDialog(store)}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50 z-10"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
@@ -307,16 +319,6 @@ const UserStores = () => {
                   Керувати магазином
                 </Button>
               </CardContent>
-              <CardFooter className="flex justify-end pt-0">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => openDeleteDialog(store)}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardFooter>
             </Card>
           ))}
         </div>
