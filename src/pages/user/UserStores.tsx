@@ -122,7 +122,7 @@ const UserStores = () => {
         setStoresLimit(storesLimitValue);
         
         // Перевіряємо, чи може користувач створити ще один магазин
-        // Виправляємо логіку тут: порівнюємо з фактичною кількістю
+        // Виправляємо логіку: порівнюємо з фактичною кількістю, щоб не було можливо створити більше ніж дозволено
         setCanCreateStore(stores.length < storesLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
@@ -137,7 +137,7 @@ const UserStores = () => {
   // Оновлюємо стан canCreateStore коли змінюється кількість магазинів або ліміт
   useEffect(() => {
     if (storesLimit !== null) {
-      // Виправляємо логіку тут також
+      // Виправляємо логіку: порівнюємо з фактичною кількістю, щоб не було можливо створити більше ніж дозволено
       setCanCreateStore(stores.length < storesLimit);
     }
   }, [stores.length, storesLimit]);
@@ -161,7 +161,8 @@ const UserStores = () => {
       return;
     }
 
-    if (!canCreateStore) {
+    // Додаткова перевірка перед створенням - чи не перевищено ліміт
+    if (stores.length >= (storesLimit || 0)) {
       toast({
         title: 'Помилка',
         description: 'Ви досягли ліміту створення магазинів. Оновіть тарифний план.',

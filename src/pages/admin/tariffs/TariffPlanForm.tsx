@@ -1,3 +1,4 @@
+
 // Компонент для редагування та створення тарифних планів в адмін-панелі
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -60,6 +61,18 @@ interface LimitationType {
   is_numeric: boolean;
 }
 
+interface TariffItem {
+  id: string;
+  description: string;
+}
+
+interface TariffPlanItem {
+  id?: string;
+  tariff_item_id: string;
+  is_active: boolean;
+  tariff_item: TariffItem;
+}
+
 const TariffPlanForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -70,6 +83,12 @@ const TariffPlanForm = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
+  
+  // Для тарифних пунктів
+  const [tariffItems, setTariffItems] = useState<TariffItem[]>([]);
+  const [planItems, setPlanItems] = useState<TariffPlanItem[]>([]);
+  const [newItemDescription, setNewItemDescription] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState<string>('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,9 +138,29 @@ const TariffPlanForm = () => {
         });
       }
     };
+    
+    const fetchTariffItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tariff_items')
+          .select('*')
+          .order('description', { ascending: true });
+
+        if (error) throw error;
+        setTariffItems(data || []);
+      } catch (error) {
+        console.error('Error fetching tariff items:', error);
+        toast({
+          title: 'Помилка',
+          description: 'Не вдалося завантажити пункти тарифних планів',
+          variant: 'destructive',
+        });
+      }
+    };
 
     fetchCurrencies();
     fetchLimitationTypes();
+    fetchTariffItems();
   }, [toast]);
 
   useEffect(() => {
@@ -206,8 +245,49 @@ const TariffPlanForm = () => {
           });
         }
       };
+      
+      // Завантаження пунктів тарифного плану
+      const fetchPlanItems = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('tariff_plan_items')
+            .select(`
+              id,
+              tariff_item_id,
+              is_active,
+              tariff_items:tariff_item_id (
+                id, 
+                description
+              )
+            `)
+            .eq('tariff_plan_id', id);
+
+          if (error) throw error;
+
+          if (data) {
+            const formattedItems = data.map(item => ({
+              id: item.id,
+              tariff_item_id: item.tariff_item_id,
+              is_active: item.is_active,
+              tariff_item: {
+                id: item.tariff_items.id,
+                description: item.tariff_items.description
+              }
+            }));
+            setPlanItems(formattedItems);
+          }
+        } catch (error) {
+          console.error('Error fetching plan items:', error);
+          toast({
+            title: 'Помилка',
+            description: 'Не вдалося завантажити пункти тарифного плану',
+            variant: 'destructive',
+          });
+        }
+      };
 
       fetchPlanLimitations();
+      fetchPlanItems();
     }
   }, [id, toast]);
 
@@ -241,6 +321,7 @@ const TariffPlanForm = () => {
 
         if (createError) throw createError;
 
+        // Зберігаємо обмеження
         await Promise.all(
           limitations.map(async (limitation) => {
             const { error: limitationError } = await supabase
@@ -252,6 +333,21 @@ const TariffPlanForm = () => {
               });
 
             if (limitationError) throw limitationError;
+          })
+        );
+        
+        // Зберігаємо пункти тарифного плану
+        await Promise.all(
+          planItems.map(async (item) => {
+            const { error: itemError } = await supabase
+              .from('tariff_plan_items')
+              .insert({
+                tariff_plan_id: newPlan.id,
+                tariff_item_id: item.tariff_item_id,
+                is_active: item.is_active,
+              });
+
+            if (itemError) throw itemError;
           })
         );
 
@@ -268,6 +364,7 @@ const TariffPlanForm = () => {
 
         if (updateError) throw updateError;
 
+        // Оновлюємо обмеження
         await Promise.all(
           limitations.map(async (limitation) => {
             if (limitation.id) {
@@ -291,6 +388,29 @@ const TariffPlanForm = () => {
 
               if (limitationError) throw limitationError;
             }
+          })
+        );
+        
+        // Оновлюємо пункти тарифного плану: спочатку видаляємо всі
+        const { error: deleteError } = await supabase
+          .from('tariff_plan_items')
+          .delete()
+          .eq('tariff_plan_id', id);
+        
+        if (deleteError) throw deleteError;
+        
+        // Потім додаємо всі поточні пункти
+        await Promise.all(
+          planItems.map(async (item) => {
+            const { error: itemError } = await supabase
+              .from('tariff_plan_items')
+              .insert({
+                tariff_plan_id: id,
+                tariff_item_id: item.tariff_item_id,
+                is_active: item.is_active,
+              });
+
+            if (itemError) throw itemError;
           })
         );
 
@@ -366,6 +486,114 @@ const TariffPlanForm = () => {
     },
     [limitations]
   );
+  
+  // Функції для роботи з пунктами тарифного плану
+  const handleAddNewTariffItem = async () => {
+    if (!newItemDescription.trim()) {
+      toast({
+        title: 'Помилка',
+        description: 'Введіть опис пункту тарифного плану',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('tariff_items')
+        .insert({ description: newItemDescription.trim() })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Додаємо новий пункт до списку всіх пунктів
+      setTariffItems([...tariffItems, data]);
+      
+      // Додаємо новий пункт до списку пунктів плану
+      setPlanItems([
+        ...planItems,
+        {
+          tariff_item_id: data.id,
+          is_active: true,
+          tariff_item: {
+            id: data.id,
+            description: data.description
+          }
+        }
+      ]);
+      
+      setNewItemDescription('');
+      toast({
+        title: 'Успішно',
+        description: 'Пункт тарифного плану створено',
+      });
+    } catch (error) {
+      console.error('Error creating tariff item:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося створити пункт тарифного плану',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const handleAddExistingItem = () => {
+    if (!selectedItemId) {
+      toast({
+        title: 'Помилка',
+        description: 'Виберіть пункт тарифного плану',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Перевіряємо, чи вже є такий пункт у плані
+    const existingItem = planItems.find(item => item.tariff_item_id === selectedItemId);
+    if (existingItem) {
+      toast({
+        title: 'Інформація',
+        description: 'Цей пункт вже додано до тарифного плану',
+      });
+      return;
+    }
+    
+    const selectedItem = tariffItems.find(item => item.id === selectedItemId);
+    if (selectedItem) {
+      setPlanItems([
+        ...planItems,
+        {
+          tariff_item_id: selectedItem.id,
+          is_active: true,
+          tariff_item: {
+            id: selectedItem.id,
+            description: selectedItem.description
+          }
+        }
+      ]);
+      
+      setSelectedItemId('');
+      toast({
+        title: 'Успішно',
+        description: 'Пункт додано до тарифного плану',
+      });
+    }
+  };
+  
+  const toggleItemActive = (index: number) => {
+    const updatedItems = [...planItems];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      is_active: !updatedItems[index].is_active
+    };
+    setPlanItems(updatedItems);
+  };
+  
+  const deleteItem = (index: number) => {
+    const updatedItems = [...planItems];
+    updatedItems.splice(index, 1);
+    setPlanItems(updatedItems);
+  };
 
   if (isLoading) {
     return <p>Завантаження...</p>;
@@ -392,23 +620,38 @@ const TariffPlanForm = () => {
         </CardHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Tabs defaultValue="info" className="p-6" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-6 grid grid-cols-3 gap-4">
-                <TabsTrigger value="info" className="flex items-center gap-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:flex-row h-full">
+            {/* Вертикальні вкладки зліва */}
+            <div className="w-full lg:w-56 shrink-0 border-r">
+              <TabsList className="flex lg:flex-col p-2 gap-1 h-auto" orientation="vertical">
+                <TabsTrigger 
+                  className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
+                  value="info"
+                  onClick={() => setActiveTab("info")}
+                >
                   <Info className="w-4 h-4" />
                   Основна інформація
                 </TabsTrigger>
-                <TabsTrigger value="functions" className="flex items-center gap-2">
+                <TabsTrigger 
+                  className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
+                  value="functions"
+                  onClick={() => setActiveTab("functions")}
+                >
                   <Package className="w-4 h-4" />
                   Функції
                 </TabsTrigger>
-                <TabsTrigger value="limitations" className="flex items-center gap-2">
+                <TabsTrigger 
+                  className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
+                  value="limitations"
+                  onClick={() => setActiveTab("limitations")}
+                >
                   <Layers className="w-4 h-4" />
                   Обмеження
                 </TabsTrigger>
               </TabsList>
-
+            </div>
+            
+            <div className="flex-1 p-6">
               <TabsContent value="info" className="space-y-6">
                 <div className="bg-white p-6 rounded-lg border shadow-sm">
                   <FormField
@@ -541,10 +784,103 @@ const TariffPlanForm = () => {
                     Налаштуйте функції, які будуть доступні користувачам цього тарифного плану.
                   </p>
                   
-                  <div className="p-8 text-center text-gray-500">
-                    <Package className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                    <p>Функціональність буде додана в майбутніх оновленнях</p>
+                  {/* Форма додавання нового пункту тарифного плану */}
+                  <div className="mb-6 p-4 border border-dashed rounded-md">
+                    <h4 className="text-md font-medium mb-3">Додати новий пункт</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="new-item">Опис пункту</Label>
+                        <div className="flex mt-1 gap-2">
+                          <Input
+                            id="new-item"
+                            placeholder="Введіть опис пункту тарифного плану"
+                            value={newItemDescription}
+                            onChange={(e) => setNewItemDescription(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button 
+                            type="button" 
+                            onClick={handleAddNewTariffItem} 
+                            variant="outline"
+                            className="shrink-0"
+                          >
+                            Додати
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="existing-item">Або виберіть існуючий</Label>
+                        <div className="flex mt-1 gap-2">
+                          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Виберіть пункт" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tariffItems.map((item) => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.description}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            type="button" 
+                            onClick={handleAddExistingItem} 
+                            variant="outline"
+                            className="shrink-0"
+                          >
+                            Додати
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                  
+                  {/* Список пунктів тарифного плану */}
+                  {planItems.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[60%]">Опис</TableHead>
+                            <TableHead className="w-[20%]">Активний</TableHead>
+                            <TableHead className="w-[20%] text-right">Дії</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {planItems.map((item, index) => (
+                            <TableRow key={index} className={!item.is_active ? "opacity-60" : ""}>
+                              <TableCell className="font-medium">
+                                {item.tariff_item.description}
+                              </TableCell>
+                              <TableCell>
+                                <Switch 
+                                  checked={item.is_active} 
+                                  onCheckedChange={() => toggleItemActive(index)}
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => deleteItem(index)}
+                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center p-8 border-2 border-dashed rounded-lg">
+                      <Package className="mx-auto h-12 w-12 text-gray-300 mb-2" />
+                      <p className="text-gray-500">У цього тарифу ще немає пунктів</p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -563,50 +899,39 @@ const TariffPlanForm = () => {
                     </Button>
                   </div>
                   
-                  <div className="space-y-4">
-                    {limitations.length === 0 ? (
-                      <div className="text-center p-8 border-2 border-dashed rounded-lg">
-                        <Layers className="mx-auto h-12 w-12 text-gray-300 mb-2" />
-                        <p className="text-gray-500">У цього тарифу ще немає обмежень</p>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={handleAddLimitation} 
-                          className="mt-4 border-indigo-200 hover:bg-indigo-50"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Додати перше обмеження
-                        </Button>
-                      </div>
-                    ) : (
-                      limitations.map((limitation, index) => (
-                        <Card key={index} className="overflow-hidden">
-                          <CardHeader className="bg-gray-50 pb-2 pt-4">
-                            <div className="flex justify-between items-center">
-                              <CardTitle className="text-base font-medium">
-                                Обмеження #{index + 1}
-                              </CardTitle>
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeleteLimitation(index)}
-                                className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Видалити
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <Label htmlFor={`limitation-type-${index}`}>Тип обмеження</Label>
+                  {limitations.length === 0 ? (
+                    <div className="text-center p-8 border-2 border-dashed rounded-lg">
+                      <Layers className="mx-auto h-12 w-12 text-gray-300 mb-2" />
+                      <p className="text-gray-500">У цього тарифу ще немає обмежень</p>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleAddLimitation} 
+                        className="mt-4 border-indigo-200 hover:bg-indigo-50"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Додати перше обмеження
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[40%]">Тип обмеження</TableHead>
+                            <TableHead className="w-[40%]">Значення</TableHead>
+                            <TableHead className="w-[20%] text-right">Дії</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {limitations.map((limitation, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
                                 <Select
                                   value={limitation.limitation_type_id}
                                   onValueChange={(value) => handleLimitationChange(index, 'limitation_type_id', value)}
                                 >
-                                  <SelectTrigger className="mt-1">
+                                  <SelectTrigger>
                                     <SelectValue placeholder="Виберіть тип обмеження" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -617,43 +942,64 @@ const TariffPlanForm = () => {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </div>
-                              <div>
-                                <Label htmlFor={`limitation-value-${index}`}>Значення</Label>
+                              </TableCell>
+                              <TableCell>
                                 <Input
                                   type="number"
-                                  id={`limitation-value-${index}`}
                                   value={limitation.value}
                                   onChange={(e) => handleLimitationChange(index, 'value', e.target.value)}
                                   placeholder="Введіть значення"
-                                  className="mt-1"
                                 />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))
-                    )}
-                  </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteLimitation(index)}
+                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      
+                      <div className="flex justify-center mt-4">
+                        <Button 
+                          type="button" 
+                          onClick={handleAddLimitation} 
+                          variant="outline"
+                          className="flex items-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Додати ще обмеження
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
-            </Tabs>
-            
-            <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
-              <Button type="button" variant="outline" onClick={() => navigate('/admin/tariffs')}>
-                Скасувати
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {isSubmitting ? 'Збереження...' : 'Зберегти'}
-              </Button>
             </div>
           </form>
         </Form>
+        
+        <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
+          <Button type="button" variant="outline" onClick={() => navigate('/admin/tariffs')}>
+            Скасувати
+          </Button>
+          <Button 
+            type="button" 
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+            className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {isSubmitting ? 'Збереження...' : 'Зберегти'}
+          </Button>
+        </div>
       </Card>
     </div>
   );
