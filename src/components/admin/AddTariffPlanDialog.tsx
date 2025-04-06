@@ -162,6 +162,7 @@ const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTari
       if (error) {
         console.error('Error fetching plan limitations:', error);
       } else {
+        // Виправлення: правильно отримуємо доступ до даних від limitation_types
         const transformedData = data?.map(item => ({
           limitation_type: {
             name: item.limitation_types?.name || '',
