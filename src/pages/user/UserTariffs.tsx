@@ -469,7 +469,7 @@ const UserTariffs = () => {
                 )}
               </div>
               
-              <Button onClick={() => navigate('/user/stores')} className="mb-4">
+              <Button onClick={() => navigate('/user/dashboard/stores')} className="mb-4">
                 Керувати магазинами
               </Button>
             </CardContent>
