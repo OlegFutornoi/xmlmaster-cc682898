@@ -175,7 +175,7 @@ const UserTariffs = () => {
         return [];
       }
 
-      // Виправлений код: коректне перетворення даних
+      // Виправляємо перетворення даних - використовуємо правильний доступ до об'єкта, а не масиву
       return data?.map(item => ({
         limitation_type: {
           name: item.limitation_types?.name || '',
