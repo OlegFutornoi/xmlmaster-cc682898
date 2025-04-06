@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Info, ExternalLink } from 'lucide-react';
+import { CheckCircle, Clock, Info, ExternalLink, BoxesIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
@@ -27,6 +27,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Separator } from '@/components/ui/separator';
+
+interface PlanLimitation {
+  limitation_type: {
+    name: string;
+    description: string;
+  };
+  value: number;
+}
 
 const UserTariffs = () => {
   const { user } = useAuth();
@@ -37,6 +46,7 @@ const UserTariffs = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlanDetails, setSelectedPlanDetails] = useState(null);
   const [tariffItems, setTariffItems] = useState([]);
+  const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const [isSubscribing, setIsSubscribing] = useState(false);
 
   useEffect(() => {
@@ -148,13 +158,37 @@ const UserTariffs = () => {
     }
   };
 
+  const fetchPlanLimitations = async (planId) => {
+    try {
+      const { data, error } = await supabase
+        .from('tariff_plan_limitations')
+        .select(`
+          value,
+          limitation_types:limitation_type_id (name, description)
+        `)
+        .eq('tariff_plan_id', planId);
+
+      if (error) {
+        console.error('Error fetching plan limitations:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error:', error);
+      return [];
+    }
+  };
+
   const openPlanDetails = async (planId) => {
     try {
       const items = await fetchTariffItems(planId);
+      const limitations = await fetchPlanLimitations(planId);
       const plan = tariffPlans.find(p => p.id === planId);
       
       setSelectedPlanDetails(plan);
       setTariffItems(items);
+      setPlanLimitations(limitations);
     } catch (error) {
       console.error('Error loading plan details:', error);
       toast({
@@ -417,6 +451,29 @@ const UserTariffs = () => {
                         </Table>
                       ) : (
                         <p className="text-sm text-muted-foreground">Немає доступних функцій</p>
+                      )}
+
+                      {planLimitations.length > 0 && (
+                        <>
+                          <Separator className="my-4" />
+                          <h4 className="text-sm font-medium mb-2">Обмеження магазину:</h4>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Параметр</TableHead>
+                                <TableHead className="text-right">Значення</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {planLimitations.map((limitation, index) => (
+                                <TableRow key={index}>
+                                  <TableCell>{limitation.limitation_type.description || limitation.limitation_type.name}</TableCell>
+                                  <TableCell className="text-right">{limitation.value}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </>
                       )}
                     </div>
                     <div className="mt-6 flex justify-end">

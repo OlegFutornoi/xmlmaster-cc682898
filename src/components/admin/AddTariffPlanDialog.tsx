@@ -35,6 +35,14 @@ interface TariffPlan {
   };
 }
 
+interface PlanLimitation {
+  limitation_type: {
+    name: string;
+    description: string;
+  };
+  value: number;
+}
+
 interface AddTariffPlanDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -52,6 +60,8 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tariffItems, setTariffItems] = useState<any[]>([]);
+  const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,6 +69,13 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
       fetchTariffPlans();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (selectedPlanId) {
+      fetchTariffItems(selectedPlanId);
+      fetchPlanLimitations(selectedPlanId);
+    }
+  }, [selectedPlanId]);
 
   const fetchTariffPlans = async () => {
     setLoading(true);
@@ -104,6 +121,49 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTariffItems = async (planId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tariff_plan_items')
+        .select(`
+          id,
+          is_active,
+          tariff_item_id,
+          tariff_items (id, description)
+        `)
+        .eq('tariff_plan_id', planId)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching tariff items:', error);
+      } else {
+        setTariffItems(data || []);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const fetchPlanLimitations = async (planId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tariff_plan_limitations')
+        .select(`
+          value,
+          limitation_types:limitation_type_id (name, description)
+        `)
+        .eq('tariff_plan_id', planId);
+
+      if (error) {
+        console.error('Error fetching plan limitations:', error);
+      } else {
+        setPlanLimitations(data || []);
+      }
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
@@ -232,6 +292,32 @@ export const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {selectedPlanId && tariffItems.length > 0 && (
+                <div className="border p-3 rounded-md bg-muted/30">
+                  <h4 className="font-medium mb-2">Доступні функції:</h4>
+                  <ul className="list-disc pl-5 text-sm space-y-1">
+                    {tariffItems.map(item => (
+                      <li key={item.id}>
+                        {item.tariff_items.description}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedPlanId && planLimitations.length > 0 && (
+                <div className="border p-3 rounded-md bg-muted/30">
+                  <h4 className="font-medium mb-2">Обмеження магазину:</h4>
+                  <ul className="list-none text-sm space-y-1">
+                    {planLimitations.map((limitation, index) => (
+                      <li key={index}>
+                        {limitation.limitation_type.description || limitation.limitation_type.name} - {limitation.value}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

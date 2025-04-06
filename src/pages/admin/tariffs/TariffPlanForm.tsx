@@ -54,6 +54,7 @@ import {
   Settings2,
   List,
   ListChecks,
+  BoxesIcon,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,20 @@ interface Currency {
 interface TariffItem {
   id: string;
   description: string;
+}
+
+interface LimitationType {
+  id: string;
+  name: string;
+  description: string;
+  is_numeric: boolean;
+}
+
+interface PlanLimitation {
+  id: string;
+  limitation_type_id: string;
+  value: number;
+  limitation_type?: LimitationType;
 }
 
 interface TariffPlanFormValues {
@@ -89,6 +104,12 @@ const TariffPlanForm = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Для обмежень
+  const [limitationTypes, setLimitationTypes] = useState<LimitationType[]>([]);
+  const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
+  const [newLimitationTypeId, setNewLimitationTypeId] = useState('');
+  const [newLimitationValue, setNewLimitationValue] = useState<number>(0);
   
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -162,6 +183,32 @@ const TariffPlanForm = () => {
   }, [toast]);
 
   useEffect(() => {
+    const fetchLimitationTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('limitation_types')
+          .select('id, name, description, is_numeric')
+          .order('name', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching limitation types:', error);
+          toast({
+            title: 'Помилка',
+            description: 'Не вдалося завантажити список типів обмежень',
+            variant: 'destructive',
+          });
+        } else {
+          setLimitationTypes(data || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    fetchLimitationTypes();
+  }, [toast]);
+
+  useEffect(() => {
     const fetchTariffPlan = async () => {
       if (id && id !== 'new') {
         setIsLoading(true);
@@ -197,6 +244,34 @@ const TariffPlanForm = () => {
               console.error('Error fetching tariff plan items:', itemsError);
             } else {
               setPlanItems(itemsData || []);
+            }
+            
+            // Завантаження обмежень тарифного плану
+            const { data: limitationsData, error: limitationsError } = await supabase
+              .from('tariff_plan_limitations')
+              .select(`
+                id, 
+                limitation_type_id, 
+                value,
+                limitation_types:limitation_type_id (
+                  id, 
+                  name, 
+                  description, 
+                  is_numeric
+                )
+              `)
+              .eq('tariff_plan_id', id);
+            
+            if (limitationsError) {
+              console.error('Error fetching tariff plan limitations:', limitationsError);
+            } else {
+              // Перетворюємо отримані дані у формат PlanLimitation
+              setPlanLimitations(limitationsData.map(item => ({
+                id: item.id,
+                limitation_type_id: item.limitation_type_id,
+                value: item.value,
+                limitation_type: item.limitation_types
+              })));
             }
           }
         } catch (error) {
@@ -348,6 +423,61 @@ const TariffPlanForm = () => {
     return item ? item.description : 'Невідома функція';
   };
 
+  // Функції для роботи з обмеженнями
+  const addLimitation = () => {
+    if (!newLimitationTypeId) {
+      toast({
+        title: 'Помилка',
+        description: 'Оберіть тип обмеження',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (planLimitations.some(item => item.limitation_type_id === newLimitationTypeId)) {
+      toast({
+        title: 'Інформація',
+        description: 'Це обмеження вже додано до тарифу',
+      });
+      return;
+    }
+
+    const limitationType = limitationTypes.find(type => type.id === newLimitationTypeId);
+
+    const newLimitation: PlanLimitation = {
+      id: '',
+      limitation_type_id: newLimitationTypeId,
+      value: newLimitationValue,
+      limitation_type: limitationType
+    };
+    
+    setPlanLimitations([...planLimitations, newLimitation]);
+    setNewLimitationTypeId('');
+    setNewLimitationValue(0);
+    
+    toast({
+      title: 'Успіх',
+      description: 'Обмеження додано',
+    });
+  };
+
+  const updateLimitationValue = (index: number, value: number) => {
+    const updatedLimitations = [...planLimitations];
+    updatedLimitations[index].value = value;
+    setPlanLimitations(updatedLimitations);
+  };
+
+  const removeLimitation = (index: number) => {
+    const updatedLimitations = [...planLimitations];
+    updatedLimitations.splice(index, 1);
+    setPlanLimitations(updatedLimitations);
+  };
+
+  const getLimitationTypeDescription = (typeId: string) => {
+    const type = limitationTypes.find(t => t.id === typeId);
+    return type ? type.description || type.name : 'Невідоме обмеження';
+  };
+
   const onSubmit = async (values: z.infer<typeof validationSchema>) => {
     setIsLoading(true);
     try {
@@ -393,6 +523,16 @@ const TariffPlanForm = () => {
         if (deleteError) {
           console.error('Error deleting existing plan items:', deleteError);
         }
+        
+        // Видаляємо існуючі обмеження
+        const { error: deleteLimitationsError } = await supabase
+          .from('tariff_plan_limitations')
+          .delete()
+          .eq('tariff_plan_id', planId);
+          
+        if (deleteLimitationsError) {
+          console.error('Error deleting existing plan limitations:', deleteLimitationsError);
+        }
       } else {
         const { data, error } = await supabase
           .from('tariff_plans')
@@ -406,6 +546,7 @@ const TariffPlanForm = () => {
         planId = data[0].id;
       }
       
+      // Зберігаємо функції тарифу
       if (planItems.length > 0) {
         const itemsToInsert = planItems.map(item => ({
           tariff_plan_id: planId,
@@ -422,6 +563,28 @@ const TariffPlanForm = () => {
           toast({
             title: 'Увага',
             description: 'Тарифний план збережено, але виникла помилка при збереженні функцій тарифу',
+            variant: 'destructive',
+          });
+        }
+      }
+      
+      // Зберігаємо обмеження тарифу
+      if (planLimitations.length > 0) {
+        const limitationsToInsert = planLimitations.map(limitation => ({
+          tariff_plan_id: planId,
+          limitation_type_id: limitation.limitation_type_id,
+          value: limitation.value
+        }));
+        
+        const { error: limitationsError } = await supabase
+          .from('tariff_plan_limitations')
+          .insert(limitationsToInsert);
+          
+        if (limitationsError) {
+          console.error('Error saving plan limitations:', limitationsError);
+          toast({
+            title: 'Увага',
+            description: 'Тарифний план збережено, але виникла помилка при збереженні обмежень тарифу',
             variant: 'destructive',
           });
         }
@@ -443,6 +606,11 @@ const TariffPlanForm = () => {
       setIsLoading(false);
     }
   };
+
+  // Фільтруємо типи обмежень, які ще не були додані до тарифу
+  const availableLimitationTypes = limitationTypes.filter(
+    type => !planLimitations.some(limitation => limitation.limitation_type_id === type.id)
+  );
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-full">
@@ -484,6 +652,13 @@ const TariffPlanForm = () => {
                     >
                       <ListChecks className="h-4 w-4 mr-2" />
                       Функції тарифу
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="limitations" 
+                      className="w-full justify-start text-left px-3 data-[state=active]:bg-accent data-[state=active]:font-medium"
+                    >
+                      <BoxesIcon className="h-4 w-4 mr-2" />
+                      Обмеження магазину
                     </TabsTrigger>
                   </TabsList>
                 </div>
@@ -764,6 +939,114 @@ const TariffPlanForm = () => {
                               </p>
                               <p className="text-muted-foreground text-sm">
                                 Додайте функції з існуючого списку або створіть нові
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+                  
+                  {/* Нова вкладка з обмеженнями */}
+                  <TabsContent value="limitations" className="p-6 w-full space-y-6 mt-0">
+                    <div className="flex flex-col space-y-4">
+                      <h3 className="text-lg font-medium">Додати нове обмеження</h3>
+                      
+                      <Card className="border-dashed">
+                        <CardContent className="pt-6">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="col-span-1 md:col-span-2">
+                              <Select
+                                value={newLimitationTypeId}
+                                onValueChange={setNewLimitationTypeId}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Оберіть тип обмеження" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableLimitationTypes.map((type) => (
+                                    <SelectItem key={type.id} value={type.id}>
+                                      {type.description || type.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Input
+                                type="number"
+                                placeholder="Значення"
+                                value={newLimitationValue}
+                                onChange={(e) => setNewLimitationValue(Number(e.target.value))}
+                                min="0"
+                                className="flex-grow"
+                              />
+                              <Button 
+                                type="button" 
+                                onClick={addLimitation}
+                                variant="secondary"
+                                className="shrink-0"
+                              >
+                                <Plus className="h-5 w-5" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            * Значення 0 означає, що функціонал недоступний
+                          </p>
+                        </CardContent>
+                      </Card>
+                      
+                      <h3 className="text-lg font-medium mt-4">Обмеження тарифу ({planLimitations.length})</h3>
+                      
+                      <Card>
+                        <CardContent className="pt-6">
+                          {planLimitations.length > 0 ? (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Найменування</TableHead>
+                                  <TableHead className="w-[150px]">Значення</TableHead>
+                                  <TableHead className="w-[80px] text-right">Дії</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {planLimitations.map((limitation, index) => (
+                                  <TableRow key={index} className="group">
+                                    <TableCell>
+                                      {getLimitationTypeDescription(limitation.limitation_type_id)}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Input 
+                                        type="number"
+                                        min="0"
+                                        value={limitation.value}
+                                        onChange={(e) => updateLimitationValue(index, Number(e.target.value))}
+                                      />
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeLimitation(index)}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                              <BoxesIcon className="h-12 w-12 text-muted-foreground mb-4" />
+                              <p className="text-muted-foreground">
+                                Ще немає обмежень у цьому тарифі
+                              </p>
+                              <p className="text-muted-foreground text-sm">
+                                Додайте обмеження, щоб контролювати можливості користувачів
                               </p>
                             </div>
                           )}

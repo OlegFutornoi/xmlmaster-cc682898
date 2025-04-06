@@ -63,6 +63,33 @@ export type Database = {
         }
         Relationships: []
       }
+      limitation_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_numeric: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_numeric?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_numeric?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tariff_items: {
         Row: {
           created_at: string
@@ -126,6 +153,48 @@ export type Database = {
           },
         ]
       }
+      tariff_plan_limitations: {
+        Row: {
+          created_at: string
+          id: string
+          limitation_type_id: string
+          tariff_plan_id: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          limitation_type_id: string
+          tariff_plan_id: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          limitation_type_id?: string
+          tariff_plan_id?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariff_plan_limitations_limitation_type_id_fkey"
+            columns: ["limitation_type_id"]
+            isOneToOne: false
+            referencedRelation: "limitation_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_plan_limitations_tariff_plan_id_fkey"
+            columns: ["tariff_plan_id"]
+            isOneToOne: false
+            referencedRelation: "tariff_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tariff_plans: {
         Row: {
           created_at: string
@@ -163,6 +232,38 @@ export type Database = {
             columns: ["currency_id"]
             isOneToOne: false
             referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_stores: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
