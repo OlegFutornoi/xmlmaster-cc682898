@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління тарифами користувача
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -174,6 +175,7 @@ const UserTariffs = () => {
         return [];
       }
 
+      // Виправлений код: коректне перетворення даних
       return data?.map(item => ({
         limitation_type: {
           name: item.limitation_types?.name || '',

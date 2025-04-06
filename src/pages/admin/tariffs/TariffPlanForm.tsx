@@ -70,7 +70,7 @@ const TariffPlanForm = () => {
   const [limitations, setLimitations] = useState<Limitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState("info"); // Додано стан для активної вкладки
+  const [activeTab, setActiveTab] = useState("info");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -336,16 +336,18 @@ const TariffPlanForm = () => {
 
       if (field === 'limitation_type_id') {
         const selectedLimitationType = limitationTypes.find((lt) => lt.id === value);
-        updatedLimitations[index] = {
-          ...updatedLimitations[index],
-          limitation_type_id: value,
-          limitation_type: {
-            id: selectedLimitationType?.id || '',
-            name: selectedLimitationType?.name || '',
-            description: selectedLimitationType?.description || '',
-            is_numeric: selectedLimitationType?.is_numeric || true,
-          },
-        };
+        if (selectedLimitationType) {
+          updatedLimitations[index] = {
+            ...updatedLimitations[index],
+            limitation_type_id: value,
+            limitation_type: {
+              id: selectedLimitationType.id,
+              name: selectedLimitationType.name,
+              description: selectedLimitationType.description,
+              is_numeric: selectedLimitationType.is_numeric,
+            },
+          };
+        }
       } else {
         updatedLimitations[index] = {
           ...updatedLimitations[index],
