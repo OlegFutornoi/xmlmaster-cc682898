@@ -74,8 +74,18 @@ interface TariffItem {
   is_active: boolean;
 }
 
+interface LimitationType {
+  name: string;
+  description: string;
+}
+
 interface PlanLimitation {
-  limitation_type: {
+  limitation_type: LimitationType;
+  value: number;
+}
+
+interface LimitationTypeResponse {
+  limitation_types: {
     name: string;
     description: string;
   };
@@ -249,7 +259,6 @@ const UserTariffs = () => {
   };
 
   const fetchPlanDetails = async (planId: string) => {
-    // Отримуємо обмеження для тарифного плану
     try {
       const { data: limitationsData, error: limitationsError } = await extendedSupabase
         .from('tariff_plan_limitations')
@@ -261,7 +270,6 @@ const UserTariffs = () => {
 
       if (limitationsError) throw limitationsError;
 
-      // Отримуємо пункти для тарифного плану
       const { data: itemsData, error: itemsError } = await supabase
         .from('tariff_plan_items')
         .select(`
@@ -273,8 +281,8 @@ const UserTariffs = () => {
       if (itemsError) throw itemsError;
 
       if (limitationsData) {
-        // Виправляємо перетворення даних у правильний формат
-        const formattedLimitations = limitationsData.map(item => ({
+        const typedData = limitationsData as LimitationTypeResponse[] || [];
+        const formattedLimitations = typedData.map(item => ({
           limitation_type: {
             name: item.limitation_types?.name || '',
             description: item.limitation_types?.description || ''
@@ -287,7 +295,7 @@ const UserTariffs = () => {
 
       if (itemsData) {
         const formattedItems = itemsData
-          .filter(item => item.is_active) // відображаємо лише активні пункти
+          .filter(item => item.is_active)
           .map(item => ({
             id: item.tariff_items.id,
             description: item.tariff_items.description,
@@ -334,7 +342,6 @@ const UserTariffs = () => {
         return;
       }
 
-      // Розрахунок дати закінчення
       let endDate = null;
       if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
         const startDate = new Date();
@@ -342,7 +349,6 @@ const UserTariffs = () => {
         endDate.setDate(startDate.getDate() + selectedPlan.duration_days);
       }
 
-      // Деактивуємо поточну підписку
       if (activeSubscription) {
         const { error: updateError } = await supabase
           .from('user_tariff_subscriptions')
@@ -352,7 +358,6 @@ const UserTariffs = () => {
         if (updateError) throw updateError;
       }
 
-      // Створюємо нову підписку
       const { error: createError } = await supabase
         .from('user_tariff_subscriptions')
         .insert({
@@ -433,7 +438,6 @@ const UserTariffs = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Тарифні плани</h1>
       
-      {/* Активний тарифний план */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Поточний тариф</h2>
         {activeSubscription ? (
@@ -495,7 +499,6 @@ const UserTariffs = () => {
         )}
       </div>
 
-      {/* Доступні тарифні плани */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Доступні тарифи</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -543,7 +546,6 @@ const UserTariffs = () => {
         </div>
       </div>
 
-      {/* Історія підписок */}
       {subscriptionHistory.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Історія підписок</h2>
@@ -581,7 +583,6 @@ const UserTariffs = () => {
         </div>
       )}
 
-      {/* Діалог підтвердження активації тарифу */}
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -594,7 +595,6 @@ const UserTariffs = () => {
           {selectedPlanId && (
             <div className="py-4">
               <div className="space-y-6">
-                {/* Деталі тарифного плану */}
                 <div>
                   <h3 className="text-lg font-medium mb-2">
                     {availablePlans.find(p => p.id === selectedPlanId)?.name}
@@ -618,7 +618,6 @@ const UserTariffs = () => {
                   </div>
                 </div>
                 
-                {/* Включені пункти */}
                 {planItems.length > 0 && (
                   <div>
                     <h4 className="font-medium mb-2">Включені послуги:</h4>
@@ -633,7 +632,6 @@ const UserTariffs = () => {
                   </div>
                 )}
                 
-                {/* Обмеження */}
                 {planLimitations.length > 0 && (
                   <div>
                     <h4 className="font-medium mb-2">Обмеження:</h4>

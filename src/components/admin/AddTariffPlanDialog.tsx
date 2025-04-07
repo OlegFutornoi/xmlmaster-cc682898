@@ -53,6 +53,14 @@ interface PlanLimitation {
   value: number;
 }
 
+interface LimitationTypeResponse {
+  limitation_types: {
+    name: string;
+    description: string;
+  };
+  value: number;
+}
+
 interface AddTariffPlanDialogProps {
   userId: string;
   isOpen: boolean;
@@ -163,13 +171,14 @@ const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTari
         console.error('Error fetching plan limitations:', error);
       } else {
         // Виправляємо трансформацію даних, щоб уникнути помилок TypeScript
-        const formattedLimitations = data?.map(item => ({
+        const typedData = data as LimitationTypeResponse[] || [];
+        const formattedLimitations = typedData.map(item => ({
           limitation_type: {
             name: item.limitation_types?.name || '',
             description: item.limitation_types?.description || ''
           },
           value: item.value
-        })) || [];
+        }));
         
         setPlanLimitations(formattedLimitations);
       }
