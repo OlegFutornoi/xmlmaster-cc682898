@@ -1,5 +1,5 @@
 
-// Компонент для додавання тарифного плану через діалог
+// Компонент для додавання нового тарифного плану для користувача
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,220 +9,117 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { extendedSupabase } from '@/integrations/supabase/extended-client';
-import { useToast } from '@/hooks/use-toast';
-import { assignTariffPlan } from '@/services/tariffService';
-import { PlanLimitationsList } from '@/components/admin/tariffs/PlanLimitationsList';
-import { PlanLimitation } from '@/components/admin/tariffs/types';
-import { ActiveSubscriptionInfo } from '@/components/admin/tariffs/ActiveSubscriptionInfo';
-import { useActiveSubscription } from '@/hooks/tariffs/useActiveSubscription';
-import { Check, X } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { AlertCircle, Check, RefreshCcw, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-interface AddTariffPlanDialogProps {
-  userId: string;
-  onSuccess: () => void;
+import { useActiveSubscription } from '@/hooks/tariffs/useActiveSubscription';
+import { usePlanLimitations } from '@/hooks/tariffs/usePlanLimitations';
+import PlanLimitationsList from '@/components/admin/tariffs/PlanLimitationsList';
+import ActiveSubscriptionInfo from '@/components/admin/tariffs/ActiveSubscriptionInfo';
+import { PlanLimitation } from '@/components/admin/tariffs/types';
+
+interface TariffPlan {
+  id: string;
+  name: string;
+  price: number;
+  is_permanent: boolean;
+  currency_code: string;
+  duration_days: number | null;
 }
 
-const AddTariffPlanDialog: React.FC<AddTariffPlanDialogProps> = ({ userId, onSuccess }) => {
-  const { toast } = useToast();
-  const [tariffPlans, setTariffPlans] = useState<any[]>([]);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+interface TariffDialogProps {
+  open: boolean;
+  userId: string;
+  selectedPlan: TariffPlan | null;
+  onOpenChange: (open: boolean) => void;
+  onActivate: () => Promise<void>;
+  isActivating: boolean;
+}
+
+export const AddTariffPlanDialog: React.FC<TariffDialogProps> = ({
+  open,
+  userId,
+  selectedPlan,
+  onOpenChange,
+  onActivate,
+  isActivating
+}) => {
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { activeSubscription, isLoading: isLoadingSubscription } = useActiveSubscription(userId, open);
   
-  const { activeSubscription, isLoading: subscriptionLoading } = useActiveSubscription(userId);
+  const { planLimitations: fetchedLimitations } = usePlanLimitations(
+    selectedPlan?.id || ''
+  );
 
   useEffect(() => {
-    if (isDialogOpen) {
-      fetchTariffPlans();
+    if (fetchedLimitations) {
+      setPlanLimitations(fetchedLimitations);
     }
-  }, [isDialogOpen]);
+  }, [fetchedLimitations]);
 
-  useEffect(() => {
-    if (selectedPlanId) {
-      fetchPlanLimitations();
-    } else {
-      setPlanLimitations([]);
-    }
-  }, [selectedPlanId]);
-
-  const fetchTariffPlans = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tariff_plans')
-        .select(`
-          id, 
-          name, 
-          price, 
-          duration_days, 
-          is_permanent,
-          currencies:currency_id (code, name)
-        `)
-        .order('price', { ascending: true });
-
-      if (error) throw error;
-      setTariffPlans(data || []);
-    } catch (error) {
-      console.error('Error fetching tariff plans:', error);
-      toast({
-        title: "Помилка",
-        description: "Не вдалося завантажити тарифні плани",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchPlanLimitations = async () => {
-    if (!selectedPlanId) return;
-    
-    try {
-      const { data, error } = await extendedSupabase
-        .from('tariff_plan_limitations')
-        .select(`
-          value,
-          limitation_types:limitation_type_id (name, description)
-        `)
-        .eq('tariff_plan_id', selectedPlanId);
-
-      if (error) throw error;
-      
-      // Виправлене перетворення даних
-      const formattedLimitations = (data || []).map(item => ({
-        limitation_type: {
-          name: item.limitation_types ? 
-            (typeof item.limitation_types === 'object' && 'name' in item.limitation_types ? 
-              item.limitation_types.name || '' : '') : '',
-          description: item.limitation_types ? 
-            (typeof item.limitation_types === 'object' && 'description' in item.limitation_types ? 
-              item.limitation_types.description || '' : '') : ''
-        },
-        value: item.value
-      }));
-      
-      setPlanLimitations(formattedLimitations);
-    } catch (error) {
-      console.error('Error fetching plan limitations:', error);
-    }
-  };
-
-  const handleActivatePlan = async () => {
-    if (!selectedPlanId) {
-      toast({
-        title: "Помилка",
-        description: "Спочатку виберіть тарифний план",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await assignTariffPlan(
-        userId, 
-        selectedPlanId, 
-        activeSubscription?.id
-      );
-
-      toast({
-        title: "Успішно",
-        description: "Тарифний план успішно призначено користувачу",
-      });
-      
-      setIsDialogOpen(false);
-      onSuccess();
-    } catch (error: any) {
-      console.error('Error activating plan:', error);
-      toast({
-        title: "Помилка",
-        description: error.message || "Не вдалося активувати тарифний план",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const selectedPlan = tariffPlans.find(plan => plan.id === selectedPlanId);
+  if (!selectedPlan) return null;
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Додати тариф</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Додати тарифний план</DialogTitle>
+          <DialogTitle>Підтвердження активації тарифу</DialogTitle>
           <DialogDescription>
-            Виберіть тарифний план для користувача.
+            Перегляньте деталі обраного тарифного плану
           </DialogDescription>
         </DialogHeader>
-
-        {!subscriptionLoading && activeSubscription && (
-          <ActiveSubscriptionInfo subscription={activeSubscription} />
-        )}
-
-        <div className="grid gap-4 mt-4">
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium">Доступні тарифні плани:</h3>
-            <div className="grid grid-cols-1 gap-3">
-              {tariffPlans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={`
-                    border rounded-lg p-3 cursor-pointer transition-colors
-                    ${selectedPlanId === plan.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}
-                  `}
-                  onClick={() => setSelectedPlanId(plan.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      {selectedPlanId === plan.id ? (
-                        <Check className="h-5 w-5 text-blue-500 mr-2" />
-                      ) : (
-                        <div className="h-5 w-5 border rounded-full mr-2"></div>
-                      )}
-                      <div>
-                        <h4 className="font-medium">{plan.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {plan.price} {plan.currencies.code} - 
-                          {plan.is_permanent 
-                            ? ' Постійний доступ' 
-                            : ` ${plan.duration_days} днів`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-lg font-semibold">
-                      {plan.price} {plan.currencies.code}
-                    </div>
-                  </div>
-                  
-                  {selectedPlanId === plan.id && planLimitations.length > 0 && (
-                    <div className="mt-3 ml-7">
-                      <PlanLimitationsList planLimitations={planLimitations} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+        
+        <div className="py-4">
+          {activeSubscription && (
+            <ActiveSubscriptionInfo activeSubscription={activeSubscription} />
+          )}
+          
+          <div>
+            <h3 className="text-lg font-medium">{selectedPlan.name}</h3>
+            <p className="text-2xl font-bold my-2">
+              {selectedPlan.price} {selectedPlan.currency_code}
+            </p>
+            <Badge variant="outline">
+              {selectedPlan.is_permanent 
+                ? "Постійний доступ" 
+                : `${selectedPlan.duration_days} днів`}
+            </Badge>
+            
+            {/* Список обмежень */}
+            <PlanLimitationsList planLimitations={planLimitations} />
+            
+            {activeSubscription && (
+              <Alert className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Увага</AlertTitle>
+                <AlertDescription>
+                  При активації нового тарифу, ваш поточний тариф буде деактивовано.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         </div>
-
+        
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-            <X className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Скасувати
           </Button>
-          <Button onClick={handleActivatePlan} disabled={!selectedPlanId || isLoading}>
-            {isLoading ? (
-              "Активація..."
+          <Button 
+            onClick={onActivate}
+            disabled={isActivating}
+            className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
+          >
+            {isActivating ? (
+              <>
+                <RefreshCcw className="h-4 w-4 animate-spin" />
+                Активація...
+              </>
             ) : (
               <>
-                <Check className="h-4 w-4 mr-2" />
-                Активувати
+                <Zap className="h-4 w-4" />
+                Активувати тариф
               </>
             )}
           </Button>

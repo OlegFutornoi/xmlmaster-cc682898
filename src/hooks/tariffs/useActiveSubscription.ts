@@ -5,11 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useActiveSubscription = (userId: string, isOpen: boolean) => {
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchActiveSubscription = async () => {
       if (!userId) return;
       
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('user_tariff_subscriptions')
         .select(`
@@ -35,6 +37,7 @@ export const useActiveSubscription = (userId: string, isOpen: boolean) => {
       } else {
         setActiveSubscription(data);
       }
+      setIsLoading(false);
     };
 
     if (isOpen) {
@@ -42,5 +45,5 @@ export const useActiveSubscription = (userId: string, isOpen: boolean) => {
     }
   }, [isOpen, userId]);
 
-  return { activeSubscription };
+  return { activeSubscription, isLoading };
 };

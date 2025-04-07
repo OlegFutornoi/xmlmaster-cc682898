@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TariffPlan } from '@/components/admin/tariffs/types';
-import { PlanLimitationsList } from '@/components/admin/tariffs/PlanLimitationsList';
+import PlanLimitationsList from '@/components/admin/tariffs/PlanLimitationsList';
 import { PlanLimitation } from '@/components/admin/tariffs/types';
 
 interface TariffItem {
