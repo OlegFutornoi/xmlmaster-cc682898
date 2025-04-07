@@ -620,16 +620,11 @@ const TariffPlanForm = () => {
         </CardHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:flex-row h-full">
-            <Tabs 
-              defaultValue="info" 
-              value={activeTab} 
-              onValueChange={setActiveTab} 
-              className="w-full flex flex-col lg:flex-row"
-            >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row">
               {/* Вертикальні вкладки зліва */}
-              <div className="w-full lg:w-56 shrink-0 border-r">
-                <TabsList className="flex lg:flex-col p-2 gap-1 h-auto w-full">
+              <div className="w-full md:w-56 shrink-0 border-r">
+                <TabsList className="flex flex-col p-2 gap-1 h-auto w-full bg-transparent">
                   <TabsTrigger 
                     className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
                     value="info"
@@ -917,51 +912,58 @@ const TariffPlanForm = () => {
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="space-y-4">
+                      <div className="space-y-4">
+                        <div className="divide-y border rounded-lg overflow-hidden">
                           {limitations.map((limitation, index) => (
                             <div 
                               key={index} 
-                              className="flex flex-col sm:flex-row gap-4 items-start border p-4 rounded-lg bg-gray-50"
+                              className="flex items-center p-4 bg-white hover:bg-gray-50 transition-colors"
                             >
                               <div className="flex-1">
-                                <Label htmlFor={`limitation-type-${index}`}>Тип обмеження</Label>
-                                <Select
-                                  value={limitation.limitation_type_id}
-                                  onValueChange={(value) => handleLimitationChange(index, 'limitation_type_id', value)}
-                                >
-                                  <SelectTrigger id={`limitation-type-${index}`} className="mt-1.5">
-                                    <SelectValue placeholder="Виберіть тип обмеження" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {limitationTypes.map((type) => (
-                                      <SelectItem key={type.id} value={type.id}>
-                                        {type.description || type.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="flex flex-col md:flex-row gap-4">
+                                  <div className="flex-1">
+                                    <Label htmlFor={`limitation-type-${index}`} className="text-xs text-gray-500">
+                                      Тип обмеження
+                                    </Label>
+                                    <Select
+                                      value={limitation.limitation_type_id}
+                                      onValueChange={(value) => handleLimitationChange(index, 'limitation_type_id', value)}
+                                    >
+                                      <SelectTrigger id={`limitation-type-${index}`} className="mt-1">
+                                        <SelectValue placeholder="Виберіть тип обмеження" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {limitationTypes.map((type) => (
+                                          <SelectItem key={type.id} value={type.id}>
+                                            {type.description || type.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  <div className="w-full md:w-32">
+                                    <Label htmlFor={`limitation-value-${index}`} className="text-xs text-gray-500">
+                                      Значення
+                                    </Label>
+                                    <Input
+                                      id={`limitation-value-${index}`}
+                                      type="number"
+                                      value={limitation.value}
+                                      onChange={(e) => handleLimitationChange(index, 'value', e.target.value)}
+                                      placeholder="Значення"
+                                      className="mt-1"
+                                    />
+                                  </div>
+                                </div>
                               </div>
-                              
-                              <div className="w-full sm:w-32">
-                                <Label htmlFor={`limitation-value-${index}`}>Значення</Label>
-                                <Input
-                                  id={`limitation-value-${index}`}
-                                  type="number"
-                                  value={limitation.value}
-                                  onChange={(e) => handleLimitationChange(index, 'value', e.target.value)}
-                                  placeholder="Введіть значення"
-                                  className="mt-1.5"
-                                />
-                              </div>
-                              
-                              <div className="self-end sm:self-center mt-2 sm:mt-0">
+                              <div className="ml-4">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleDeleteLimitation(index)}
-                                  className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -987,23 +989,23 @@ const TariffPlanForm = () => {
                 </TabsContent>
               </div>
             </Tabs>
+            
+            <div className="p-6 border-t bg-gray-50 flex justify-between items-center mt-auto">
+              <Button type="button" variant="outline" onClick={() => navigate('/admin/tariffs')}>
+                Скасувати
+              </Button>
+              <Button 
+                type="button" 
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSubmitting}
+                className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                {isSubmitting ? 'Збереження...' : 'Зберегти'}
+              </Button>
+            </div>
           </form>
         </Form>
-        
-        <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
-          <Button type="button" variant="outline" onClick={() => navigate('/admin/tariffs')}>
-            Скасувати
-          </Button>
-          <Button 
-            type="button" 
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {isSubmitting ? 'Збереження...' : 'Зберегти'}
-          </Button>
-        </div>
       </Card>
     </div>
   );
