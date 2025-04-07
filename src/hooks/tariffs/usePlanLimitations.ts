@@ -27,8 +27,12 @@ export const usePlanLimitations = (selectedPlanId: string) => {
       } else {
         const formattedLimitations = (data || []).map(item => ({
           limitation_type: {
-            name: item.limitation_types ? item.limitation_types.name || '' : '',
-            description: item.limitation_types ? item.limitation_types.description || '' : ''
+            name: item.limitation_types ? 
+              (typeof item.limitation_types === 'object' && 'name' in item.limitation_types ? 
+                item.limitation_types.name || '' : '') : '',
+            description: item.limitation_types ? 
+              (typeof item.limitation_types === 'object' && 'description' in item.limitation_types ? 
+                item.limitation_types.description || '' : '') : ''
           },
           value: item.value
         }));
