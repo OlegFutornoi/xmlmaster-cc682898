@@ -90,6 +90,44 @@ export type Database = {
         }
         Relationships: []
       }
+      suppliers: {
+        Row: {
+          created_at: string
+          file_path: string | null
+          id: string
+          name: string
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tariff_items: {
         Row: {
           created_at: string
@@ -158,6 +196,7 @@ export type Database = {
           created_at: string
           id: string
           limitation_type_id: string
+          suppliers_count: boolean | null
           tariff_plan_id: string
           updated_at: string
           value: number
@@ -166,6 +205,7 @@ export type Database = {
           created_at?: string
           id?: string
           limitation_type_id: string
+          suppliers_count?: boolean | null
           tariff_plan_id: string
           updated_at?: string
           value?: number
@@ -174,6 +214,7 @@ export type Database = {
           created_at?: string
           id?: string
           limitation_type_id?: string
+          suppliers_count?: boolean | null
           tariff_plan_id?: string
           updated_at?: string
           value?: number
