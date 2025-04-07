@@ -173,8 +173,8 @@ const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTari
         // Виправлене перетворення даних
         const formattedLimitations = (data || []).map(item => ({
           limitation_type: {
-            name: item.limitation_types?.name || '',
-            description: item.limitation_types?.description || ''
+            name: item.limitation_types ? item.limitation_types.name || '' : '',
+            description: item.limitation_types ? item.limitation_types.description || '' : ''
           },
           value: item.value
         }));

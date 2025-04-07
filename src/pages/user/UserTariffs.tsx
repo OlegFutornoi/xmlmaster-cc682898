@@ -285,8 +285,8 @@ const UserTariffs = () => {
         // Виправлене перетворення даних
         const formattedLimitations = (limitationsData || []).map(item => ({
           limitation_type: {
-            name: item.limitation_types?.name || '',
-            description: item.limitation_types?.description || ''
+            name: item.limitation_types ? item.limitation_types.name || '' : '',
+            description: item.limitation_types ? item.limitation_types.description || '' : ''
           },
           value: item.value
         }));
