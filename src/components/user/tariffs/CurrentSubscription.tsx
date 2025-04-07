@@ -1,4 +1,3 @@
-
 // Компонент відображення інформації про поточну підписку користувача
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,7 +79,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
               Закінчення: {format(new Date(end_date as string), "dd MMM yyyy", { locale: uk })}
             </span>
             {daysLeft !== null && (
-              <Badge variant={daysLeft < 5 ? "warning" : "outline"} className="whitespace-nowrap">
+              <Badge variant={daysLeft < 5 ? "warning" : "default"} className="whitespace-nowrap">
                 {daysLeft} {daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дні' : 'днів'} залишилось
               </Badge>
             )}

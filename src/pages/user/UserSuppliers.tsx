@@ -1,4 +1,3 @@
-
 // Компонент для відображення та керування постачальниками користувача
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -56,7 +55,8 @@ const UserSuppliers = () => {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Використовуємо any як тимчасове рішення для типізації
+      const { data, error } = await (supabase as any)
         .from('suppliers')
         .select('*')
         .eq('user_id', user.id)
@@ -70,7 +70,7 @@ const UserSuppliers = () => {
           variant: 'destructive',
         });
       } else {
-        setSuppliers(data || []);
+        setSuppliers(data as Supplier[] || []);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -104,13 +104,10 @@ const UserSuppliers = () => {
       }
 
       // Отримуємо обмеження для активного тарифу користувача
-      const { data: limitationData, error: limitationError } = await supabase
+      // Використовуємо any як тимчасове рішення для типізації
+      const { data: limitationData, error: limitationError } = await (supabase as any)
         .from('tariff_plan_limitations')
-        .select(`
-          value,
-          limitation_type_id,
-          suppliers_count
-        `)
+        .select('value, suppliers_count')
         .eq('tariff_plan_id', subscriptionData.tariff_plan_id)
         .eq('suppliers_count', true)
         .maybeSingle();
@@ -170,7 +167,7 @@ const UserSuppliers = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     // Перевірка валідації
     if (!supplierName.trim()) {
       toast({
@@ -244,7 +241,8 @@ const UserSuppliers = () => {
       }
 
       // Створення запису постачальника
-      const { data, error } = await supabase
+      // Використовуємо any як тимчасове рішення для типізації
+      const { data, error } = await (supabase as any)
         .from('suppliers')
         .insert({
           user_id: user.id,
@@ -288,7 +286,8 @@ const UserSuppliers = () => {
     setIsDeleting(true);
     try {
       // Отримуємо інформацію про постачальника перед видаленням
-      const { data: supplierData, error: fetchError } = await supabase
+      // Використовуємо any як тимчасове рішення для типізації
+      const { data: supplierData, error: fetchError } = await (supabase as any)
         .from('suppliers')
         .select('file_path')
         .eq('id', supplierToDelete)
@@ -300,7 +299,8 @@ const UserSuppliers = () => {
       }
 
       // Видаляємо запис постачальника
-      const { error: deleteError } = await supabase
+      // Використовуємо any як тимчасове рішення для типізації
+      const { error: deleteError } = await (supabase as any)
         .from('suppliers')
         .delete()
         .eq('id', supplierToDelete)
@@ -311,7 +311,7 @@ const UserSuppliers = () => {
       }
 
       // Якщо є файл, видаляємо його зі сховища
-      if (supplierData?.file_path) {
+      if (supplierData && supplierData.file_path) {
         const { error: storageError } = await supabase.storage
           .from('supplier_files')
           .remove([supplierData.file_path]);
