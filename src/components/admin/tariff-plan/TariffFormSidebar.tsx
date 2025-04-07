@@ -72,7 +72,7 @@ const TariffFormSidebar: React.FC<TariffFormSidebarProps> = ({
             <Button
               variant="outline"
               type="button"
-              onClick={() => navigate('/admin/dashboard/tariffs')}
+              onClick={() => navigate('/admin/tariffs')}
             >
               Назад
             </Button>
