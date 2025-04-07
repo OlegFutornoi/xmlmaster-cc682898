@@ -274,13 +274,26 @@ const UserTariffs = () => {
       if (itemsError) throw itemsError;
 
       if (limitationsData) {
-        const formattedLimitations = limitationsData.map(item => ({
-          limitation_type: {
-            name: item.limitation_types?.name || '',
-            description: item.limitation_types?.description || '',
-          },
-          value: item.value,
-        }));
+        // Виправляємо перетворення даних у правильний формат
+        const formattedLimitations = limitationsData.map(item => {
+          if (item.limitation_types) {
+            return {
+              limitation_type: {
+                name: item.limitation_types.name || '',
+                description: item.limitation_types.description || '',
+              },
+              value: item.value,
+            };
+          }
+          return {
+            limitation_type: {
+              name: '',
+              description: '',
+            },
+            value: item.value,
+          };
+        });
+        
         setPlanLimitations(formattedLimitations);
       }
 

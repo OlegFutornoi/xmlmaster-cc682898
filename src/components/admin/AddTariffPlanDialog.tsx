@@ -162,16 +162,27 @@ const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTari
       if (error) {
         console.error('Error fetching plan limitations:', error);
       } else {
-        // Виправляємо перетворення даних, щоб уникнути помилок TypeScript
-        const transformedData = data?.map(item => ({
-          limitation_type: {
-            name: item.limitation_types?.name || '',
-            description: item.limitation_types?.description || '',
-          },
-          value: item.value,
-        })) || [];
+        // Виправляємо трансформацію даних, щоб уникнути помилок TypeScript
+        const formattedLimitations = data?.map(item => {
+          if (item.limitation_types) {
+            return {
+              limitation_type: {
+                name: item.limitation_types.name || '',
+                description: item.limitation_types.description || '',
+              },
+              value: item.value,
+            };
+          }
+          return {
+            limitation_type: {
+              name: '',
+              description: '',
+            },
+            value: item.value,
+          };
+        }) || [];
         
-        setPlanLimitations(transformedData);
+        setPlanLimitations(formattedLimitations);
       }
     };
 
