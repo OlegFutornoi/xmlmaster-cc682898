@@ -621,317 +621,316 @@ const TariffPlanForm = () => {
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col lg:flex-row h-full">
-            {/* Вертикальні вкладки зліва */}
-            <div className="w-full lg:w-56 shrink-0 border-r">
-              <TabsList className="flex lg:flex-col p-2 gap-1 h-auto" orientation="vertical">
-                <TabsTrigger 
-                  className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
-                  value="info"
-                  onClick={() => setActiveTab("info")}
-                >
-                  <Info className="w-4 h-4" />
-                  Основна інформація
-                </TabsTrigger>
-                <TabsTrigger 
-                  className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
-                  value="functions"
-                  onClick={() => setActiveTab("functions")}
-                >
-                  <Package className="w-4 h-4" />
-                  Функції
-                </TabsTrigger>
-                <TabsTrigger 
-                  className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
-                  value="limitations"
-                  onClick={() => setActiveTab("limitations")}
-                >
-                  <Layers className="w-4 h-4" />
-                  Обмеження
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <div className="flex-1 p-6">
-              <TabsContent value="info" className="space-y-6">
-                <div className="bg-white p-6 rounded-lg border shadow-sm">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base">Назва</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Назва тарифного плану" {...field} className="focus-visible:ring-indigo-500" />
-                        </FormControl>
-                        <FormDescription>
-                          Це назва тарифного плану, яку бачитимуть користувачі.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="bg-white p-6 rounded-lg border shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Tabs 
+              defaultValue="info" 
+              value={activeTab} 
+              onValueChange={setActiveTab} 
+              className="w-full flex flex-col lg:flex-row"
+            >
+              {/* Вертикальні вкладки зліва */}
+              <div className="w-full lg:w-56 shrink-0 border-r">
+                <TabsList className="flex lg:flex-col p-2 gap-1 h-auto w-full">
+                  <TabsTrigger 
+                    className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
+                    value="info"
+                  >
+                    <Info className="w-4 h-4" />
+                    Основна інформація
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
+                    value="functions"
+                  >
+                    <Package className="w-4 h-4" />
+                    Функції
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    className="flex items-center justify-start gap-2 py-3 px-4 w-full data-[state=active]:bg-indigo-50" 
+                    value="limitations"
+                  >
+                    <Layers className="w-4 h-4" />
+                    Обмеження
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <div className="flex-1 p-6">
+                <TabsContent value="info" className="space-y-6 mt-0">
+                  <div className="bg-white p-6 rounded-lg border shadow-sm">
                     <FormField
                       control={form.control}
-                      name="price"
+                      name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Ціна</FormLabel>
+                          <FormLabel className="text-base">Назва</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Ціна тарифного плану" 
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                              className="focus-visible:ring-indigo-500"
-                            />
+                            <Input placeholder="Назва тарифного плану" {...field} className="focus-visible:ring-indigo-500" />
                           </FormControl>
                           <FormDescription>
-                            Вкажіть ціну тарифного плану.
+                            Це назва тарифного плану, яку бачитимуть користувачі.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                  </div>
 
-                    <FormField
-                      control={form.control}
-                      name="currency_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Валюта</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                  <div className="bg-white p-6 rounded-lg border shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-base">Ціна</FormLabel>
                             <FormControl>
-                              <SelectTrigger className="focus:ring-indigo-500">
-                                <SelectValue placeholder="Виберіть валюту" />
-                              </SelectTrigger>
+                              <Input 
+                                type="number" 
+                                placeholder="Ціна тарифного плану" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                className="focus-visible:ring-indigo-500"
+                              />
                             </FormControl>
-                            <SelectContent>
-                              {currencies.map((currency) => (
-                                <SelectItem key={currency.id} value={currency.id}>
-                                  {currency.name} ({currency.code})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Виберіть валюту для тарифного плану.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormDescription>
+                              Вкажіть ціну тарифного плану.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="currency_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-base">Валюта</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="focus:ring-indigo-500">
+                                  <SelectValue placeholder="Виберіть валюту" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {currencies.map((currency) => (
+                                  <SelectItem key={currency.id} value={currency.id}>
+                                    {currency.name} ({currency.code})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Виберіть валюту для тарифного плану.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="bg-white p-6 rounded-lg border shadow-sm">
-                  <FormField
-                    control={form.control}
-                    name="is_permanent"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Постійний доступ</FormLabel>
-                          <FormDescription>
-                            Увімкніть, якщо тарифний план надає постійний доступ.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {!form.watch("is_permanent") && (
+                  <div className="bg-white p-6 rounded-lg border shadow-sm">
                     <FormField
                       control={form.control}
-                      name="duration_days"
+                      name="is_permanent"
                       render={({ field }) => (
-                        <FormItem className="mt-4">
-                          <FormLabel className="text-base">Тривалість (в днях)</FormLabel>
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Постійний доступ</FormLabel>
+                            <FormDescription>
+                              Увімкніть, якщо тарифний план надає постійний доступ.
+                            </FormDescription>
+                          </div>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Тривалість тарифного плану в днях" 
-                              {...field} 
-                              value={field.value || ""} 
-                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                              className="focus-visible:ring-indigo-500"
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Вкажіть тривалість тарифного плану в днях.
-                          </FormDescription>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
-                  )}
-                </div>
-              </TabsContent>
 
-              <TabsContent value="functions" className="space-y-6">
-                <div className="bg-white p-6 rounded-lg border shadow-sm">
-                  <h3 className="text-lg font-semibold mb-4">Функції тарифного плану</h3>
-                  <p className="text-gray-500 mb-4">
-                    Налаштуйте функції, які будуть доступні користувачам цього тарифного плану.
-                  </p>
-                  
-                  {/* Форма додавання нового пункту тарифного плану */}
-                  <div className="mb-6 p-4 border border-dashed rounded-md">
-                    <h4 className="text-md font-medium mb-3">Додати новий пункт</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="new-item">Опис пункту</Label>
-                        <div className="flex mt-1 gap-2">
-                          <Input
-                            id="new-item"
-                            placeholder="Введіть опис пункту тарифного плану"
-                            value={newItemDescription}
-                            onChange={(e) => setNewItemDescription(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={handleAddNewTariffItem} 
-                            variant="outline"
-                            className="shrink-0"
-                          >
-                            Додати
-                          </Button>
+                    {!form.watch("is_permanent") && (
+                      <FormField
+                        control={form.control}
+                        name="duration_days"
+                        render={({ field }) => (
+                          <FormItem className="mt-4">
+                            <FormLabel className="text-base">Тривалість (в днях)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                placeholder="Тривалість тарифного плану в днях" 
+                                {...field} 
+                                value={field.value || ""} 
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                className="focus-visible:ring-indigo-500"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Вкажіть тривалість тарифного плану в днях.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="functions" className="space-y-6 mt-0">
+                  <div className="bg-white p-6 rounded-lg border shadow-sm">
+                    <h3 className="text-lg font-semibold mb-4">Функції тарифного плану</h3>
+                    <p className="text-gray-500 mb-4">
+                      Налаштуйте функції, які будуть доступні користувачам цього тарифного плану.
+                    </p>
+                    
+                    {/* Форма додавання нового пункту тарифного плану */}
+                    <div className="mb-6 p-4 border border-dashed rounded-md">
+                      <h4 className="text-md font-medium mb-3">Додати новий пункт</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="new-item">Опис пункту</Label>
+                          <div className="flex mt-1 gap-2">
+                            <Input
+                              id="new-item"
+                              placeholder="Введіть опис пункту тарифного плану"
+                              value={newItemDescription}
+                              onChange={(e) => setNewItemDescription(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={handleAddNewTariffItem} 
+                              variant="outline"
+                              className="shrink-0"
+                            >
+                              Додати
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="existing-item">Або виберіть існуючий</Label>
-                        <div className="flex mt-1 gap-2">
-                          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Виберіть пункт" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tariffItems.map((item) => (
-                                <SelectItem key={item.id} value={item.id}>
-                                  {item.description}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button 
-                            type="button" 
-                            onClick={handleAddExistingItem} 
-                            variant="outline"
-                            className="shrink-0"
-                          >
-                            Додати
-                          </Button>
+                        
+                        <div>
+                          <Label htmlFor="existing-item">Або виберіть існуючий</Label>
+                          <div className="flex mt-1 gap-2">
+                            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Виберіть пункт" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {tariffItems.map((item) => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.description}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              type="button" 
+                              onClick={handleAddExistingItem} 
+                              variant="outline"
+                              className="shrink-0"
+                            >
+                              Додати
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Список пунктів тарифного плану */}
-                  {planItems.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[60%]">Опис</TableHead>
-                            <TableHead className="w-[20%]">Активний</TableHead>
-                            <TableHead className="w-[20%] text-right">Дії</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {planItems.map((item, index) => (
-                            <TableRow key={index} className={!item.is_active ? "opacity-60" : ""}>
-                              <TableCell className="font-medium">
-                                {item.tariff_item.description}
-                              </TableCell>
-                              <TableCell>
-                                <Switch 
-                                  checked={item.is_active} 
-                                  onCheckedChange={() => toggleItemActive(index)}
-                                />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => deleteItem(index)}
-                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
+                    
+                    {/* Список пунктів тарифного плану */}
+                    {planItems.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[60%]">Опис</TableHead>
+                              <TableHead className="w-[20%]">Активний</TableHead>
+                              <TableHead className="w-[20%] text-right">Дії</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center p-8 border-2 border-dashed rounded-lg">
-                      <Package className="mx-auto h-12 w-12 text-gray-300 mb-2" />
-                      <p className="text-gray-500">У цього тарифу ще немає пунктів</p>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="limitations" className="space-y-6">
-                <div className="bg-white p-6 rounded-lg border shadow-sm">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Обмеження тарифного плану</h3>
-                    <Button 
-                      type="button" 
-                      onClick={handleAddLimitation} 
-                      variant="outline"
-                      className="flex items-center gap-2 border-indigo-200 hover:bg-indigo-50"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Додати обмеження
-                    </Button>
+                          </TableHeader>
+                          <TableBody>
+                            {planItems.map((item, index) => (
+                              <TableRow key={index} className={!item.is_active ? "opacity-60" : ""}>
+                                <TableCell className="font-medium">
+                                  {item.tariff_item.description}
+                                </TableCell>
+                                <TableCell>
+                                  <Switch 
+                                    checked={item.is_active} 
+                                    onCheckedChange={() => toggleItemActive(index)}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => deleteItem(index)}
+                                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="text-center p-8 border-2 border-dashed rounded-lg">
+                        <Package className="mx-auto h-12 w-12 text-gray-300 mb-2" />
+                        <p className="text-gray-500">У цього тарифу ще немає пунктів</p>
+                      </div>
+                    )}
                   </div>
-                  
-                  {limitations.length === 0 ? (
-                    <div className="text-center p-8 border-2 border-dashed rounded-lg">
-                      <Layers className="mx-auto h-12 w-12 text-gray-300 mb-2" />
-                      <p className="text-gray-500">У цього тарифу ще немає обмежень</p>
+                </TabsContent>
+
+                <TabsContent value="limitations" className="space-y-6 mt-0">
+                  <div className="bg-white p-6 rounded-lg border shadow-sm">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Обмеження тарифного плану</h3>
                       <Button 
                         type="button" 
-                        variant="outline" 
                         onClick={handleAddLimitation} 
-                        className="mt-4 border-indigo-200 hover:bg-indigo-50"
+                        variant="outline"
+                        className="flex items-center gap-2 border-indigo-200 hover:bg-indigo-50"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Додати перше обмеження
+                        <Plus className="w-4 h-4" />
+                        Додати обмеження
                       </Button>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[40%]">Тип обмеження</TableHead>
-                            <TableHead className="w-[40%]">Значення</TableHead>
-                            <TableHead className="w-[20%] text-right">Дії</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                    
+                    {limitations.length === 0 ? (
+                      <div className="text-center p-8 border-2 border-dashed rounded-lg">
+                        <Layers className="mx-auto h-12 w-12 text-gray-300 mb-2" />
+                        <p className="text-gray-500">У цього тарифу ще немає обмежень</p>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={handleAddLimitation} 
+                          className="mt-4 border-indigo-200 hover:bg-indigo-50"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Додати перше обмеження
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="space-y-4">
                           {limitations.map((limitation, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
+                            <div 
+                              key={index} 
+                              className="flex flex-col sm:flex-row gap-4 items-start border p-4 rounded-lg bg-gray-50"
+                            >
+                              <div className="flex-1">
+                                <Label htmlFor={`limitation-type-${index}`}>Тип обмеження</Label>
                                 <Select
                                   value={limitation.limitation_type_id}
                                   onValueChange={(value) => handleLimitationChange(index, 'limitation_type_id', value)}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger id={`limitation-type-${index}`} className="mt-1.5">
                                     <SelectValue placeholder="Виберіть тип обмеження" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -942,47 +941,52 @@ const TariffPlanForm = () => {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </TableCell>
-                              <TableCell>
+                              </div>
+                              
+                              <div className="w-full sm:w-32">
+                                <Label htmlFor={`limitation-value-${index}`}>Значення</Label>
                                 <Input
+                                  id={`limitation-value-${index}`}
                                   type="number"
                                   value={limitation.value}
                                   onChange={(e) => handleLimitationChange(index, 'value', e.target.value)}
                                   placeholder="Введіть значення"
+                                  className="mt-1.5"
                                 />
-                              </TableCell>
-                              <TableCell className="text-right">
+                              </div>
+                              
+                              <div className="self-end sm:self-center mt-2 sm:mt-0">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleDeleteLimitation(index)}
-                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
-                              </TableCell>
-                            </TableRow>
+                              </div>
+                            </div>
                           ))}
-                        </TableBody>
-                      </Table>
-                      
-                      <div className="flex justify-center mt-4">
-                        <Button 
-                          type="button" 
-                          onClick={handleAddLimitation} 
-                          variant="outline"
-                          className="flex items-center gap-2"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Додати ще обмеження
-                        </Button>
+                        </div>
+                        
+                        <div className="flex justify-center mt-4">
+                          <Button 
+                            type="button" 
+                            onClick={handleAddLimitation} 
+                            variant="outline"
+                            className="flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Додати ще обмеження
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
           </form>
         </Form>
         
