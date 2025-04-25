@@ -356,7 +356,6 @@ export type Database = {
       }
       users: {
         Row: {
-          avatar_url: string | null
           created_at: string
           email: string
           id: string
@@ -366,7 +365,6 @@ export type Database = {
           username: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
           email: string
           id?: string
@@ -376,7 +374,6 @@ export type Database = {
           username: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -392,10 +389,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_avatar_column_if_not_exists: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

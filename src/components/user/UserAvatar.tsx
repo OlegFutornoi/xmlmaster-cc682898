@@ -46,32 +46,21 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     
     setIsLoadingAvatar(true);
     try {
-      // Отримуємо аватар з профілю користувача
-      if (user.avatar_url) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching avatar:', error);
+      } else if (data?.avatar_url) {
         // Отримуємо URL аватару зі сховища
         const { data: storageData } = await supabase.storage
           .from('avatars')
-          .getPublicUrl(`${user.id}/${user.avatar_url}`);
+          .getPublicUrl(`${user.id}/${data.avatar_url}`);
           
         setAvatarUrl(storageData.publicUrl);
-      } else {
-        // Якщо в профілі немає avatar_url, перевіряємо в базі даних
-        const { data, error } = await supabase
-          .from('users')
-          .select('avatar_url')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching avatar:', error);
-        } else if (data?.avatar_url) {
-          // Отримуємо URL аватару зі сховища
-          const { data: storageData } = await supabase.storage
-            .from('avatars')
-            .getPublicUrl(`${user.id}/${data.avatar_url}`);
-            
-          setAvatarUrl(storageData.publicUrl);
-        }
       }
     } catch (error) {
       console.error('Error:', error);
