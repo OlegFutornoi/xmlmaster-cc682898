@@ -1,7 +1,6 @@
 
-// Компонент для управління тарифними планами в адмін-панелі
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -254,7 +253,7 @@ const AdminTariffs = () => {
           </TabsContent>
         </Tabs>
         
-        {/* Видалено <Outlet /> компонент, який міг спричиняти проблему з маршрутизацією */}
+        <Outlet />
       </div>
     </div>
   );

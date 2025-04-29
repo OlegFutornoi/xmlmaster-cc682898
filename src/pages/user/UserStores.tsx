@@ -47,14 +47,8 @@ const UserStores = () => {
   useEffect(() => {
     console.log('UserStores component mounted');
     fetchUserStores();
+    fetchUserLimitations();
   }, []);
-
-  // Окремий useEffect для викликання fetchUserLimitations після завантаження магазинів
-  useEffect(() => {
-    if (stores.length > 0 || !isLoading) {
-      fetchUserLimitations();
-    }
-  }, [stores, isLoading]);
 
   const fetchUserStores = async () => {
     if (!user) return;
@@ -127,7 +121,8 @@ const UserStores = () => {
         const storesLimitValue = limitationData[0].value;
         setStoresLimit(storesLimitValue);
         
-        // ВИПРАВЛЕНО: перевіряємо кількість магазинів строго менше ліміту
+        // Перевіряємо, чи може користувач створити ще один магазин
+        // Виправляємо логіку тут: порівнюємо з фактичною кількістю
         setCanCreateStore(stores.length < storesLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
@@ -138,6 +133,14 @@ const UserStores = () => {
       console.error('Error fetching limitations:', error);
     }
   };
+
+  // Оновлюємо стан canCreateStore коли змінюється кількість магазинів або ліміт
+  useEffect(() => {
+    if (storesLimit !== null) {
+      // Виправляємо логіку тут також
+      setCanCreateStore(stores.length < storesLimit);
+    }
+  }, [stores.length, storesLimit]);
 
   const handleCreateStore = async () => {
     if (!newStoreName.trim()) {
@@ -158,9 +161,7 @@ const UserStores = () => {
       return;
     }
 
-    // ВИПРАВЛЕНО: додаткова перевірка перед створенням - чи не перевищено ліміт
-    // Перевіряємо, що кількість магазинів строго менше ліміту
-    if (storesLimit !== null && stores.length >= storesLimit) {
+    if (!canCreateStore) {
       toast({
         title: 'Помилка',
         description: 'Ви досягли ліміту створення магазинів. Оновіть тарифний план.',
@@ -191,6 +192,7 @@ const UserStores = () => {
       setNewStoreName('');
       setIsDialogOpen(false);
       fetchUserStores();
+      fetchUserLimitations();
     } catch (error) {
       console.error('Error creating store:', error);
       toast({
@@ -226,6 +228,7 @@ const UserStores = () => {
       setIsDeleteDialogOpen(false);
       setStoreToDelete(null);
       fetchUserStores();
+      fetchUserLimitations();
     } catch (error) {
       console.error('Error deleting store:', error);
       toast({
@@ -266,7 +269,7 @@ const UserStores = () => {
             <TooltipContent>
               {canCreateStore 
                 ? "Створити магазин" 
-                : `Досягнуто ліміт магазинів (${storesLimit})`
+                : "Функціонал не доступний"
               }
             </TooltipContent>
           </Tooltip>
