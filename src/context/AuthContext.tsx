@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +8,6 @@ interface User {
   username: string;
   email: string;
   is_active: boolean;
-  avatar_url?: string;
 }
 
 interface AuthContextType {
@@ -143,8 +141,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        is_active: userData.is_active,
-        avatar_url: userData.avatar_url
+        is_active: userData.is_active
       };
       
       setUser(loggedInUser);
@@ -159,42 +156,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         variant: "destructive",
       });
       return false;
-    }
-  };
-
-  const assignFreePlan = async (userId: string) => {
-    try {
-      // Пошук безкоштовного тарифного плану "Демо доступ"
-      const { data: freePlan, error: freePlanError } = await supabase
-        .from('tariff_plans')
-        .select('id')
-        .eq('price', 0)
-        .maybeSingle();
-
-      if (freePlanError) {
-        console.error('Error finding free plan:', freePlanError);
-        return;
-      }
-
-      // Якщо знайдено безкоштовний план, активуємо його для користувача
-      if (freePlan) {
-        // Створюємо підписку для користувача
-        const { error: subscriptionError } = await supabase
-          .from('user_tariff_subscriptions')
-          .insert({
-            user_id: userId,
-            tariff_plan_id: freePlan.id,
-            is_active: true,
-            // Для безкоштовного плану end_date може бути null
-            end_date: null
-          });
-
-        if (subscriptionError) {
-          console.error('Error creating subscription:', subscriptionError);
-        }
-      }
-    } catch (error) {
-      console.error('Error assigning free plan:', error);
     }
   };
 
@@ -219,7 +180,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Insert new user - змінюємо is_active на true
+      // Insert new user
       const { data, error } = await supabase
         .from('users')
         .insert([
@@ -227,7 +188,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             username, 
             email, 
             password_hash: passwordHash,
-            is_active: true // Користувачі тепер відразу активні
+            is_active: false // Users start as inactive until approved by admin
           }
         ])
         .select();
@@ -235,11 +196,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (error) {
         console.error('Error registering user:', error);
         throw new Error('Помилка при створенні облікового запису');
-      }
-
-      // Якщо користувач успішно створений, активуємо для нього безкоштовний план
-      if (data && data.length > 0) {
-        await assignFreePlan(data[0].id);
       }
 
       return true;
