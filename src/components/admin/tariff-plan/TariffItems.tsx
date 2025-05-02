@@ -1,12 +1,18 @@
 
+// Компонент для відображення та керування пунктами тарифного плану
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { PlanFormProps } from "./types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PlusCircle, Trash2 } from "lucide-react";
+
+// Визначаємо власний інтерфейс для пропсів компонента
+interface PlanFormProps {
+  planId?: string;
+  editMode?: boolean;
+}
 
 const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
   const [newItem, setNewItem] = useState("");
@@ -123,6 +129,7 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
         <div className="flex gap-2">
           <div className="flex-1">
             <Input
+              id="tariff-item-input"
               placeholder="Введіть назву пункту тарифу"
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
@@ -133,6 +140,7 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  id="add-item-button"
                   onClick={addItem}
                   disabled={isLoading}
                   size="icon"
@@ -163,7 +171,7 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
           <tbody>
             {itemsList.length > 0 ? (
               itemsList.map((item) => (
-                <tr key={item.id} className="border-b">
+                <tr key={item.id} className="border-b" id={`tariff-item-${item.id}`}>
                   <td className="py-2 pl-2">{item.id.substring(0, 8)}</td>
                   <td className="py-2">
                     {item.tariff_items?.description || "Невідомо"}
@@ -175,6 +183,7 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
                         size="sm"
                         onClick={() => removeItem(item.id)}
                         className="text-destructive h-8 w-8 p-0"
+                        id={`delete-item-${item.id}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
