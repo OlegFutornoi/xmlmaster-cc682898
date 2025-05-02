@@ -11,17 +11,21 @@ import { PlusCircle, Trash2 } from "lucide-react";
 // Визначаємо власний інтерфейс для пропсів компонента
 interface PlanFormProps {
   planId?: string;
+  tariffPlanId?: string;  // Додаємо альтернативний проп для сумісності
   editMode?: boolean;
 }
 
-const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
+const TariffItems: React.FC<PlanFormProps> = ({ planId, tariffPlanId, editMode = false }) => {
   const [newItem, setNewItem] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [itemsList, setItemsList] = useState<any[]>([]);
 
+  // Визначаємо ефективний ID плану (використовуємо один з двох)
+  const effectivePlanId = planId || tariffPlanId;
+
   // Завантажуємо наявні елементи тарифу при першому рендері
   useState(() => {
-    if (planId) {
+    if (effectivePlanId) {
       fetchTariffItems();
     }
   });
@@ -36,7 +40,7 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
         tariff_plans:tariff_plan_id (id, name),
         tariff_items:tariff_item_id (id, description)
       `)
-      .eq("tariff_plan_id", planId);
+      .eq("tariff_plan_id", effectivePlanId);
 
     if (error) {
       console.error("Error fetching tariff items:", error);
@@ -71,7 +75,7 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, editMode = false }) => {
       const { error: relationError } = await supabase
         .from("tariff_plan_items")
         .insert({
-          tariff_plan_id: planId,
+          tariff_plan_id: effectivePlanId,
           tariff_item_id: itemData.id,
           is_active: true,
         });
