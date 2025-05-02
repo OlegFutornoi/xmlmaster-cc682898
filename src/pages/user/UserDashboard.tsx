@@ -6,6 +6,7 @@ import UserHome from './UserHome';
 import UserTariffs from './UserTariffs';
 import UserStores from './UserStores';
 import UserSettings from './UserSettings';
+import UserSuppliers from './UserSuppliers'; // Додаємо імпорт нової сторінки
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -112,6 +113,14 @@ const UserDashboard = () => {
             element={
               activeSubscription 
                 ? <UserStores /> 
+                : <Navigate to="/user/dashboard/tariffs" replace />
+            } 
+          />
+          <Route 
+            path="/suppliers" 
+            element={
+              activeSubscription 
+                ? <UserSuppliers /> 
                 : <Navigate to="/user/dashboard/tariffs" replace />
             } 
           />
