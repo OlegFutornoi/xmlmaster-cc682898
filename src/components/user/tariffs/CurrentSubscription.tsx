@@ -46,8 +46,36 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
     );
   }
 
-  // Перевірка дати закінчення підписки
-  const hasValidEndDate = subscription.end_date && new Date(subscription.end_date).getFullYear() > 1970;
+  // Визначаємо термін дії підписки
+  const getSubscriptionTermDisplay = () => {
+    if (subscription.tariff_plan.is_permanent) {
+      return (
+        <Badge variant="outline" className="flex items-center gap-1 text-xs">
+          <Infinity className="h-3 w-3" />
+          Постійний доступ
+        </Badge>
+      );
+    } else if (subscription.end_date) {
+      // Перевіряємо, що дата закінчення валідна (не 1970 рік)
+      const endDate = new Date(subscription.end_date);
+      if (endDate.getFullYear() > 1970) {
+        return (
+          <Badge variant="outline" className="flex items-center gap-1 text-xs">
+            <Clock className="h-3 w-3" />
+            До {format(endDate, "d MMMM yyyy", { locale: uk })}
+          </Badge>
+        );
+      }
+    }
+    
+    // Якщо немає валідної дати закінчення або is_permanent
+    return (
+      <Badge variant="outline" className="flex items-center gap-1 text-xs">
+        <Clock className="h-3 w-3" />
+        Активний тариф
+      </Badge>
+    );
+  };
 
   return (
     <Card className="mb-4">
@@ -61,22 +89,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
           )}
         </div>
         <div className="flex items-center gap-2">
-          {subscription.tariff_plan.is_permanent ? (
-            <Badge variant="outline" className="flex items-center gap-1 text-xs">
-              <Infinity className="h-3 w-3" />
-              Постійний доступ
-            </Badge>
-          ) : hasValidEndDate ? (
-            <Badge variant="outline" className="flex items-center gap-1 text-xs">
-              <Clock className="h-3 w-3" />
-              До {format(new Date(subscription.end_date!), "d MMMM yyyy", { locale: uk })}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="flex items-center gap-1 text-xs">
-              <Infinity className="h-3 w-3" />
-              Необмежений доступ
-            </Badge>
-          )}
+          {getSubscriptionTermDisplay()}
           <Button variant="ghost" size="icon" onClick={() => navigate('/user/dashboard/stores')} id="go-to-stores-button">
             <Store className="h-4 w-4" />
           </Button>

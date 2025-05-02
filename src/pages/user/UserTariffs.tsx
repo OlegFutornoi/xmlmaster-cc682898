@@ -88,14 +88,18 @@ const UserTariffs = () => {
 
   return (
     <div className="container mx-auto px-4 py-4">
-      <h1 className="text-xl font-semibold mb-4">Тарифні плани</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-base font-medium">Тарифні плани</h1>
+      </div>
       
       <div className="mb-4">
         <CurrentSubscription subscription={activeSubscription} />
       </div>
 
       <div className="mb-8">
-        <h2 className="text-base font-medium mb-3">Доступні тарифи</h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Доступні тарифи</h2>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tariffPlans.map(plan => (
             <TariffCard 

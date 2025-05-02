@@ -40,8 +40,8 @@ export const createDemoTariffIfNotExist = async () => {
         name: 'Демо доступ',
         price: 0,
         currency_id: currency.id,
-        is_permanent: true,
-        duration_days: null
+        is_permanent: false, // Змінили на false, щоб використовувати duration_days
+        duration_days: 14 // Додали тривалість пробного періоду (наприклад, 14 днів)
       })
       .select('id')
       .single();

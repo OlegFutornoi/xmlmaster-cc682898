@@ -87,7 +87,7 @@ const UserSidebar = () => {
     const interval = setInterval(fetchSubscription, 60000); // Check every minute
     
     return () => clearInterval(interval);
-  }, [user, location.pathname]); // Додано явну залежність від location.pathname
+  }, [user, location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -149,8 +149,6 @@ const UserSidebar = () => {
         </Button>
       </div>
 
-      {/* Секцію з інформацією про активний тариф видалено */}
-
       <div className="flex-1 py-4 overflow-y-auto">
         <nav className="px-2 space-y-1">
           {menuItems.map((item) => {
@@ -187,25 +185,25 @@ const UserSidebar = () => {
 
       <div className="p-4 border-t border-sidebar-border">
         {!isCollapsed && (
-          <div className="flex items-center mb-4">
-            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-              <User className="h-4 w-4" />
-            </div>
-            <div className="ml-3 truncate">
-              <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="ml-3 truncate">
                 <p className="text-sm font-medium text-sidebar-foreground">
                   {user?.username || 'Користувач'}
                 </p>
-                {user && (
-                  <Badge 
-                    variant={user.is_active ? "success" : "destructive"} 
-                    className="text-xs"
-                  >
-                    {user.is_active ? 'Активний' : 'Неактивний'}
-                  </Badge>
-                )}
               </div>
             </div>
+            {user && (
+              <Badge 
+                variant={user.is_active ? "success" : "destructive"} 
+                className="text-xs self-start ml-11"
+              >
+                {user.is_active ? 'Активний' : 'Неактивний'}
+              </Badge>
+            )}
           </div>
         )}
         <Button
