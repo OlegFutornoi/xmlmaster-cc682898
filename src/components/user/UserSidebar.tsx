@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,12 +11,9 @@ import {
   User, 
   Store, 
   Settings, 
-  CreditCard,
-  Calendar
+  CreditCard
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { uk } from 'date-fns/locale';
 
 const UserSidebar = () => {
   const { user, logout } = useAuth();
@@ -135,6 +133,7 @@ const UserSidebar = () => {
       className={`h-screen bg-sidebar transition-all duration-300 flex flex-col border-r border-sidebar-border ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}
+      id="user-sidebar"
     >
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
@@ -150,20 +149,7 @@ const UserSidebar = () => {
         </Button>
       </div>
 
-      {!isCollapsed && activeSubscription && (
-        <div className="p-3 border-b border-sidebar-border bg-blue-50">
-          <div className="text-sm font-medium mb-1">Активний тариф:</div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-blue-700">{activeSubscription.tariff_plans.name}</span>
-            {!activeSubscription.tariff_plans.is_permanent && (
-              <span className="text-xs text-gray-600 flex items-center mt-1">
-                <Calendar className="h-3 w-3 mr-1" />
-                До {format(new Date(activeSubscription.end_date), "dd MMMM yyyy", { locale: uk })}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Секцію з інформацією про активний тариф видалено */}
 
       <div className="flex-1 py-4 overflow-y-auto">
         <nav className="px-2 space-y-1">
@@ -189,6 +175,7 @@ const UserSidebar = () => {
                     navigate('/user/dashboard/tariffs');
                   }
                 }}
+                id={`sidebar-link-${item.name.toLowerCase()}`}
               >
                 {item.icon}
                 {!isCollapsed && <span className="ml-3">{item.name}</span>}
@@ -227,6 +214,7 @@ const UserSidebar = () => {
           className={`w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
             isCollapsed ? 'justify-center px-0' : ''
           }`}
+          id="logout-button"
         >
           <LogOut className="h-5 w-5" />
           {!isCollapsed && <span className="ml-2">Вихід</span>}

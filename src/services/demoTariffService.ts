@@ -59,8 +59,12 @@ export const createDemoTariffIfNotExist = async () => {
 };
 
 // Виконати при завантаженні застосунку
-createDemoTariffIfNotExist().then(id => {
-  if (id) {
-    console.log('Demo tariff plan checked/created with ID:', id);
-  }
-});
+try {
+  createDemoTariffIfNotExist().then(id => {
+    if (id) {
+      console.log('Demo tariff plan checked/created with ID:', id);
+    }
+  });
+} catch (error) {
+  console.error('Error initializing demo tariff:', error);
+}

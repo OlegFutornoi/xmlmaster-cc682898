@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, Infinity, AlertCircle } from 'lucide-react';
+import { Clock, Infinity, AlertCircle, Store } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Subscription {
@@ -36,63 +36,52 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
 
   if (!subscription) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Немає активного тарифу</CardTitle>
-          <CardDescription>
-            Виберіть тарифний план, щоб почати користуватися всіма можливостями системи.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Увага</AlertTitle>
-            <AlertDescription>
-              Для створення та управління магазинами необхідно активувати тарифний план.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <Alert variant="default">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Немає активного тарифу</AlertTitle>
+        <AlertDescription>
+          Виберіть тарифний план, щоб почати користуватися всіма можливостями системи.
+        </AlertDescription>
+      </Alert>
     );
   }
 
+  // Перевірка дати закінчення підписки
+  const hasValidEndDate = subscription.end_date && new Date(subscription.end_date).getFullYear() > 1970;
+
   return (
-    <Card>
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>{subscription.tariff_plan.name}</CardTitle>
-            <CardDescription>
-              Активовано: {format(new Date(subscription.start_date), "d MMMM yyyy", { locale: uk })}
-            </CardDescription>
-          </div>
-          <Badge variant="secondary" className="text-lg py-1">
-            {subscription.tariff_plan.price} {subscription.tariff_plan.currency.code}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="flex items-center mb-4">
-          {subscription.tariff_plan.is_permanent ? (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Infinity className="h-3.5 w-3.5" />
-              Постійний доступ
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              Закінчується: {subscription.end_date 
-                ? format(new Date(subscription.end_date), "d MMMM yyyy", { locale: uk })
-                : 'Не вказано'
-              }
+    <Card className="mb-4">
+      <CardHeader className="py-3 px-4 bg-muted/30 border-b flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{subscription.tariff_plan.name}</span>
+          {subscription.tariff_plan.price > 0 && (
+            <Badge variant="secondary" className="text-sm">
+              {subscription.tariff_plan.price} {subscription.tariff_plan.currency.code}
             </Badge>
           )}
         </div>
-        
-        <Button onClick={() => navigate('/user/dashboard/stores')} className="mb-4">
-          Керувати магазинами
-        </Button>
-      </CardContent>
+        <div className="flex items-center gap-2">
+          {subscription.tariff_plan.is_permanent ? (
+            <Badge variant="outline" className="flex items-center gap-1 text-xs">
+              <Infinity className="h-3 w-3" />
+              Постійний доступ
+            </Badge>
+          ) : hasValidEndDate ? (
+            <Badge variant="outline" className="flex items-center gap-1 text-xs">
+              <Clock className="h-3 w-3" />
+              До {format(new Date(subscription.end_date!), "d MMMM yyyy", { locale: uk })}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="flex items-center gap-1 text-xs">
+              <Infinity className="h-3 w-3" />
+              Необмежений доступ
+            </Badge>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => navigate('/user/dashboard/stores')} id="go-to-stores-button">
+            <Store className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
     </Card>
   );
 };

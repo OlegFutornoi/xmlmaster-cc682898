@@ -1,7 +1,6 @@
 
 // Сервіс для керування підписками користувача
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 export const activateUserPlan = async (
   userId: string, 
@@ -34,9 +33,14 @@ export const activateUserPlan = async (
     // Розраховуємо кінцеву дату підписки
     let endDate = null;
     if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
-      const startDate = new Date();
-      endDate = new Date();
-      endDate.setDate(startDate.getDate() + selectedPlan.duration_days);
+      // Якщо це Демо доступ (price=0 і is_permanent=true), не встановлюємо кінцеву дату
+      if (selectedPlan.price === 0 && selectedPlan.is_permanent) {
+        endDate = null;
+      } else {
+        const startDate = new Date();
+        endDate = new Date();
+        endDate.setDate(startDate.getDate() + selectedPlan.duration_days);
+      }
     }
 
     // Якщо є активна підписка, деактивуємо її
