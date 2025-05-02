@@ -185,7 +185,7 @@ const UserSidebar = () => {
 
       <div className="p-4 border-t border-sidebar-border">
         {!isCollapsed && (
-          <div className="flex flex-col gap-2 mb-4">
+          <div className="flex flex-col gap-2 mb-3">
             <div className="flex items-center">
               <div className="flex items-center justify-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                 <User className="h-4 w-4" />
@@ -208,14 +208,12 @@ const UserSidebar = () => {
         )}
         <Button
           variant="ghost"
+          size="icon"
           onClick={handleLogout}
-          className={`w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
-            isCollapsed ? 'justify-center px-0' : ''
-          }`}
+          className={`w-full flex justify-center items-center text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
           id="logout-button"
         >
           <LogOut className="h-5 w-5" />
-          {!isCollapsed && <span className="ml-2">Вихід</span>}
         </Button>
       </div>
     </div>

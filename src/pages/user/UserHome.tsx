@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Calendar, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { uk } from 'date-fns/locale';
 
 const UserHome = () => {
@@ -49,6 +49,22 @@ const UserHome = () => {
 
     fetchSubscription();
   }, [user]);
+
+  // Функція для форматування дати закінчення підписки
+  const formatEndDate = (subscription) => {
+    if (!subscription || !subscription.tariff_plans) return '';
+    
+    if (subscription.end_date) {
+      return format(new Date(subscription.end_date), "dd MMMM yyyy", { locale: uk });
+    } else if (subscription.start_date && subscription.tariff_plans.duration_days) {
+      // Якщо end_date відсутня, але є start_date і duration_days, обчислюємо дату закінчення
+      const startDate = new Date(subscription.start_date);
+      const endDate = addDays(startDate, subscription.tariff_plans.duration_days);
+      return format(endDate, "dd MMMM yyyy", { locale: uk });
+    }
+    
+    return '';
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -106,7 +122,7 @@ const UserHome = () => {
                         Термін дії: {activeSubscription.tariff_plans.duration_days} днів
                       </Badge>
                       <p className="text-sm text-gray-600">
-                        до {format(new Date(activeSubscription.end_date), "dd MMMM yyyy", { locale: uk })}
+                        до {formatEndDate(activeSubscription)}
                       </p>
                     </>
                   )}

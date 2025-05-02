@@ -37,9 +37,11 @@ export const activateUserPlan = async (
     }
 
     // Розраховуємо дату закінчення нової підписки
+    const startDate = new Date();
     let endDate = null;
+    
     if (!planData.is_permanent && planData.duration_days) {
-      const end = new Date();
+      const end = new Date(startDate);
       end.setDate(end.getDate() + planData.duration_days);
       endDate = end.toISOString();
     }
@@ -50,7 +52,7 @@ export const activateUserPlan = async (
       .insert({
         user_id: userId,
         tariff_plan_id: planId,
-        start_date: new Date().toISOString(),
+        start_date: startDate.toISOString(),
         end_date: endDate,
         is_active: true
       })

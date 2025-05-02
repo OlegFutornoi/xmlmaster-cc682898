@@ -87,7 +87,7 @@ const UserTariffs = () => {
   const selectedPlan = tariffPlans.find(plan => plan.id === selectedPlanId) || null;
 
   return (
-    <div className="container mx-auto px-4 py-4">
+    <div className="container mx-auto px-4 py-4" id="user-tariffs-container">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-base font-medium">Тарифні плани</h1>
       </div>
