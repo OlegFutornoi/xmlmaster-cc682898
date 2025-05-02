@@ -1,6 +1,6 @@
 
 // Компонент для відображення та керування пунктами тарифного плану
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -23,13 +23,6 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, tariffPlanId, editMode =
   // Визначаємо ефективний ID плану (використовуємо один з двох)
   const effectivePlanId = planId || tariffPlanId;
 
-  // Завантажуємо наявні елементи тарифу при першому рендері
-  useState(() => {
-    if (effectivePlanId) {
-      fetchTariffItems();
-    }
-  });
-
   const fetchTariffItems = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
@@ -49,6 +42,13 @@ const TariffItems: React.FC<PlanFormProps> = ({ planId, tariffPlanId, editMode =
     }
     setIsLoading(false);
   };
+
+  // Використовуємо useEffect замість useState для завантаження даних
+  useEffect(() => {
+    if (effectivePlanId) {
+      fetchTariffItems();
+    }
+  }, [effectivePlanId]); // Додаємо залежність, щоб ефект спрацьовував при зміні ID
 
   const addItem = async () => {
     if (!newItem.trim()) {
