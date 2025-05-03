@@ -1,5 +1,7 @@
 
+// Компонент списку постачальників
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Table, 
   TableBody, 
@@ -10,13 +12,15 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { 
   Eye, 
   Trash2, 
   RefreshCw, 
   FileText, 
   ChevronRight,
-  FileSearch
+  FileSearch,
+  PackageOpen
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import SupplierDetails from './SupplierDetails';
@@ -50,6 +54,7 @@ const SupplierList: React.FC<SupplierListProps> = ({
   onUpdateSupplier,
   onDeleteSupplier
 }) => {
+  const navigate = useNavigate();
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [supplierToUpdate, setSupplierToUpdate] = useState<Supplier | null>(null);
@@ -67,6 +72,11 @@ const SupplierList: React.FC<SupplierListProps> = ({
   const toggleSupplierStatus = async (supplier: Supplier) => {
     const newStatus = !supplier.is_active;
     await onUpdateSupplier(supplier.id, { is_active: newStatus });
+  };
+  
+  // Функція для перегляду товарів постачальника
+  const viewSupplierProducts = (supplierId: string) => {
+    navigate(`/user/suppliers/${supplierId}/products`);
   };
 
   // Якщо завантажуємо дані, показуємо скелетон
@@ -107,8 +117,9 @@ const SupplierList: React.FC<SupplierListProps> = ({
         <Table id="suppliers-table">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[300px]">Назва постачальника</TableHead>
+              <TableHead className="w-[250px]">Назва постачальника</TableHead>
               <TableHead>Тип файлу</TableHead>
+              <TableHead>Товари</TableHead>
               <TableHead>Статус</TableHead>
               <TableHead className="text-right">Дії</TableHead>
             </TableRow>
@@ -129,10 +140,17 @@ const SupplierList: React.FC<SupplierListProps> = ({
                   <div className="flex items-center">
                     {getFileType(supplier.url) === 'XML' ? (
                       <div className="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded">XML</div>
-                    ) : (
+                    ) : getFileType(supplier.url) === 'CSV' ? (
                       <div className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded">CSV</div>
+                    ) : (
+                      <div className="bg-gray-100 text-gray-800 text-xs px-2.5 py-0.5 rounded">Невідомо</div>
                     )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="font-mono">
+                    {supplier.product_count}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Switch
@@ -148,6 +166,7 @@ const SupplierList: React.FC<SupplierListProps> = ({
                       size="icon"
                       onClick={() => setSelectedSupplierId(supplier.id)}
                       id={`view-supplier-${supplier.id}`}
+                      title="Переглянути деталі"
                     >
                       <Eye className="h-4 w-4" />
                       <span className="sr-only">Переглянути</span>
@@ -155,8 +174,19 @@ const SupplierList: React.FC<SupplierListProps> = ({
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => viewSupplierProducts(supplier.id)}
+                      id={`view-products-${supplier.id}`}
+                      title="Переглянути товари"
+                    >
+                      <PackageOpen className="h-4 w-4" />
+                      <span className="sr-only">Товари</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setSupplierToUpdate(supplier)}
                       id={`update-supplier-${supplier.id}`}
+                      title="Оновити URL"
                     >
                       <RefreshCw className="h-4 w-4" />
                       <span className="sr-only">Оновити</span>
@@ -166,6 +196,7 @@ const SupplierList: React.FC<SupplierListProps> = ({
                       size="icon"
                       onClick={() => setSupplierToDelete(supplier)}
                       id={`delete-supplier-${supplier.id}`}
+                      title="Видалити"
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Видалити</span>

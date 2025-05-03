@@ -1,124 +1,90 @@
 
-// Файл App.tsx - Головний компонент додатку
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Routes, Route } from "react-router-dom";
-import { AdminAuthProvider } from "./context/AdminAuthContext";
+import { lazy } from 'react'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import { ThemeProvider } from '@/components/ui/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
+import { UserProvider } from './context/AuthContext'
+import { AdminAuthProvider } from './context/AdminAuthContext'
+import UserRoute from '@/components/auth/UserRoute'
+import AdminRoute from '@/components/auth/AdminRoute'
 
-// Public pages
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+// Лейзі імпорт для оптимізації
+const Home = lazy(() => import('./pages/Index'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
-// User pages
-import UserLogin from "./pages/user/UserLogin";
-import UserRegister from "./pages/user/UserRegister";
-import UserDashboard from "./pages/user/UserDashboard";
-import UserHome from "./pages/user/UserHome";
-import UserTariffs from "./pages/user/UserTariffs";
-import UserStores from "./pages/user/UserStores";
-import UserSettings from "./pages/user/UserSettings";
-import UserRoute from "./components/auth/UserRoute";
+// Адмін сторінки
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'))
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminTariffs = lazy(() => import('./pages/admin/tariffs/AdminTariffs'))
+const AdminCurrencies = lazy(() => import('./pages/admin/tariffs/AdminCurrencies'))
+const TariffPlanForm = lazy(() => import('./pages/admin/tariffs/TariffPlanForm'))
 
-// Admin pages
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminRoute from "./components/auth/AdminRoute";
+// Користувацькі сторінки
+const UserHome = lazy(() => import('./pages/user/UserHome'))
+const UserDashboard = lazy(() => import('./pages/user/UserDashboard'))
+const UserLogin = lazy(() => import('./pages/user/UserLogin'))
+const UserSettings = lazy(() => import('./pages/user/UserSettings'))
+const UserTariffs = lazy(() => import('./pages/user/UserTariffs'))
+const UserStores = lazy(() => import('./pages/user/UserStores'))
+const UserRegister = lazy(() => import('./pages/user/UserRegister'))
+const UserSuppliers = lazy(() => import('./pages/user/UserSuppliers'))
 
-// Tariff pages
-import AdminTariffs from "./pages/admin/tariffs/AdminTariffs";
-import AdminCurrencies from "./pages/admin/tariffs/AdminCurrencies";
-import TariffPlanForm from "./pages/admin/tariffs/TariffPlanForm";
+// Нові сторінки
+const SupplierProducts = lazy(() => import('./pages/user/SupplierProducts'))
+const ProductDetails = lazy(() => import('./components/user/products/ProductDetails'))
 
-const App = () => (
-  <AdminAuthProvider>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<Index />} />
-        
-        {/* User routes */}
-        <Route path="/user/login" element={<UserLogin />} />
-        <Route path="/user/register" element={<UserRegister />} />
-        <Route 
-          path="/user/dashboard/*" 
-          element={
-            <UserRoute>
-              <UserDashboard />
-            </UserRoute>
-          } 
-        />
-        
-        {/* Admin routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route 
-          path="/admin/dashboard" 
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/settings" 
-          element={
-            <AdminRoute>
-              <AdminSettings />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/users" 
-          element={
-            <AdminRoute>
-              <AdminUsers />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Tariff routes */}
-        <Route 
-          path="/admin/tariffs" 
-          element={
-            <AdminRoute>
-              <AdminTariffs />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/tariffs/currencies" 
-          element={
-            <AdminRoute>
-              <AdminCurrencies />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/tariffs/new" 
-          element={
-            <AdminRoute>
-              <TariffPlanForm />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/tariffs/:id" 
-          element={
-            <AdminRoute>
-              <TariffPlanForm />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Catch-all route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
-  </AdminAuthProvider>
-);
+function App() {
+  return (
+    <>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <AdminAuthProvider>
+          <UserProvider>
+            <Router>
+              <Routes>
+                {/* Головна сторінка */}
+                <Route path="/" element={<Home />} />
 
-export default App;
+                {/* Сторінки користувача */}
+                <Route path="/user/login" element={<UserLogin />} />
+                <Route path="/user/register" element={<UserRegister />} />
+
+                {/* Захищені сторінки користувача */}
+                <Route path="/user" element={<UserRoute><UserHome /></UserRoute>} />
+                <Route path="/user/dashboard" element={<UserRoute><UserDashboard /></UserRoute>} />
+                <Route path="/user/settings" element={<UserRoute><UserSettings /></UserRoute>} />
+                <Route path="/user/tariffs" element={<UserRoute><UserTariffs /></UserRoute>} />
+                <Route path="/user/stores" element={<UserRoute><UserStores /></UserRoute>} />
+                <Route path="/user/suppliers" element={<UserRoute><UserSuppliers /></UserRoute>} />
+                
+                {/* Нові маршрути */}
+                <Route path="/user/suppliers/:supplierId/products" element={<UserRoute><SupplierProducts /></UserRoute>} />
+                <Route path="/user/products/:productId" element={<UserRoute><ProductDetails /></UserRoute>} />
+
+                {/* Сторінки адміна */}
+                <Route path="/admin/login" element={<AdminLogin />} />
+                
+                {/* Захищені сторінки адміна */}
+                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+                <Route path="/admin/tariffs" element={<AdminRoute><AdminTariffs /></AdminRoute>} />
+                <Route path="/admin/currencies" element={<AdminRoute><AdminCurrencies /></AdminRoute>} />
+                <Route path="/admin/tariffs/new" element={<AdminRoute><TariffPlanForm /></AdminRoute>} />
+                <Route path="/admin/tariffs/edit/:planId" element={<AdminRoute><TariffPlanForm /></AdminRoute>} />
+
+                {/* Сторінка "Не знайдено" */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+            <Toaster />
+          </UserProvider>
+        </AdminAuthProvider>
+      </ThemeProvider>
+    </>
+  )
+}
+
+export default App

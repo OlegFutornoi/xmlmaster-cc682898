@@ -14,6 +14,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { FileType } from '@/types/supplier';
+import { determineFileType, validateFileUrl } from '@/utils/fileProcessing';
 
 // Схема валідації для форми
 const supplierSchema = z.object({
@@ -45,6 +50,8 @@ interface AddSupplierFormProps {
 // Компонент форми додавання постачальника
 const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
@@ -54,13 +61,66 @@ const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
     },
   });
 
+  // Функція для перевірки доступності файлу
+  const validateFile = async (url: string): Promise<boolean> => {
+    setIsValidating(true);
+    
+    try {
+      // Перевіряємо URL та формат файлу
+      const { valid, fileType, message } = validateFileUrl(url);
+      
+      if (!valid) {
+        toast.error(message);
+        return false;
+      }
+      
+      // Перевіряємо доступність файлу
+      const response = await fetch(url, { method: 'HEAD' });
+      
+      if (!response.ok) {
+        toast.error(`Файл недоступний: ${response.status} ${response.statusText}`);
+        return false;
+      }
+      
+      // Файл доступний, визначаємо його тип
+      const type = determineFileType(url);
+      
+      if (type === FileType.UNKNOWN) {
+        toast.error('URL повинен вказувати на файл формату XML або CSV');
+        return false;
+      }
+      
+      toast.success(`Файл формату ${type} доступний`);
+      return true;
+    } catch (error) {
+      console.error('Помилка валідації файлу:', error);
+      toast.error('Не вдалося перевірити доступність файлу');
+      return false;
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   const onSubmit = async (values: SupplierFormValues) => {
+    if (!user) {
+      toast.error('Потрібно увійти в систему');
+      return;
+    }
+    
+    // Перевіряємо доступність файлу перед додаванням постачальника
+    const isFileValid = await validateFile(values.url);
+    
+    if (!isFileValid) {
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const success = await onAddSupplier({
         name: values.name,
         url: values.url
       });
+      
       if (success) {
         form.reset(); // Скидаємо форму у випадку успішного додавання
       }
@@ -84,7 +144,7 @@ const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
                     id="supplier-name-input"
                     placeholder="Введіть назву постачальника" 
                     {...field}
-                    disabled={isSubmitting} 
+                    disabled={isSubmitting || isValidating} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -103,7 +163,7 @@ const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
                     id="supplier-url-input"
                     placeholder="https://example.com/products.xml" 
                     {...field}
-                    disabled={isSubmitting} 
+                    disabled={isSubmitting || isValidating} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -114,11 +174,15 @@ const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
 
         <Button 
           type="submit" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || isValidating}
           className="w-full md:w-auto"
           id="add-supplier-button"
         >
-          {isSubmitting ? 'Додавання...' : 'Додати постачальника'}
+          {isSubmitting 
+            ? 'Додавання...' 
+            : isValidating 
+            ? 'Перевірка файлу...' 
+            : 'Додати постачальника'}
         </Button>
       </form>
     </Form>
