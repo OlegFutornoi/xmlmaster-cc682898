@@ -1,8 +1,8 @@
 
 // Компонент для керування маршрутизацією та темою додатку
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
-import { ThemeProvider } from './components/ui/theme-provider'
+import { Routes, Route } from 'react-router-dom'
+import { ThemeProvider } from './components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from './context/AuthContext'
 import { AdminAuthProvider } from './context/AdminAuthContext'
@@ -53,7 +53,7 @@ function App() {
 
                 {/* Захищені сторінки користувача */}
                 <Route path="/user" element={<UserRoute><UserHome /></UserRoute>} />
-                <Route path="/user/dashboard" element={<UserRoute><UserDashboard /></UserRoute>} />
+                <Route path="/user/dashboard/*" element={<UserRoute><UserDashboard /></UserRoute>} />
                 <Route path="/user/settings" element={<UserRoute><UserSettings /></UserRoute>} />
                 <Route path="/user/tariffs" element={<UserRoute><UserTariffs /></UserRoute>} />
                 <Route path="/user/stores" element={<UserRoute><UserStores /></UserRoute>} />
