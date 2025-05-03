@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/button';
 interface Supplier {
   id: string;
   name: string;
+  url: string | null;
+  file_path: string | null;
+  is_active: boolean;
+  product_count: number;
   [key: string]: any;
 }
 

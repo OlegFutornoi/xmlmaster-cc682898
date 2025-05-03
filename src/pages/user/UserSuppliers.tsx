@@ -6,10 +6,23 @@ import SupplierList from '@/components/user/suppliers/SupplierList';
 import AddSupplierForm from '@/components/user/suppliers/AddSupplierForm';
 import { toast } from 'sonner';
 
+// Інтерфейс для типу постачальника
+interface Supplier {
+  id: string;
+  name: string;
+  url: string | null;
+  file_path: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  is_active: boolean;
+  product_count: number;
+}
+
 // Компонент сторінки для роботи з постачальниками
 const UserSuppliers = () => {
   const { user } = useAuth();
-  const [suppliers, setSuppliers] = useState([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Завантажуємо список постачальників при монтуванні компонента
@@ -44,13 +57,15 @@ const UserSuppliers = () => {
   };
 
   // Функція для додавання нового постачальника
-  const addSupplier = async (newSupplier) => {
+  const addSupplier = async (newSupplier: { name: string; url: string }) => {
     try {
       const { data, error } = await supabase
         .from('suppliers')
         .insert({
           ...newSupplier,
-          user_id: user?.id
+          user_id: user?.id,
+          is_active: true,
+          product_count: 0
         })
         .select()
         .single();
@@ -72,7 +87,7 @@ const UserSuppliers = () => {
   };
 
   // Функція для оновлення постачальника
-  const updateSupplier = async (supplierId, updates) => {
+  const updateSupplier = async (supplierId: string, updates: Partial<Supplier>) => {
     try {
       const { data, error } = await supabase
         .from('suppliers')
@@ -104,7 +119,7 @@ const UserSuppliers = () => {
   };
 
   // Функція для видалення постачальника
-  const deleteSupplier = async (supplierId) => {
+  const deleteSupplier = async (supplierId: string) => {
     try {
       const { error } = await supabase
         .from('suppliers')

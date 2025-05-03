@@ -32,6 +32,8 @@ interface Supplier {
   created_at: string;
   updated_at: string;
   user_id: string;
+  is_active: boolean;
+  product_count: number;
 }
 
 interface SupplierListProps {
