@@ -7,7 +7,6 @@ interface UserRouteProps {
   children: ReactNode;
 }
 
-// Компонент для захисту маршрутів користувача
 const UserRoute = ({ children }: UserRouteProps) => {
   const { isAuthenticated } = useAuth();
 
