@@ -1,175 +1,153 @@
+// Сервіс для роботи з постачальниками
+import { supabase } from '@/integrations/supabase/client';
+import { FileProcessingResult, FileType, Product, ProductCategory, Supplier } from '@/types/supplier';
+import { processSupplierFile } from '@/utils/fileProcessing';
 
-// Сервіс для роботи з товарами та постачальниками
-import { supabase } from "@/integrations/supabase/client";
-import { Product, ProductAttribute, ProductCategory, ProductImage, SupplierFileData } from "@/types/supplier";
-import { toast } from "sonner";
-
-/**
- * Обробляє дані файлу постачальника та зберігає їх у базу даних
- */
+// Функція для обробки та збереження даних з файлу постачальника
 export const processAndSaveFileData = async (
   supplierId: string,
   userId: string,
-  data: SupplierFileData
-): Promise<{ success: boolean; message: string; productCount: number; categoryCount: number }> => {
+  fileData: {
+    products: Product[];
+    categories: ProductCategory[];
+  }
+): Promise<{ success: boolean; message: string; affectedRows?: number }> => {
   try {
-    // 1. Обробляємо та зберігаємо категорії
-    const categories = data.categories.map(category => ({
-      ...category,
+    // Зберігаємо категорії
+    const categoriesToInsert = fileData.categories.map(category => ({
+      name: category.name,
+      supplier_id: supplierId,
       user_id: userId,
-      supplier_id: supplierId
+      product_count: category.product_count
     }));
     
-    const { data: savedCategories, error: categoriesError } = await supabase
+    // Додаємо категорії (без ON CONFLICT, оскільки немає відповідного обмеження)
+    const { data: insertedCategories, error: categoriesError } = await supabase
       .from('product_categories')
-      .upsert(
-        categories.map(category => ({
-          name: category.name,
-          user_id: userId,
-          supplier_id: supplierId,
-          product_count: category.product_count
-        })),
-        { onConflict: 'user_id, supplier_id, name' }
-      )
-      .select();
+      .insert(categoriesToInsert)
+      .select('id, name');
     
     if (categoriesError) {
-      console.error("Помилка збереження категорій:", categoriesError);
-      return { 
-        success: false, 
-        message: `Помилка збереження категорій: ${categoriesError.message}`,
-        productCount: 0,
-        categoryCount: 0
-      };
+      console.error('Помилка збереження категорій:', categoriesError);
+      return { success: false, message: `Помилка збереження категорій: ${categoriesError.message}` };
     }
     
-    // 2. Створюємо мапу категорій для пошуку їх ID
+    // Створюємо мапу для категорій за їх назвами
     const categoryMap = new Map<string, string>();
-    if (savedCategories) {
-      savedCategories.forEach(category => {
-        categoryMap.set(category.name, category.id);
-      });
-    }
+    insertedCategories?.forEach(category => {
+      categoryMap.set(category.name, category.id);
+    });
     
-    // 3. Обробляємо та зберігаємо продукти
-    const products = data.products.map(product => {
-      const categoryName = product.category_name || "Без категорії";
+    // Зберігаємо товари з правильними ID категорій
+    const productsToInsert = fileData.products.map(product => {
+      const categoryId = product.category_name ? categoryMap.get(product.category_name) : null;
+      
       return {
-        ...product,
-        user_id: userId,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        old_price: product.old_price,
+        sale_price: product.sale_price,
+        currency: product.currency,
+        manufacturer: product.manufacturer,
+        category_id: categoryId,
         supplier_id: supplierId,
-        category_id: categoryMap.get(categoryName) || null
+        user_id: userId,
+        is_active: true
       };
     });
     
-    // 4. Зберігаємо продукти партіями
-    const savedProductIds: string[] = [];
-    const batchSize = 50; // Розмір пакету для збереження
+    // Додаємо товари
+    const { data: insertedProducts, error: productsError } = await supabase
+      .from('products')
+      .insert(productsToInsert)
+      .select('id');
     
-    for (let i = 0; i < products.length; i += batchSize) {
-      const batch = products.slice(i, i + batchSize);
+    if (productsError) {
+      console.error('Помилка збереження товарів:', productsError);
+      return { success: false, message: `Помилка збереження товарів: ${productsError.message}` };
+    }
+    
+    // Створюємо масив для зберігання всіх атрибутів товарів
+    const allAttributes: any[] = [];
+    
+    // Створюємо масив для зберігання всіх зображень товарів
+    const allImages: any[] = [];
+    
+    // Додаємо атрибути та зображення для кожного товару
+    fileData.products.forEach((product, index) => {
+      const productId = insertedProducts[index]?.id;
       
-      const { data: savedProducts, error: productsError } = await supabase
-        .from('products')
-        .upsert(
-          batch.map(product => ({
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            old_price: product.old_price,
-            sale_price: product.sale_price,
-            currency: product.currency,
-            manufacturer: product.manufacturer,
-            category_id: product.category_id,
-            supplier_id: product.supplier_id,
-            user_id: product.user_id,
-            is_active: product.is_active
-          })),
-          { onConflict: 'name, supplier_id, user_id' }
-        )
-        .select();
-      
-      if (productsError) {
-        console.error("Помилка збереження товарів:", productsError);
-        return { 
-          success: false, 
-          message: `Помилка збереження товарів: ${productsError.message}`,
-          productCount: savedProductIds.length,
-          categoryCount: savedCategories?.length || 0
-        };
-      }
-      
-      if (savedProducts) {
-        // Зберігаємо ID збережених продуктів
-        savedProductIds.push(...savedProducts.map(p => p.id));
+      if (productId) {
+        // Додаємо атрибути
+        if (product.attributes && product.attributes.length > 0) {
+          product.attributes.forEach(attr => {
+            allAttributes.push({
+              product_id: productId,
+              attribute_name: attr.attribute_name,
+              attribute_value: attr.attribute_value
+            });
+          });
+        }
         
-        // 5. Зберігаємо зображення та атрибути для поточного пакету продуктів
-        for (let j = 0; j < savedProducts.length; j++) {
-          const savedProduct = savedProducts[j];
-          const originalProduct = batch[j];
-          
-          // 5.1. Зберігаємо зображення
-          if (originalProduct.images && originalProduct.images.length > 0) {
-            const { error: imagesError } = await supabase
-              .from('product_images')
-              .upsert(
-                originalProduct.images.map(image => ({
-                  product_id: savedProduct.id,
-                  image_url: image.image_url,
-                  is_main: image.is_main
-                })),
-                { onConflict: 'product_id, image_url' }
-              );
-            
-            if (imagesError) {
-              console.error(`Помилка збереження зображень для товару ${savedProduct.id}:`, imagesError);
-            }
-          }
-          
-          // 5.2. Зберігаємо атрибути
-          if (originalProduct.attributes && originalProduct.attributes.length > 0) {
-            const { error: attributesError } = await supabase
-              .from('product_attributes')
-              .upsert(
-                originalProduct.attributes.map(attr => ({
-                  product_id: savedProduct.id,
-                  attribute_name: attr.attribute_name,
-                  attribute_value: attr.attribute_value
-                })),
-                { onConflict: 'product_id, attribute_name' }
-              );
-            
-            if (attributesError) {
-              console.error(`Помилка збереження атрибутів для товару ${savedProduct.id}:`, attributesError);
-            }
-          }
+        // Додаємо зображення
+        if (product.images && product.images.length > 0) {
+          product.images.forEach(img => {
+            allImages.push({
+              product_id: productId,
+              image_url: img.image_url,
+              is_main: img.is_main
+            });
+          });
         }
       }
+    });
+    
+    // Зберігаємо атрибути товарів
+    if (allAttributes.length > 0) {
+      const { error: attributesError } = await supabase
+        .from('product_attributes')
+        .insert(allAttributes);
+      
+      if (attributesError) {
+        console.error('Помилка збереження атрибутів:', attributesError);
+        // Продовжуємо виконання, оскільки атрибути не є критичними
+      }
     }
     
-    // 6. Оновлюємо кількість товарів у постачальника
-    const { error: supplierUpdateError } = await supabase
+    // Зберігаємо зображення товарів
+    if (allImages.length > 0) {
+      const { error: imagesError } = await supabase
+        .from('product_images')
+        .insert(allImages);
+      
+      if (imagesError) {
+        console.error('Помилка збереження зображень:', imagesError);
+        // Продовжуємо виконання, оскільки зображення не є критичними
+      }
+    }
+    
+    // Оновлюємо кількість товарів у постачальника
+    const { error: updateError } = await supabase
       .from('suppliers')
-      .update({ product_count: savedProductIds.length })
+      .update({ product_count: productsToInsert.length })
       .eq('id', supplierId);
     
-    if (supplierUpdateError) {
-      console.error("Помилка оновлення кількості товарів у постачальника:", supplierUpdateError);
+    if (updateError) {
+      console.error('Помилка оновлення кількості товарів постачальника:', updateError);
+      // Продовжуємо виконання, це не критична помилка
     }
     
-    return {
-      success: true,
-      message: `Успішно збережено ${savedProductIds.length} товарів та ${savedCategories?.length || 0} категорій`,
-      productCount: savedProductIds.length,
-      categoryCount: savedCategories?.length || 0
+    return { 
+      success: true, 
+      message: `Успішно додано ${insertedProducts.length} товарів та ${insertedCategories.length} категорій`,
+      affectedRows: insertedProducts.length
     };
   } catch (error) {
-    console.error("Помилка обробки та збереження даних файлу:", error);
-    return {
-      success: false,
-      message: `Помилка обробки та збереження даних файлу: ${error instanceof Error ? error.message : String(error)}`,
-      productCount: 0,
-      categoryCount: 0
+    console.error('Помилка обробки даних:', error);
+    return { 
+      success: false, 
+      message: `Помилка обробки даних: ${error instanceof Error ? error.message : String(error)}` 
     };
   }
 };
@@ -180,95 +158,53 @@ export const processAndSaveFileData = async (
 export const getSupplierProducts = async (supplierId: string): Promise<{
   products: Product[];
   categories: ProductCategory[];
-  success: boolean;
 }> => {
   try {
-    // 1. Отримуємо товари постачальника
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('supplier_id', supplierId)
-      .order('created_at', { ascending: false });
-    
-    if (productsError) {
-      console.error("Помилка отримання товарів:", productsError);
-      toast.error("Не вдалося завантажити товари");
-      return { products: [], categories: [], success: false };
-    }
-    
-    // 2. Отримуємо категорії постачальника
+    // Отримуємо категорії
     const { data: categories, error: categoriesError } = await supabase
       .from('product_categories')
       .select('*')
-      .eq('supplier_id', supplierId)
-      .order('name');
+      .eq('supplier_id', supplierId);
     
     if (categoriesError) {
-      console.error("Помилка отримання категорій:", categoriesError);
-      toast.error("Не вдалося завантажити категорії");
-      return { products: products || [], categories: [], success: false };
+      console.error('Помилка отримання категорій:', categoriesError);
+      throw new Error(`Помилка отримання категорій: ${categoriesError.message}`);
     }
     
-    // 3. Отримуємо зображення для товарів
-    const { data: images, error: imagesError } = await supabase
-      .from('product_images')
-      .select('*')
-      .in(
-        'product_id', 
-        products ? products.map(p => p.id as string) : []
-      );
+    // Отримуємо товари
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select(`
+        *,
+        product_attributes (*),
+        product_images (*)
+      `)
+      .eq('supplier_id', supplierId);
     
-    if (imagesError) {
-      console.error("Помилка отримання зображень:", imagesError);
+    if (productsError) {
+      console.error('Помилка отримання товарів:', productsError);
+      throw new Error(`Помилка отримання товарів: ${productsError.message}`);
     }
     
-    // 4. Отримуємо атрибути для товарів
-    const { data: attributes, error: attributesError } = await supabase
-      .from('product_attributes')
-      .select('*')
-      .in(
-        'product_id', 
-        products ? products.map(p => p.id as string) : []
-      );
-    
-    if (attributesError) {
-      console.error("Помилка отримання атрибутів:", attributesError);
-    }
-    
-    // 5. Організуємо дані та додаємо зображення і атрибути до товарів
-    const productsWithData = products ? products.map(product => {
-      // Знаходимо всі зображення для товару
-      const productImages = images 
-        ? images.filter(img => img.product_id === product.id)
-        : [];
-      
-      // Знаходимо всі атрибути для товару
-      const productAttributes = attributes 
-        ? attributes.filter(attr => attr.product_id === product.id)
-        : [];
-      
-      // Знаходимо категорію товару
-      const category = categories 
-        ? categories.find(cat => cat.id === product.category_id)
-        : undefined;
+    // Перетворюємо дані у формат, що очікуєє клієнтом
+    const formattedProducts = products.map(product => {
+      const category = categories.find(cat => cat.id === product.category_id);
       
       return {
         ...product,
-        images: productImages,
-        attributes: productAttributes,
-        category_name: category?.name
+        category_name: category?.name || 'Без категорії',
+        attributes: product.product_attributes,
+        images: product.product_images
       };
-    }) : [];
+    });
     
     return {
-      products: productsWithData,
-      categories: categories || [],
-      success: true
+      products: formattedProducts,
+      categories: categories
     };
   } catch (error) {
-    console.error("Помилка отримання товарів та категорій:", error);
-    toast.error("Сталася помилка при завантаженні даних товарів");
-    return { products: [], categories: [], success: false };
+    console.error('Помилка отримання даних:', error);
+    throw error;
   }
 };
 
@@ -308,7 +244,7 @@ export const getProductDetails = async (productId: string): Promise<{
       console.error("Помилка отримання зображень:", imagesError);
     }
     
-    // 3. Отримуємо атрибути товару
+    // 3. Отримуємо атрибути товар��
     const { data: attributes, error: attributesError } = await supabase
       .from('product_attributes')
       .select('*')
@@ -357,41 +293,39 @@ export const getProductDetails = async (productId: string): Promise<{
 export const updateSupplierProducts = async (
   supplierId: string, 
   userId: string,
-  url: string | null
-): Promise<{ success: boolean; message: string }> => {
-  if (!url) {
-    return { 
-      success: false, 
-      message: "URL файлу постачальника не вказано" 
-    };
-  }
-  
+  url: string
+): Promise<{ success: boolean; message: string; affectedRows?: number }> => {
   try {
-    // Імпортуємо функцію для обробки файлу
-    const { processSupplierFile } = await import('@/utils/fileProcessing');
+    // Видаляємо старі дані
+    const { error: deleteError } = await supabase.rpc('delete_supplier_data', {
+      supplier_id_param: supplierId
+    });
     
-    // Обробляємо файл
+    if (deleteError) {
+      console.error('Помилка видалення старих даних:', deleteError);
+      return {
+        success: false,
+        message: `Помилка видалення старих даних: ${deleteError.message}`
+      };
+    }
+    
+    // Отримуємо та обробляємо дані з файлу
     const result = await processSupplierFile(url);
     
     if (!result.success || !result.data) {
-      return { 
-        success: false, 
-        message: result.message 
+      return {
+        success: false,
+        message: result.message
       };
     }
     
     // Зберігаємо оброблені дані
-    const saveResult = await processAndSaveFileData(supplierId, userId, result.data);
-    
-    return {
-      success: saveResult.success,
-      message: saveResult.message
-    };
+    return await processAndSaveFileData(supplierId, userId, result.data);
   } catch (error) {
-    console.error("Помилка оновлення товарів постачальника:", error);
+    console.error('Помилка оновлення товарів:', error);
     return {
       success: false,
-      message: `Помилка оновлення товарів постачальника: ${error instanceof Error ? error.message : String(error)}`
+      message: `Помилка оновлення товарів: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 };
