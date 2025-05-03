@@ -1,4 +1,5 @@
 
+// Компонент форми для додавання нового постачальника
 import { useState } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +35,9 @@ const supplierSchema = z.object({
     ),
 });
 
+// Визначаємо тип для даних постачальника на основі схеми валідації
+type SupplierFormValues = z.infer<typeof supplierSchema>;
+
 interface AddSupplierFormProps {
   onAddSupplier: (supplier: { name: string; url: string }) => Promise<boolean>;
 }
@@ -42,7 +46,7 @@ interface AddSupplierFormProps {
 const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof supplierSchema>>({
+  const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
       name: '',
@@ -50,10 +54,13 @@ const AddSupplierForm: React.FC<AddSupplierFormProps> = ({ onAddSupplier }) => {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof supplierSchema>) => {
+  const onSubmit = async (values: SupplierFormValues) => {
     setIsSubmitting(true);
     try {
-      const success = await onAddSupplier(values);
+      const success = await onAddSupplier({
+        name: values.name,
+        url: values.url
+      });
       if (success) {
         form.reset(); // Скидаємо форму у випадку успішного додавання
       }
