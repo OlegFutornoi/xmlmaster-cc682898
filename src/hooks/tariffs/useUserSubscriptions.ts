@@ -1,10 +1,9 @@
 
 // Хук для отримання підписок користувача
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { addDays, differenceInDays } from 'date-fns';
 
 interface Subscription {
   id: string;
@@ -29,59 +28,10 @@ export const useUserSubscriptions = () => {
   const [activeSubscription, setActiveSubscription] = useState<Subscription | null>(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState<Subscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
-  // Перевірка терміну дії підписки
-  const checkSubscriptionExpiry = useCallback(async (subscription: Subscription) => {
-    if (!user) return false;
-    
-    // Якщо підписка постійна, вона не може закінчитися
-    if (subscription.tariff_plan.is_permanent) return true;
-    
-    // Якщо є кінцева дата, перевіряємо, чи не минула вона
-    if (subscription.end_date) {
-      const endDate = new Date(subscription.end_date);
-      const now = new Date();
-      
-      // Якщо дата закінчення вже минула і підписка активна, деактивуємо її
-      if (endDate < now && subscription.is_active) {
-        console.log('Деактивуємо підписку через закінчення терміну', subscription.id);
-        try {
-          const { error } = await supabase
-            .from('user_tariff_subscriptions')
-            .update({ is_active: false })
-            .eq('id', subscription.id);
-            
-          if (error) {
-            console.error('Помилка деактивації підписки:', error);
-            return false;
-          }
-          
-          return false;
-        } catch (err) {
-          console.error('Помилка під час деактивації підписки:', err);
-          return false;
-        }
-      }
-      
-      // Термін ще не минув
-      return endDate >= now && subscription.is_active;
-    }
-    
-    return subscription.is_active;
-  }, [user]);
+  const fetchUserSubscriptions = async () => {
+    if (!user) return;
 
-  // Завантаження підписок користувача
-  const fetchUserSubscriptions = useCallback(async () => {
-    if (!user) {
-      setIsLoading(false);
-      setActiveSubscription(null);
-      setSubscriptionHistory([]);
-      return;
-    }
-
-    console.log('Завантаження підписок користувача');
-    
     setIsLoading(true);
     try {
       // Отримуємо активну підписку
@@ -125,32 +75,7 @@ export const useUserSubscriptions = () => {
             }
           }
         };
-        
-        // Виправлення: Перевірка чи правильно встановлена end_date для тимчасових тарифів
-        if (!formattedActive.tariff_plan.is_permanent && 
-            formattedActive.tariff_plan.duration_days && 
-            !formattedActive.end_date) {
-          const startDate = new Date(formattedActive.start_date);
-          const endDate = addDays(startDate, formattedActive.tariff_plan.duration_days);
-          formattedActive.end_date = endDate.toISOString();
-          
-          // Оновлюємо дату закінчення в базі даних
-          await supabase
-            .from('user_tariff_subscriptions')
-            .update({ end_date: endDate.toISOString() })
-            .eq('id', formattedActive.id);
-        }
-
-        // Перевіряємо, чи не закінчився термін дії підписки
-        const isStillActive = await checkSubscriptionExpiry(formattedActive);
-        
-        if (isStillActive) {
-          setActiveSubscription(formattedActive);
-        } else {
-          setActiveSubscription(null);
-        }
-      } else {
-        setActiveSubscription(null);
+        setActiveSubscription(formattedActive);
       }
 
       // Отримуємо історію підписок
@@ -195,8 +120,6 @@ export const useUserSubscriptions = () => {
         }));
         setSubscriptionHistory(formattedHistory);
       }
-      
-      setLastCheckTime(Date.now());
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       toast({
@@ -207,21 +130,13 @@ export const useUserSubscriptions = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, toast, checkSubscriptionExpiry]);
+  };
 
   useEffect(() => {
-    fetchUserSubscriptions();
-    
-    // Періодично перевіряємо статус підписки, але не частіше ніж раз на 30 секунд
-    const interval = setInterval(() => {
-      // Перевіряємо, чи минуло достатньо часу з останньої перевірки
-      if (Date.now() - lastCheckTime > 30000 && user) {
-        fetchUserSubscriptions();
-      }
-    }, 60000); // Інтервал перевірки залишаємо на 1 хвилину
-    
-    return () => clearInterval(interval);
-  }, [user, fetchUserSubscriptions, lastCheckTime]);
+    if (user) {
+      fetchUserSubscriptions();
+    }
+  }, [user]);
 
   return {
     activeSubscription,

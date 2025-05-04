@@ -9,6 +9,7 @@ interface User {
   username: string;
   email: string;
   is_active: boolean;
+  avatar_url?: string;
 }
 
 interface AuthContextType {
@@ -142,7 +143,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        is_active: userData.is_active
+        is_active: userData.is_active,
+        avatar_url: userData.avatar_url
       };
       
       setUser(loggedInUser);

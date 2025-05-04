@@ -1,35 +1,26 @@
 
-// Компонент головної сторінки панелі керування користувача
-import { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+// Компонент для відображення панелі керування користувача
+import { useState, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import UserSidebar from '@/components/user/UserSidebar';
+import UserHome from './UserHome';
+import UserTariffs from './UserTariffs';
 import UserStores from './UserStores';
 import UserSettings from './UserSettings';
-import UserTariffs from './UserTariffs';
 import UserSuppliers from './UserSuppliers';
-import SupplierProducts from './SupplierProducts';
-import ProductDetails from '@/components/user/products/ProductDetails';
 
-// Головний компонент панелі керування користувача
 const UserDashboard = () => {
   return (
-    <div className="flex min-h-screen bg-background" id="user-dashboard">
-      {/* Бокова панель */}
+    <div className="flex h-screen">
       <UserSidebar />
-      
-      {/* Основний контент */}
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto p-4">
-          <Routes>
-            <Route index element={<Navigate to="tariffs" replace />} />
-            <Route path="tariffs" element={<UserTariffs />} />
-            <Route path="stores" element={<UserStores />} />
-            <Route path="settings" element={<UserSettings />} />
-            <Route path="suppliers" element={<UserSuppliers />} />
-            <Route path="suppliers/:supplierId/products" element={<SupplierProducts />} />
-            <Route path="products/:productId" element={<ProductDetails />} />
-          </Routes>
-        </div>
+      <div className="flex-1 overflow-y-auto">
+        <Routes>
+          <Route path="/" element={<UserHome />} />
+          <Route path="tariffs" element={<UserTariffs />} />
+          <Route path="stores" element={<UserStores />} />
+          <Route path="suppliers" element={<UserSuppliers />} />
+          <Route path="settings" element={<UserSettings />} />
+        </Routes>
       </div>
     </div>
   );
