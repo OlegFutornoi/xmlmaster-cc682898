@@ -25,6 +25,16 @@ const ActiveSubscriptionInfo: React.FC<ActiveSubscriptionInfoProps> = ({ activeS
       } catch (e) {
         console.error('Помилка форматування дати:', e);
       }
+    } else if (activeSubscription.tariff_plans.duration_days) {
+      try {
+        const startDate = new Date(activeSubscription.start_date);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + activeSubscription.tariff_plans.duration_days);
+        
+        return `Дійсний до: ${format(endDate, 'd MMMM yyyy', { locale: uk })}`;
+      } catch (e) {
+        console.error('Помилка розрахунку дати закінчення:', e);
+      }
     }
     
     return "Термін дії не визначено";

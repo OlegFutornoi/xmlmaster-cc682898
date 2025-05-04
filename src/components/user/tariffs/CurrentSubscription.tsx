@@ -61,10 +61,14 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
         const endDate = new Date(subscription.end_date);
         // Перевіряємо, що це дійсно дата і вона не є невалідною (Invalid Date)
         if (!isNaN(endDate.getTime())) {
+          const now = new Date();
+          const daysLeft = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          
           return (
             <Badge variant="outline" className="flex items-center gap-1 text-xs" id="temporary-subscription-badge">
               <Clock className="h-3 w-3" />
-              До {format(endDate, "d MMMM yyyy", { locale: uk })}
+              До {format(endDate, "d MMMM yyyy", { locale: uk })} 
+              {daysLeft > 0 ? ` (${daysLeft} дн.)` : ' (закінчився)'}
             </Badge>
           );
         }

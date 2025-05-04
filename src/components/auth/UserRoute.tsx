@@ -15,16 +15,16 @@ const UserRoute = ({ children, requiresSubscription = true }: UserRouteProps) =>
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
   const { activeSubscription, isLoading } = useUserSubscriptions();
-  const [redirectToTariffs, setRedirectToTariffs] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
     // Перевіряємо умови для переадресації на сторінку тарифів
     if (!isLoading && requiresSubscription && !activeSubscription && 
         location.pathname !== '/user/dashboard/tariffs' && 
         user) {
-      setRedirectToTariffs(true);
+      setShouldRedirect(true);
     } else {
-      setRedirectToTariffs(false);
+      setShouldRedirect(false);
     }
   }, [isLoading, requiresSubscription, activeSubscription, location.pathname, user]);
 
@@ -40,7 +40,7 @@ const UserRoute = ({ children, requiresSubscription = true }: UserRouteProps) =>
 
   // Якщо маршрут вимагає підписки і її немає, перенаправляємо на сторінку тарифів,
   // але тільки якщо ми не знаходимось на сторінці тарифів
-  if (redirectToTariffs) {
+  if (shouldRedirect) {
     console.log("Перенаправляємо на сторінку тарифів через відсутність активної підписки");
     return <Navigate to="/user/dashboard/tariffs" replace />;
   }

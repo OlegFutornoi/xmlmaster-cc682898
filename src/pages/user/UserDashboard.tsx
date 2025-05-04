@@ -19,7 +19,7 @@ const UserDashboard = () => {
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto p-4">
           <Routes>
-            <Route path="/" element={<Navigate to="/user/dashboard/tariffs" replace />} />
+            <Route index element={<Navigate to="tariffs" replace />} />
             <Route path="tariffs" element={<UserTariffs />} />
             <Route path="stores" element={<UserStores />} />
             <Route path="settings" element={<UserSettings />} />

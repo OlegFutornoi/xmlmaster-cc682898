@@ -44,6 +44,7 @@ export const activateUserPlan = async (
       const end = new Date(startDate);
       end.setDate(end.getDate() + planData.duration_days);
       endDate = end.toISOString();
+      console.log(`Встановлюємо кінцеву дату підписки: ${endDate} (${planData.duration_days} днів від ${startDate.toISOString()})`);
     }
 
     // Створюємо нову підписку

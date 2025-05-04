@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { addDays, differenceInDays } from 'date-fns';
 
 interface Subscription {
   id: string;
@@ -30,6 +31,7 @@ export const useUserSubscriptions = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
+  // Перевірка терміну дії підписки
   const checkSubscriptionExpiry = useCallback(async (subscription: Subscription) => {
     if (!user) return false;
     
@@ -52,6 +54,7 @@ export const useUserSubscriptions = () => {
             
           if (error) {
             console.error('Помилка деактивації підписки:', error);
+            return false;
           }
           
           return false;
@@ -68,8 +71,14 @@ export const useUserSubscriptions = () => {
     return subscription.is_active;
   }, [user]);
 
+  // Завантаження підписок користувача
   const fetchUserSubscriptions = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      setActiveSubscription(null);
+      setSubscriptionHistory([]);
+      return;
+    }
 
     console.log('Завантаження підписок користувача');
     
@@ -116,6 +125,21 @@ export const useUserSubscriptions = () => {
             }
           }
         };
+        
+        // Виправлення: Перевірка чи правильно встановлена end_date для тимчасових тарифів
+        if (!formattedActive.tariff_plan.is_permanent && 
+            formattedActive.tariff_plan.duration_days && 
+            !formattedActive.end_date) {
+          const startDate = new Date(formattedActive.start_date);
+          const endDate = addDays(startDate, formattedActive.tariff_plan.duration_days);
+          formattedActive.end_date = endDate.toISOString();
+          
+          // Оновлюємо дату закінчення в базі даних
+          await supabase
+            .from('user_tariff_subscriptions')
+            .update({ end_date: endDate.toISOString() })
+            .eq('id', formattedActive.id);
+        }
 
         // Перевіряємо, чи не закінчився термін дії підписки
         const isStillActive = await checkSubscriptionExpiry(formattedActive);
@@ -186,12 +210,7 @@ export const useUserSubscriptions = () => {
   }, [user, toast, checkSubscriptionExpiry]);
 
   useEffect(() => {
-    if (user) {
-      fetchUserSubscriptions();
-    } else {
-      setActiveSubscription(null);
-      setSubscriptionHistory([]);
-    }
+    fetchUserSubscriptions();
     
     // Періодично перевіряємо статус підписки, але не частіше ніж раз на 30 секунд
     const interval = setInterval(() => {
