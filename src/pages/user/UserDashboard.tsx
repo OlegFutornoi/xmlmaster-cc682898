@@ -1,130 +1,32 @@
 
-import { Routes, Route, Navigate } from 'react-router-dom';
+// Компонент головної сторінки панелі керування користувача
+import { useState } from 'react';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import UserSidebar from '@/components/user/UserSidebar';
-import { useAuth } from '@/context/AuthContext';
-import UserHome from './UserHome';
-import UserTariffs from './UserTariffs';
 import UserStores from './UserStores';
 import UserSettings from './UserSettings';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import UserTariffs from './UserTariffs';
+import UserSuppliers from './UserSuppliers';
 
+// Головний компонент панелі керування користувача
 const UserDashboard = () => {
-  const { user } = useAuth();
-  const [activeSubscription, setActiveSubscription] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Додаємо залежність від пошукового параметра, щоб компонент перемонтувався після зміни URL
-  const [location, setLocation] = useState(window.location.pathname);
-
-  // Оновлюємо стан розташування при зміні URL
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setLocation(window.location.pathname);
-    };
-
-    window.addEventListener('popstate', handleLocationChange);
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      if (user) {
-        try {
-          setIsLoading(true);
-          const { data, error } = await supabase
-            .from('user_tariff_subscriptions')
-            .select(`
-              id,
-              is_active,
-              start_date,
-              end_date,
-              tariff_plans (
-                id,
-                name,
-                duration_days,
-                is_permanent
-              )
-            `)
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error fetching subscription:', error);
-          } else {
-            // Перевіряємо чи не закінчився термін підписки
-            if (data && !data.tariff_plans.is_permanent && data.end_date) {
-              const endDate = new Date(data.end_date);
-              const now = new Date();
-              
-              if (endDate < now) {
-                // Підписка закінчилась - деактивуємо її
-                const { error: updateError } = await supabase
-                  .from('user_tariff_subscriptions')
-                  .update({ is_active: false })
-                  .eq('id', data.id);
-                
-                if (updateError) {
-                  console.error('Error deactivating expired subscription:', updateError);
-                }
-                setActiveSubscription(null);
-              } else {
-                setActiveSubscription(data);
-              }
-            } else {
-              setActiveSubscription(data);
-            }
-          }
-        } catch (error) {
-          console.error('Error:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchSubscription();
-  }, [user, location]); // Додаємо location в залежності
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Завантаження...</div>;
-  }
-
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-background">
+      {/* Бокова панель */}
       <UserSidebar />
+      
+      {/* Основний контент */}
       <div className="flex-1 overflow-auto">
-        <Routes>
-          <Route 
-            path="/" 
-            element={
-              activeSubscription 
-                ? <UserHome /> 
-                : <Navigate to="/user/dashboard/tariffs" replace />
-            } 
-          />
-          <Route path="/tariffs" element={<UserTariffs />} />
-          <Route 
-            path="/stores" 
-            element={
-              activeSubscription 
-                ? <UserStores /> 
-                : <Navigate to="/user/dashboard/tariffs" replace />
-            } 
-          />
-          <Route 
-            path="/settings" 
-            element={
-              activeSubscription 
-                ? <UserSettings /> 
-                : <Navigate to="/user/dashboard/tariffs" replace />
-            } 
-          />
-          <Route path="*" element={<Navigate to="/user/dashboard" replace />} />
-        </Routes>
+        <div className="container mx-auto p-4">
+          <Routes>
+            <Route path="/" element={<Navigate to="/user/dashboard/tariffs" replace />} />
+            <Route path="tariffs" element={<UserTariffs />} />
+            <Route path="stores" element={<UserStores />} />
+            <Route path="settings" element={<UserSettings />} />
+            <Route path="suppliers" element={<UserSuppliers />} />
+            <Route path="suppliers/*" element={<Outlet />} />
+          </Routes>
+        </div>
       </div>
     </div>
   );

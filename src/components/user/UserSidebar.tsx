@@ -11,10 +11,12 @@ import {
   User, 
   Store, 
   Settings, 
-  CreditCard
+  CreditCard,
+  Truck
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Компонент бокової панелі користувача
 const UserSidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -121,6 +123,12 @@ const UserSidebar = () => {
       requiresSubscription: true
     },
     {
+      name: 'Постачальники',
+      path: '/user/dashboard/suppliers',
+      icon: <Truck className="h-5 w-5" />,
+      requiresSubscription: true
+    },
+    {
       name: 'Налаштування',
       path: '/user/dashboard/settings',
       icon: <Settings className="h-5 w-5" />,
@@ -184,8 +192,8 @@ const UserSidebar = () => {
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
-        {!isCollapsed && (
-          <div className="flex flex-col gap-2 mb-3">
+        <div className="flex flex-col gap-2 mb-2">
+          {!isCollapsed && (
             <div className="flex items-center">
               <div className="flex items-center justify-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                 <User className="h-4 w-4" />
@@ -196,24 +204,29 @@ const UserSidebar = () => {
                 </p>
               </div>
             </div>
+          )}
+          
+          <div className={`flex ${isCollapsed ? 'justify-center' : 'ml-11'}`}>
             {user && (
               <Badge 
                 variant={user.is_active ? "success" : "destructive"} 
-                className="text-xs self-start ml-11"
+                className="text-xs"
               >
-                {user.is_active ? 'Активний' : 'Неактивний'}
+                {!isCollapsed && (user.is_active ? 'Активний' : 'Неактивний')}
               </Badge>
             )}
           </div>
-        )}
+        </div>
+        
         <Button
           variant="ghost"
           size="icon"
           onClick={handleLogout}
-          className={`w-full flex justify-center items-center text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
+          className="w-full flex justify-center items-center text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           id="logout-button"
         >
           <LogOut className="h-5 w-5" />
+          {!isCollapsed && <span className="ml-2">Вийти</span>}
         </Button>
       </div>
     </div>
