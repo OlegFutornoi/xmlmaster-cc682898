@@ -15,36 +15,26 @@ const UserRoute = ({ children, requiresSubscription = true }: UserRouteProps) =>
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
   const { activeSubscription, isLoading } = useUserSubscriptions();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  useEffect(() => {
-    // Перевіряємо умови для переадресації на сторінку тарифів
-    if (!isLoading && requiresSubscription && !activeSubscription && 
-        location.pathname !== '/user/dashboard/tariffs' && 
-        user) {
-      setShouldRedirect(true);
-    } else {
-      setShouldRedirect(false);
-    }
-  }, [isLoading, requiresSubscription, activeSubscription, location.pathname, user]);
-
-  // Якщо користувач не авторизований, перенаправляємо на логін
+  // Перевіряємо, чи користувач авторизований
   if (!isAuthenticated) {
     return <Navigate to="/user/login" replace />;
   }
 
-  // Якщо маршрут вимагає активної підписки і відбувається завантаження - показуємо пустий компонент
+  // Якщо маршрут вимагає підписки і відбувається завантаження - показуємо пустий компонент
   if (requiresSubscription && isLoading) {
-    return null;
+    return <div className="flex h-screen w-full items-center justify-center">Завантаження...</div>;
   }
 
-  // Якщо маршрут вимагає підписки і її немає, перенаправляємо на сторінку тарифів,
-  // але тільки якщо ми не знаходимось на сторінці тарифів
-  if (shouldRedirect) {
+  // Перевіряємо, чи потрібна підписка для даного маршруту
+  // І перенаправляємо на сторінку тарифів, якщо підписки немає
+  if (requiresSubscription && !isLoading && !activeSubscription && 
+      location.pathname !== '/user/dashboard/tariffs' && user) {
     console.log("Перенаправляємо на сторінку тарифів через відсутність активної підписки");
     return <Navigate to="/user/dashboard/tariffs" replace />;
   }
 
+  // Якщо все в порядку, показуємо дочірні компоненти
   return <>{children}</>;
 };
 

@@ -65,7 +65,7 @@ export const useUserSubscriptions = () => {
       }
       
       // Термін ще не минув
-      return subscription.is_active;
+      return endDate >= now && subscription.is_active;
     }
     
     return subscription.is_active;

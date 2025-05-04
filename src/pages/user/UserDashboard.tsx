@@ -1,12 +1,14 @@
 
 // Компонент головної сторінки панелі керування користувача
 import { useState } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import UserSidebar from '@/components/user/UserSidebar';
 import UserStores from './UserStores';
 import UserSettings from './UserSettings';
 import UserTariffs from './UserTariffs';
 import UserSuppliers from './UserSuppliers';
+import SupplierProducts from './SupplierProducts';
+import ProductDetails from '@/components/user/products/ProductDetails';
 
 // Головний компонент панелі керування користувача
 const UserDashboard = () => {
@@ -24,7 +26,8 @@ const UserDashboard = () => {
             <Route path="stores" element={<UserStores />} />
             <Route path="settings" element={<UserSettings />} />
             <Route path="suppliers" element={<UserSuppliers />} />
-            <Route path="suppliers/*" element={<Outlet />} />
+            <Route path="suppliers/:supplierId/products" element={<SupplierProducts />} />
+            <Route path="products/:productId" element={<ProductDetails />} />
           </Routes>
         </div>
       </div>
