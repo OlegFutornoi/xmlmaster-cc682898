@@ -60,6 +60,9 @@ export const useUserSubscriptions = () => {
           return false;
         }
       }
+      
+      // Термін ще не минув
+      return subscription.is_active;
     }
     
     return subscription.is_active;
@@ -193,10 +196,8 @@ export const useUserSubscriptions = () => {
     // Періодично перевіряємо статус підписки, але не частіше ніж раз на 30 секунд
     const interval = setInterval(() => {
       // Перевіряємо, чи минуло достатньо часу з останньої перевірки
-      if (Date.now() - lastCheckTime > 30000) {
-        if (user) {
-          fetchUserSubscriptions();
-        }
+      if (Date.now() - lastCheckTime > 30000 && user) {
+        fetchUserSubscriptions();
       }
     }, 60000); // Інтервал перевірки залишаємо на 1 хвилину
     

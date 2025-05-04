@@ -11,7 +11,7 @@ import UserSuppliers from './UserSuppliers';
 // Головний компонент панелі керування користувача
 const UserDashboard = () => {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background" id="user-dashboard">
       {/* Бокова панель */}
       <UserSidebar />
       

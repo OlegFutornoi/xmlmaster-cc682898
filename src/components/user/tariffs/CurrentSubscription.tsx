@@ -36,7 +36,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
 
   if (!subscription) {
     return (
-      <Alert variant="default">
+      <Alert variant="default" id="no-active-subscription-alert">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Немає активного тарифу</AlertTitle>
         <AlertDescription>
@@ -50,7 +50,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
   const getSubscriptionTermDisplay = () => {
     if (subscription.tariff_plan.is_permanent) {
       return (
-        <Badge variant="outline" className="flex items-center gap-1 text-xs">
+        <Badge variant="outline" className="flex items-center gap-1 text-xs" id="permanent-subscription-badge">
           <Infinity className="h-3 w-3" />
           Постійний доступ
         </Badge>
@@ -62,7 +62,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
         // Перевіряємо, що це дійсно дата і вона не є невалідною (Invalid Date)
         if (!isNaN(endDate.getTime())) {
           return (
-            <Badge variant="outline" className="flex items-center gap-1 text-xs">
+            <Badge variant="outline" className="flex items-center gap-1 text-xs" id="temporary-subscription-badge">
               <Clock className="h-3 w-3" />
               До {format(endDate, "d MMMM yyyy", { locale: uk })}
             </Badge>
@@ -75,7 +75,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
     
     // Якщо немає валідної дати закінчення або is_permanent
     return (
-      <Badge variant="outline" className="flex items-center gap-1 text-xs">
+      <Badge variant="outline" className="flex items-center gap-1 text-xs" id="active-subscription-badge">
         <Clock className="h-3 w-3" />
         Активний тариф
       </Badge>
@@ -83,12 +83,12 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4" id="current-subscription-card">
       <CardHeader className="py-3 px-4 bg-muted/30 border-b flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-medium">{subscription.tariff_plan.name}</span>
           {subscription.tariff_plan.price > 0 && (
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="secondary" className="text-sm" id="subscription-price-badge">
               {subscription.tariff_plan.price} {subscription.tariff_plan.currency.code}
             </Badge>
           )}

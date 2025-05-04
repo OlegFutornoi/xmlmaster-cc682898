@@ -31,7 +31,7 @@ const ActiveSubscriptionInfo: React.FC<ActiveSubscriptionInfoProps> = ({ activeS
   };
   
   return (
-    <div className="bg-blue-50 p-4 rounded-md mb-4">
+    <div className="bg-blue-50 p-4 rounded-md mb-4" id="active-subscription-info">
       <p className="font-medium text-blue-800">Поточний тарифний план:</p>
       <p>{activeSubscription.tariff_plans.name}</p>
       <p className="text-sm text-blue-600 mt-1">

@@ -38,7 +38,8 @@ const UserRoute = ({ children, requiresSubscription = true }: UserRouteProps) =>
     return null;
   }
 
-  // Якщо маршрут вимагає підписки і її немає, перенаправляємо на сторінку тарифів
+  // Якщо маршрут вимагає підписки і її немає, перенаправляємо на сторінку тарифів,
+  // але тільки якщо ми не знаходимось на сторінці тарифів
   if (redirectToTariffs) {
     console.log("Перенаправляємо на сторінку тарифів через відсутність активної підписки");
     return <Navigate to="/user/dashboard/tariffs" replace />;
