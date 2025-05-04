@@ -1,13 +1,12 @@
 
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, PlusCircle, Store, Trash2, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Building2, PlusCircle, Store, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -21,6 +20,14 @@ interface UserStore {
   id: string;
   name: string;
   created_at: string;
+}
+
+interface LimitationValue {
+  limitation_type: {
+    name: string;
+    description: string;
+  };
+  value: number;
 }
 
 const UserStores = () => {
@@ -38,15 +45,10 @@ const UserStores = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    console.log('UserStores component mounted');
     fetchUserStores();
+    fetchUserLimitations();
   }, []);
-
-  // Окремий useEffect для викликання fetchUserLimitations після завантаження магазинів
-  useEffect(() => {
-    if (stores.length > 0 || !isLoading) {
-      fetchUserLimitations();
-    }
-  }, [stores, isLoading]);
 
   const fetchUserStores = async () => {
     if (!user) return;
@@ -80,7 +82,7 @@ const UserStores = () => {
     if (!user) return;
     
     try {
-      // Отримуємо активну підписку користувача
+      // Спочатку отримуємо активну підписку користувача
       const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('user_tariff_subscriptions')
         .select('tariff_plan_id')
@@ -119,7 +121,8 @@ const UserStores = () => {
         const storesLimitValue = limitationData[0].value;
         setStoresLimit(storesLimitValue);
         
-        // Перевіряємо кількість магазинів строго менше ліміту
+        // Перевіряємо, чи може користувач створити ще один магазин
+        // Виправляємо логіку: порівнюємо з фактичною кількістю, щоб не було можливо створити більше ніж дозволено
         setCanCreateStore(stores.length < storesLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
@@ -130,6 +133,14 @@ const UserStores = () => {
       console.error('Error fetching limitations:', error);
     }
   };
+
+  // Оновлюємо стан canCreateStore коли змінюється кількість магазинів або ліміт
+  useEffect(() => {
+    if (storesLimit !== null) {
+      // Виправляємо логіку: порівнюємо з фактичною кількістю, щоб не було можливо створити більше ніж дозволено
+      setCanCreateStore(stores.length < storesLimit);
+    }
+  }, [stores.length, storesLimit]);
 
   const handleCreateStore = async () => {
     if (!newStoreName.trim()) {
@@ -151,7 +162,7 @@ const UserStores = () => {
     }
 
     // Додаткова перевірка перед створенням - чи не перевищено ліміт
-    if (storesLimit !== null && stores.length >= storesLimit) {
+    if (stores.length >= (storesLimit || 0)) {
       toast({
         title: 'Помилка',
         description: 'Ви досягли ліміту створення магазинів. Оновіть тарифний план.',
@@ -182,6 +193,7 @@ const UserStores = () => {
       setNewStoreName('');
       setIsDialogOpen(false);
       fetchUserStores();
+      fetchUserLimitations();
     } catch (error) {
       console.error('Error creating store:', error);
       toast({
@@ -217,6 +229,7 @@ const UserStores = () => {
       setIsDeleteDialogOpen(false);
       setStoreToDelete(null);
       fetchUserStores();
+      fetchUserLimitations();
     } catch (error) {
       console.error('Error deleting store:', error);
       toast({
@@ -235,81 +248,76 @@ const UserStores = () => {
   };
 
   return (
-    <div className="container mx-auto py-4 px-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-semibold">Магазини</h1>
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Магазини</h1>
         
-        <div className="flex items-center gap-2">
-          {storesLimit !== null && (
-            <Badge variant="outline" className="flex items-center px-2 py-1 text-xs">
-              <Store className="h-3 w-3 mr-1 text-blue-600" />
-              <span className="text-muted-foreground">
-                {stores.length} з {storesLimit}
-              </span>
-            </Badge>
-          )}
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    className="rounded-full"
-                    disabled={!canCreateStore}
-                    onClick={() => setIsDialogOpen(true)}
-                    id="create-store-button"
-                  >
-                    <PlusCircle className="h-5 w-5" />
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {canCreateStore 
-                  ? "Створити магазин" 
-                  : `Досягнуто ліміт магазинів (${storesLimit})`
-                }
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="rounded-full"
+                  disabled={!canCreateStore}
+                  onClick={() => setIsDialogOpen(true)}
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {canCreateStore 
+                ? "Створити магазин" 
+                : "Функціонал не доступний"
+              }
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
+      
+      {storesLimit !== null && (
+        <Card className="mb-6 bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Store className="h-5 w-5 text-blue-600" />
+              <span className="text-blue-800">
+                {stores.length} з {storesLimit} доступних магазинів
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {isLoading ? (
         <p>Завантаження магазинів...</p>
       ) : stores.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stores.map(store => (
-            <Card key={store.id} className="overflow-hidden transition-all duration-200 hover:shadow-md relative h-[120px]">
+            <Card key={store.id} className="overflow-hidden transition-all duration-200 hover:shadow-md relative">
+              {/* Кнопка видалення перенесена у верхній правий кут */}
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => openDeleteDialog(store)}
-                className="absolute top-1 right-1 text-red-500 hover:text-red-700 hover:bg-red-50 z-10 h-6 w-6"
-                id={`delete-store-${store.id}`}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50 z-10"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </Button>
               
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
                   {store.name}
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  {format(new Date(store.created_at), "dd.MM.yyyy", { locale: uk })}
+                <CardDescription>
+                  Створено: {format(new Date(store.created_at), "dd MMMM yyyy", { locale: uk })}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="py-2 px-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs h-7 px-2 w-full flex justify-between items-center"
-                  id={`manage-store-${store.id}`}
-                >
-                  Керувати
-                  <ChevronRight className="h-3 w-3 ml-1" />
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  Керувати магазином
                 </Button>
               </CardContent>
             </Card>
@@ -318,19 +326,19 @@ const UserStores = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">У вас ще немає магазинів</CardTitle>
-            <CardDescription className="text-sm">
+            <CardTitle>У вас ще немає магазинів</CardTitle>
+            <CardDescription>
               Створіть свій перший магазин, щоб почати роботу
             </CardDescription>
           </CardHeader>
           <CardContent>
             {canCreateStore ? (
-              <Button onClick={() => setIsDialogOpen(true)} size="sm">
+              <Button onClick={() => setIsDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Створити магазин
               </Button>
             ) : (
-              <p className="text-sm text-gray-600">
+              <p className="text-gray-600">
                 Для створення магазину необхідно оновити тарифний план
               </p>
             )}
