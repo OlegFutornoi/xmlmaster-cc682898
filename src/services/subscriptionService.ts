@@ -1,69 +1,106 @@
 
-// Сервіс для керування підписками користувача
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
+import { createDemoTariffIfNotExist } from './demoTariffService';
 
+// Активація тарифного плану для користувача
 export const activateUserPlan = async (
   userId: string, 
-  selectedPlanId: string, 
-  activeSubscriptionId: string | null = null
+  planId: string, 
+  currentSubscriptionId: string | null = null
 ) => {
-  if (!userId || !selectedPlanId) {
-    throw new Error('Не вдалося активувати тарифний план: відсутній користувач або тарифний план');
-  }
-  
   try {
-    const { data: selectedPlan, error: planError } = await supabase
+    // Отримуємо дані тарифного плану
+    const { data: planData, error: planError } = await supabase
       .from('tariff_plans')
-      .select(`
-        id, 
-        name, 
-        price, 
-        duration_days, 
-        is_permanent
-      `)
-      .eq('id', selectedPlanId)
+      .select('*')
+      .eq('id', planId)
       .single();
-      
-    if (planError) throw planError;
     
-    if (!selectedPlan) {
-      throw new Error("Тариф не знайдено");
-    }
-
-    // Розраховуємо кінцеву дату підписки
-    let endDate = null;
-    if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
-      const startDate = new Date();
-      endDate = new Date();
-      endDate.setDate(startDate.getDate() + selectedPlan.duration_days);
+    if (planError) {
+      throw new Error('Не вдалося отримати деталі тарифного плану');
     }
 
     // Якщо є активна підписка, деактивуємо її
-    if (activeSubscriptionId) {
-      const { error: updateError } = await supabase
+    if (currentSubscriptionId) {
+      const { error: deactivateError } = await supabase
         .from('user_tariff_subscriptions')
-        .update({ is_active: false })
-        .eq('id', activeSubscriptionId);
+        .update({
+          is_active: false,
+          end_date: new Date().toISOString()
+        })
+        .eq('id', currentSubscriptionId);
+        
+      if (deactivateError) {
+        console.error('Error deactivating current subscription:', deactivateError);
+      }
+    }
 
-      if (updateError) throw updateError;
+    // Розраховуємо дату закінчення нової підписки
+    const startDate = new Date();
+    let endDate = null;
+    
+    if (!planData.is_permanent && planData.duration_days) {
+      const end = new Date(startDate);
+      end.setDate(end.getDate() + planData.duration_days);
+      endDate = end.toISOString();
     }
 
     // Створюємо нову підписку
-    const { error: createError } = await supabase
+    const { data: subscriptionData, error: subscriptionError } = await supabase
       .from('user_tariff_subscriptions')
       .insert({
         user_id: userId,
-        tariff_plan_id: selectedPlanId,
+        tariff_plan_id: planId,
+        start_date: startDate.toISOString(),
         end_date: endDate,
         is_active: true
-      });
-
-    if (createError) throw createError;
-
-    return selectedPlan;
+      })
+      .select();
+    
+    if (subscriptionError) {
+      throw subscriptionError;
+    }
+    
+    return subscriptionData;
   } catch (error) {
-    console.error('Error activating plan:', error);
+    console.error('Error in activateUserPlan:', error);
     throw error;
+  }
+};
+
+// Спроба активації демо-тарифу для нового користувача
+export const tryActivateDefaultPlan = async (userId: string) => {
+  try {
+    // Перевіримо, чи має користувач уже активну підписку
+    const { data: existingSubscription, error: checkError } = await supabase
+      .from('user_tariff_subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing subscription:', checkError);
+      return null;
+    }
+
+    // Якщо користувач уже має активну підписку, не створюємо нову
+    if (existingSubscription) {
+      return existingSubscription;
+    }
+
+    // Створюємо або отримуємо демо-тарифний план
+    const demoTariffId = await createDemoTariffIfNotExist();
+    if (!demoTariffId) {
+      console.error('Could not create or find demo tariff');
+      return null;
+    }
+
+    // Активуємо демо-тариф для користувача
+    return await activateUserPlan(userId, demoTariffId);
+  } catch (error) {
+    console.error('Error activating default plan:', error);
+    return null;
   }
 };

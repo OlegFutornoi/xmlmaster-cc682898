@@ -39,7 +39,14 @@ const UserDashboard = () => {
             .select(`
               id,
               is_active,
-              tariff_plans (id)
+              start_date,
+              end_date,
+              tariff_plans (
+                id,
+                name,
+                duration_days,
+                is_permanent
+              )
             `)
             .eq('user_id', user.id)
             .eq('is_active', true)
@@ -48,7 +55,28 @@ const UserDashboard = () => {
           if (error) {
             console.error('Error fetching subscription:', error);
           } else {
-            setActiveSubscription(data);
+            // Перевіряємо чи не закінчився термін підписки
+            if (data && !data.tariff_plans.is_permanent && data.end_date) {
+              const endDate = new Date(data.end_date);
+              const now = new Date();
+              
+              if (endDate < now) {
+                // Підписка закінчилась - деактивуємо її
+                const { error: updateError } = await supabase
+                  .from('user_tariff_subscriptions')
+                  .update({ is_active: false })
+                  .eq('id', data.id);
+                
+                if (updateError) {
+                  console.error('Error deactivating expired subscription:', updateError);
+                }
+                setActiveSubscription(null);
+              } else {
+                setActiveSubscription(data);
+              }
+            } else {
+              setActiveSubscription(data);
+            }
           }
         } catch (error) {
           console.error('Error:', error);
@@ -62,7 +90,7 @@ const UserDashboard = () => {
   }, [user, location]); // Додаємо location в залежності
 
   if (isLoading) {
-    return <div>Завантаження...</div>;
+    return <div className="flex justify-center items-center h-screen">Завантаження...</div>;
   }
 
   return (
