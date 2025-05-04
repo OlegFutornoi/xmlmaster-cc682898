@@ -56,15 +56,20 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({ subscription 
         </Badge>
       );
     } else if (subscription.end_date) {
-      // Перевіряємо, що дата закінчення валідна (не 1970 рік)
-      const endDate = new Date(subscription.end_date);
-      if (endDate.getFullYear() > 1970) {
-        return (
-          <Badge variant="outline" className="flex items-center gap-1 text-xs">
-            <Clock className="h-3 w-3" />
-            До {format(endDate, "d MMMM yyyy", { locale: uk })}
-          </Badge>
-        );
+      // Перевіряємо, що дата закінчення валідна
+      try {
+        const endDate = new Date(subscription.end_date);
+        // Перевіряємо, що це дійсно дата і вона не є невалідною (Invalid Date)
+        if (!isNaN(endDate.getTime())) {
+          return (
+            <Badge variant="outline" className="flex items-center gap-1 text-xs">
+              <Clock className="h-3 w-3" />
+              До {format(endDate, "d MMMM yyyy", { locale: uk })}
+            </Badge>
+          );
+        }
+      } catch (error) {
+        console.error('Помилка форматування дати:', error);
       }
     }
     

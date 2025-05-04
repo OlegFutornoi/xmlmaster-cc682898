@@ -1,6 +1,6 @@
 
 // Хук для отримання підписок користувача
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -28,8 +28,9 @@ export const useUserSubscriptions = () => {
   const [activeSubscription, setActiveSubscription] = useState<Subscription | null>(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState<Subscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
-  const checkSubscriptionExpiry = async (subscription: Subscription) => {
+  const checkSubscriptionExpiry = useCallback(async (subscription: Subscription) => {
     if (!user) return false;
     
     // Якщо підписка постійна, вона не може закінчитися
@@ -40,27 +41,35 @@ export const useUserSubscriptions = () => {
       const endDate = new Date(subscription.end_date);
       const now = new Date();
       
-      // Якщо дата закінчення вже минула, деактивуємо підписку
+      // Якщо дата закінчення вже минула і підписка активна, деактивуємо її
       if (endDate < now && subscription.is_active) {
-        const { error } = await supabase
-          .from('user_tariff_subscriptions')
-          .update({ is_active: false })
-          .eq('id', subscription.id);
+        console.log('Деактивуємо підписку через закінчення терміну', subscription.id);
+        try {
+          const { error } = await supabase
+            .from('user_tariff_subscriptions')
+            .update({ is_active: false })
+            .eq('id', subscription.id);
+            
+          if (error) {
+            console.error('Помилка деактивації підписки:', error);
+          }
           
-        if (error) {
-          console.error('Помилка деактивації підписки:', error);
+          return false;
+        } catch (err) {
+          console.error('Помилка під час деактивації підписки:', err);
+          return false;
         }
-        
-        return false;
       }
     }
     
     return subscription.is_active;
-  };
+  }, [user]);
 
-  const fetchUserSubscriptions = async () => {
+  const fetchUserSubscriptions = useCallback(async () => {
     if (!user) return;
 
+    console.log('Завантаження підписок користувача');
+    
     setIsLoading(true);
     try {
       // Отримуємо активну підписку
@@ -159,6 +168,8 @@ export const useUserSubscriptions = () => {
         }));
         setSubscriptionHistory(formattedHistory);
       }
+      
+      setLastCheckTime(Date.now());
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       toast({
@@ -169,27 +180,28 @@ export const useUserSubscriptions = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, toast, checkSubscriptionExpiry]);
 
   useEffect(() => {
     if (user) {
       fetchUserSubscriptions();
+    } else {
+      setActiveSubscription(null);
+      setSubscriptionHistory([]);
     }
     
-    // Періодично перевіряємо статус підписки
+    // Періодично перевіряємо статус підписки, але не частіше ніж раз на 30 секунд
     const interval = setInterval(() => {
-      if (user && activeSubscription) {
-        checkSubscriptionExpiry(activeSubscription)
-          .then(isActive => {
-            if (!isActive) {
-              setActiveSubscription(null);
-            }
-          });
+      // Перевіряємо, чи минуло достатньо часу з останньої перевірки
+      if (Date.now() - lastCheckTime > 30000) {
+        if (user) {
+          fetchUserSubscriptions();
+        }
       }
-    }, 60000); // Перевіряємо кожну хвилину
+    }, 60000); // Інтервал перевірки залишаємо на 1 хвилину
     
     return () => clearInterval(interval);
-  }, [user, activeSubscription]);
+  }, [user, fetchUserSubscriptions, lastCheckTime]);
 
   return {
     activeSubscription,
