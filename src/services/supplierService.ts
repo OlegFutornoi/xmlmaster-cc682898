@@ -1,7 +1,9 @@
+
 // Сервіс для роботи з постачальниками
 import { supabase } from '@/integrations/supabase/client';
 import { FileProcessingResult, FileType, Product, ProductCategory, Supplier } from '@/types/supplier';
 import { processSupplierFile } from '@/utils/fileProcessing';
+import { toast } from 'sonner';
 
 // Функція для обробки та збереження даних з файлу постачальника
 export const processAndSaveFileData = async (
@@ -225,12 +227,18 @@ export const getProductDetails = async (productId: string): Promise<{
     
     if (productError) {
       console.error("Помилка отримання товару:", productError);
-      toast.error("Не вдалося завантажити інформацію про товар");
+      toast("Не вдалося завантажити інформацію про товар", {
+        description: productError.message,
+        duration: 3000,
+      });
       return { success: false };
     }
     
     if (!product) {
-      toast.error("Товар не знайдено");
+      toast("Товар не знайдено", {
+        description: "Запитаний товар не знайдено в базі даних",
+        duration: 3000,
+      });
       return { success: false };
     }
     
@@ -244,7 +252,7 @@ export const getProductDetails = async (productId: string): Promise<{
       console.error("Помилка отримання зображень:", imagesError);
     }
     
-    // 3. Отримуємо атрибути товар��
+    // 3. Отримуємо атрибути товару
     const { data: attributes, error: attributesError } = await supabase
       .from('product_attributes')
       .select('*')
@@ -282,7 +290,10 @@ export const getProductDetails = async (productId: string): Promise<{
     };
   } catch (error) {
     console.error("Помилка отримання деталей товару:", error);
-    toast.error("Сталася помилка при завантаженні деталей товару");
+    toast("Сталася помилка при завантаженні деталей товару", {
+      description: error instanceof Error ? error.message : "Невідома помилка",
+      duration: 3000,
+    });
     return { success: false };
   }
 };
@@ -296,6 +307,15 @@ export const updateSupplierProducts = async (
   url: string
 ): Promise<{ success: boolean; message: string; affectedRows?: number }> => {
   try {
+    // Перевіряємо обмеження за тарифним планом
+    const limitsCheck = await checkProductLimits(userId);
+    if (limitsCheck.reachedLimit) {
+      return {
+        success: false,
+        message: `Ви досягли ліміту в ${limitsCheck.maxAllowed} товарів за вашим тарифним планом`
+      };
+    }
+    
     // Видаляємо старі дані
     const { error: deleteError } = await supabase.rpc('delete_supplier_data', {
       supplier_id_param: supplierId
@@ -338,11 +358,200 @@ export const checkProductLimits = async (userId: string): Promise<{
   currentCount: number;
   maxAllowed: number;
 }> => {
-  // Тут має бути логіка перевірки обмежень тарифного плану
-  // Поки просто заглушка, яка дозволяє будь-яку кількість товарів
-  return {
-    reachedLimit: false,
-    currentCount: 0,
-    maxAllowed: Number.MAX_SAFE_INTEGER
-  };
+  try {
+    // Отримуємо активну підписку користувача
+    const { data: subscription, error: subError } = await supabase
+      .from('user_tariff_subscriptions')
+      .select(`
+        id,
+        tariff_plan_id,
+        tariff_plans:tariff_plan_id (id)
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (subError) {
+      console.error('Помилка отримання підписки:', subError);
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: 100 // Базове обмеження за замовчуванням
+      };
+    }
+    
+    if (!subscription) {
+      return {
+        reachedLimit: true, // Без активної підписки обмеження досягнуто
+        currentCount: 0,
+        maxAllowed: 0
+      };
+    }
+    
+    // Отримуємо обмеження для тарифного плану
+    const { data: limitations, error: limError } = await supabase
+      .from('tariff_plan_limitations')
+      .select(`
+        id,
+        limitation_type_id,
+        value,
+        limitation_types:limitation_type_id (name)
+      `)
+      .eq('tariff_plan_id', subscription.tariff_plan_id);
+    
+    if (limError) {
+      console.error('Помилка отримання обмежень:', limError);
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: 100 // Базове обмеження за замовчуванням
+      };
+    }
+    
+    // Шукаємо обмеження для товарів
+    const productLimitation = limitations.find(
+      lim => lim.limitation_types && lim.limitation_types.name === 'products'
+    );
+    
+    if (!productLimitation) {
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: Number.MAX_SAFE_INTEGER // Без обмежень
+      };
+    }
+    
+    // Отримуємо поточну кількість товарів користувача
+    const { count: currentCount, error: countError } = await supabase
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    
+    if (countError) {
+      console.error('Помилка отримання кількості товарів:', countError);
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: Number(productLimitation.value)
+      };
+    }
+    
+    const maxAllowed = Number(productLimitation.value);
+    
+    return {
+      reachedLimit: currentCount !== null && currentCount >= maxAllowed,
+      currentCount: currentCount || 0,
+      maxAllowed
+    };
+  } catch (error) {
+    console.error('Помилка перевірки обмежень:', error);
+    return {
+      reachedLimit: false,
+      currentCount: 0,
+      maxAllowed: 100 // Базове обмеження за замовчуванням у випадку помилки
+    };
+  }
+};
+
+/**
+ * Перевіряє обмеження тарифного плану для постачальників
+ */
+export const checkSupplierLimits = async (userId: string): Promise<{
+  reachedLimit: boolean;
+  currentCount: number;
+  maxAllowed: number;
+}> => {
+  try {
+    // Отримуємо активну підписку користувача
+    const { data: subscription, error: subError } = await supabase
+      .from('user_tariff_subscriptions')
+      .select(`
+        id,
+        tariff_plan_id,
+        tariff_plans:tariff_plan_id (id)
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (subError) {
+      console.error('Помилка отримання підписки:', subError);
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: 5 // Базове обмеження за замовчуванням
+      };
+    }
+    
+    if (!subscription) {
+      return {
+        reachedLimit: true, // Без активної підписки обмеження досягнуто
+        currentCount: 0,
+        maxAllowed: 0
+      };
+    }
+    
+    // Отримуємо обмеження для тарифного плану
+    const { data: limitations, error: limError } = await supabase
+      .from('tariff_plan_limitations')
+      .select(`
+        id,
+        limitation_type_id,
+        value,
+        limitation_types:limitation_type_id (name)
+      `)
+      .eq('tariff_plan_id', subscription.tariff_plan_id);
+    
+    if (limError) {
+      console.error('Помилка отримання обмежень:', limError);
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: 5 // Базове обмеження за замовчуванням
+      };
+    }
+    
+    // Шукаємо обмеження для постачальників
+    const supplierLimitation = limitations.find(
+      lim => lim.limitation_types && lim.limitation_types.name === 'suppliers'
+    );
+    
+    if (!supplierLimitation) {
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: Number.MAX_SAFE_INTEGER // Без обмежень
+      };
+    }
+    
+    // Отримуємо поточну кількість постачальників користувача
+    const { count: currentCount, error: countError } = await supabase
+      .from('suppliers')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    
+    if (countError) {
+      console.error('Помилка отримання кількості постачальників:', countError);
+      return {
+        reachedLimit: false,
+        currentCount: 0,
+        maxAllowed: Number(supplierLimitation.value)
+      };
+    }
+    
+    const maxAllowed = Number(supplierLimitation.value);
+    
+    return {
+      reachedLimit: currentCount !== null && currentCount >= maxAllowed,
+      currentCount: currentCount || 0,
+      maxAllowed
+    };
+  } catch (error) {
+    console.error('Помилка перевірки обмежень:', error);
+    return {
+      reachedLimit: false,
+      currentCount: 0,
+      maxAllowed: 5 // Базове обмеження за замовчуванням у випадку помилки
+    };
+  }
 };

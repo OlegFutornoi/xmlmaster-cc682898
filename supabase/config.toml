@@ -1,1 +1,12 @@
+
+# Reference: https://supabase.com/docs/guides/functions/quickstart
 project_id = "lzjwkentllirumevvmhr"
+
+[functions.delete-supplier-products]
+verify_jwt = true
+
+[functions.process-supplier-file]
+verify_jwt = true
+
+[functions.update-supplier-products]
+verify_jwt = true

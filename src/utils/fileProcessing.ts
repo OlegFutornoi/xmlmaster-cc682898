@@ -47,6 +47,8 @@ export const validateFileUrl = (url: string): { valid: boolean; fileType: FileTy
  */
 export const processXmlData = async (xmlContent: string): Promise<FileProcessingResult> => {
   try {
+    console.log("Починаємо обробку XML даних...");
+    
     // Парсимо XML документ
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
@@ -54,6 +56,7 @@ export const processXmlData = async (xmlContent: string): Promise<FileProcessing
     // Перевіряємо на помилки парсингу
     const parserError = xmlDoc.querySelector("parsererror");
     if (parserError) {
+      console.error("Помилка парсингу XML:", parserError.textContent);
       return {
         success: false,
         message: "Помилка парсингу XML: " + parserError.textContent,
@@ -65,82 +68,232 @@ export const processXmlData = async (xmlContent: string): Promise<FileProcessing
     const products: Product[] = [];
     const categoriesMap = new Map<string, ProductCategory>();
     
+    console.log("XML документ успішно створено, шукаємо елементи...");
+    
     // Отримуємо всі товари з XML
-    const productElements = xmlDoc.querySelectorAll("product");
+    // Перевіряємо різні можливі структури XML
+    let productElements = xmlDoc.querySelectorAll("product");
+    
+    // Якщо немає прямих елементів "product", шукаємо в різних структурах
+    if (productElements.length === 0) {
+      console.log("Не знайдено елементи 'product', шукаємо альтернативні структури...");
+      
+      // Варіант 1: products/product
+      productElements = xmlDoc.querySelectorAll("products > product");
+      
+      // Варіант 2: catalog/product або catalog/products/product
+      if (productElements.length === 0) {
+        productElements = xmlDoc.querySelectorAll("catalog > product, catalog > products > product");
+      }
+      
+      // Варіант 3: shop/products/product
+      if (productElements.length === 0) {
+        productElements = xmlDoc.querySelectorAll("shop > products > product");
+      }
+      
+      // Варіант 4: items/item
+      if (productElements.length === 0) {
+        productElements = xmlDoc.querySelectorAll("items > item");
+      }
+      
+      // Варіант 5: yml_catalog/shop/offers/offer
+      if (productElements.length === 0) {
+        productElements = xmlDoc.querySelectorAll("yml_catalog > shop > offers > offer");
+      }
+      
+      console.log(`Знайдено ${productElements.length} елементів в альтернативних структурах`);
+    } else {
+      console.log(`Знайдено ${productElements.length} елементів 'product'`);
+    }
+    
+    // Якщо все ще немає елементів, пробуємо знайти будь-які теги, які можуть бути товарами
+    if (productElements.length === 0) {
+      console.log("Не знайдено стандартних структур, шукаємо будь-які можливі елементи товарів...");
+      const possibleProductTags = ["item", "offer", "product", "good", "article"];
+      
+      for (const tag of possibleProductTags) {
+        productElements = xmlDoc.querySelectorAll(tag);
+        if (productElements.length > 0) {
+          console.log(`Знайдено ${productElements.length} елементів '${tag}'`);
+          break;
+        }
+      }
+    }
+    
+    if (productElements.length === 0) {
+      console.error("Не знайдено жодного елемента товару в XML файлі");
+      return {
+        success: false,
+        message: "Не знайдено жодного елемента товару в XML файлі. Перевірте структуру XML.",
+        fileType: FileType.XML
+      };
+    }
+    
+    console.log(`Починаємо обробку ${productElements.length} товарів...`);
     
     // Обробляємо кожен товар
     productElements.forEach((productElement, index) => {
-      // Основні дані товару
-      const name = productElement.querySelector("name")?.textContent || `Товар ${index + 1}`;
-      const description = productElement.querySelector("description")?.textContent || null;
-      const priceText = productElement.querySelector("price")?.textContent || "0";
-      const price = parseFloat(priceText);
-      const oldPriceText = productElement.querySelector("old_price")?.textContent || null;
-      const oldPrice = oldPriceText ? parseFloat(oldPriceText) : null;
-      const salePriceText = productElement.querySelector("sale_price")?.textContent || null;
-      const salePrice = salePriceText ? parseFloat(salePriceText) : null;
-      const currency = productElement.querySelector("currency")?.textContent || "UAH";
-      const manufacturer = productElement.querySelector("manufacturer")?.textContent || null;
-      const categoryName = productElement.querySelector("category")?.textContent || "Без категорії";
-      
-      // Створюємо або оновлюємо категорію
-      if (!categoriesMap.has(categoryName)) {
-        categoriesMap.set(categoryName, {
-          name: categoryName,
-          product_count: 1
-        });
-      } else {
-        const category = categoriesMap.get(categoryName)!;
-        category.product_count += 1;
-        categoriesMap.set(categoryName, category);
-      }
-      
-      // Зображення товару
-      const images = [];
-      const imageElements = productElement.querySelectorAll("image");
-      imageElements.forEach((imgEl, imgIndex) => {
-        const imageUrl = imgEl.textContent || "";
-        if (imageUrl) {
-          images.push({
-            image_url: imageUrl,
-            is_main: imgIndex === 0 // Перше зображення є головним
-          });
-        }
-      });
-      
-      // Характеристики товару
-      const attributes = [];
-      const attrElements = productElement.querySelectorAll("attribute");
-      attrElements.forEach((attrEl) => {
-        const attrName = attrEl.getAttribute("name") || attrEl.querySelector("name")?.textContent;
-        const attrValue = attrEl.textContent || attrEl.querySelector("value")?.textContent;
+      try {
+        // Функція для пошуку значення в різних можливих елементах
+        const findValue = (selectors: string[]): string | null => {
+          for (const selector of selectors) {
+            const element = productElement.querySelector(selector);
+            if (element && element.textContent) {
+              return element.textContent.trim();
+            }
+          }
+          return null;
+        };
         
-        if (attrName && attrValue) {
-          attributes.push({
-            attribute_name: attrName,
-            attribute_value: attrValue
+        // Основні дані товару
+        const name = findValue(["name", "title", "product_name", "model"]) || `Товар ${index + 1}`;
+        const description = findValue(["description", "desc", "content", "text", "product_description"]);
+        const priceText = findValue(["price", "cost", "product_price"]) || "0";
+        const price = parseFloat(priceText);
+        const oldPriceText = findValue(["old_price", "oldprice", "base_price", "regular_price"]);
+        const oldPrice = oldPriceText ? parseFloat(oldPriceText) : null;
+        const salePriceText = findValue(["sale_price", "saleprice", "discount_price", "special_price"]);
+        const salePrice = salePriceText ? parseFloat(salePriceText) : null;
+        const currency = findValue(["currency", "currencyId", "currency_id"]) || "UAH";
+        const manufacturer = findValue(["manufacturer", "brand", "vendor", "producer"]);
+        const categoryName = findValue(["category", "categoryId", "category_id", "group", "catalog"]) || "Без категорії";
+        
+        console.log(`Обробка товару: ${name}`);
+        
+        // Створюємо або оновлюємо категорію
+        if (!categoriesMap.has(categoryName)) {
+          categoriesMap.set(categoryName, {
+            name: categoryName,
+            product_count: 1
           });
+        } else {
+          const category = categoriesMap.get(categoryName)!;
+          category.product_count += 1;
+          categoriesMap.set(categoryName, category);
         }
-      });
-      
-      // Створюємо об'єкт товару
-      const product: Product = {
-        name,
-        description,
-        price,
-        old_price: oldPrice,
-        sale_price: salePrice,
-        currency,
-        manufacturer,
-        is_active: true,
-        supplier_id: "", // Буде встановлено пізніше
-        images,
-        attributes,
-        category_name: categoryName
-      };
-      
-      products.push(product);
+        
+        // Зображення товару
+        const images: any[] = [];
+        // Шукаємо зображення в різних форматах
+        const imageSelectors = [
+          "image", "picture", "img", "photo", 
+          "images > image", "pictures > picture", "imgs > img", "photos > photo"
+        ];
+        
+        let mainImageFound = false;
+        
+        // Перевіряємо всі можливі селектори для зображень
+        for (const selector of imageSelectors) {
+          const imgElements = productElement.querySelectorAll(selector);
+          
+          if (imgElements.length > 0) {
+            imgElements.forEach((imgEl, imgIndex) => {
+              // Перевіряємо, чи елемент містить URL або сам є текстовим вузлом з URL
+              let imageUrl = imgEl.getAttribute("url") || 
+                             imgEl.getAttribute("src") || 
+                             imgEl.getAttribute("href") || 
+                             imgEl.textContent;
+                              
+              if (imageUrl && imageUrl.trim()) {
+                imageUrl = imageUrl.trim();
+                // Перевіряємо, що URL не відносний
+                if (!imageUrl.startsWith('http') && !imageUrl.startsWith('https')) {
+                  // Спробуємо знайти базовий URL в XML
+                  const baseUrlElement = xmlDoc.querySelector("base_url, shop > base_url");
+                  const baseUrl = baseUrlElement ? baseUrlElement.textContent : null;
+                  
+                  if (baseUrl) {
+                    imageUrl = baseUrl.endsWith('/') ? 
+                      `${baseUrl}${imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl}` :
+                      `${baseUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
+                  }
+                }
+                
+                images.push({
+                  image_url: imageUrl,
+                  is_main: !mainImageFound // Перше зображення є головним
+                });
+                
+                if (!mainImageFound) mainImageFound = true;
+              }
+            });
+            
+            // Якщо знайшли зображення за цим селектором, не продовжуємо пошук
+            if (images.length > 0) break;
+          }
+        }
+        
+        console.log(`Знайдено ${images.length} зображень для товару`);
+        
+        // Характеристики товару
+        const attributes: any[] = [];
+        // Шукаємо атрибути в різних форматах
+        const attrSelectors = [
+          "attribute", "param", "characteristic", "spec",
+          "attributes > attribute", "params > param", "characteristics > characteristic", "specs > spec"
+        ];
+        
+        // Перевіряємо всі можливі селектори для атрибутів
+        for (const selector of attrSelectors) {
+          const attrElements = productElement.querySelectorAll(selector);
+          
+          if (attrElements.length > 0) {
+            attrElements.forEach((attrEl) => {
+              const attrName = attrEl.getAttribute("name") || 
+                               attrEl.querySelector("name")?.textContent || 
+                               attrEl.tagName;
+              
+              const attrValue = attrEl.textContent || 
+                                attrEl.querySelector("value")?.textContent || 
+                                attrEl.getAttribute("value") || "";
+              
+              if (attrName && attrValue && attrName !== attrValue) {
+                attributes.push({
+                  attribute_name: attrName,
+                  attribute_value: attrValue
+                });
+              }
+            });
+            
+            // Якщо знайшли атрибути за цим селектором, не продовжуємо пошук
+            if (attributes.length > 0) break;
+          }
+        }
+        
+        console.log(`Знайдено ${attributes.length} атрибутів для товару`);
+        
+        // Створюємо об'єкт товару
+        const product: Product = {
+          name,
+          description,
+          price,
+          old_price: oldPrice,
+          sale_price: salePrice,
+          currency,
+          manufacturer,
+          is_active: true,
+          supplier_id: "", // Буде встановлено пізніше
+          images,
+          attributes,
+          category_name: categoryName
+        };
+        
+        products.push(product);
+      } catch (err) {
+        console.error(`Помилка обробки товару ${index}:`, err);
+        // Продовжуємо з наступним товаром
+      }
     });
+    
+    console.log(`Успішно оброблено ${products.length} товарів з ${categoriesMap.size} категорій`);
+    
+    if (products.length === 0) {
+      return {
+        success: false,
+        message: "Не вдалося отримати жодного товару з файлу. Перевірте формат XML.",
+        fileType: FileType.XML
+      };
+    }
     
     return {
       success: true,
@@ -314,9 +467,12 @@ export const processCsvData = async (csvContent: string): Promise<FileProcessing
  */
 export const processSupplierFile = async (url: string): Promise<FileProcessingResult> => {
   try {
+    console.log(`Початок обробки файлу за URL: ${url}`);
+    
     // Перевіряємо валідність URL та формат файлу
     const { valid, fileType, message } = validateFileUrl(url);
     if (!valid) {
+      console.error("Недійсний URL:", message);
       return {
         success: false,
         message: message || "Неправильний формат URL",
@@ -324,28 +480,46 @@ export const processSupplierFile = async (url: string): Promise<FileProcessingRe
       };
     }
     
+    console.log(`URL валідний, тип файлу: ${fileType}, починаємо завантаження...`);
+    
     // Завантажуємо файл
-    const response = await fetch(url);
-    
-    if (!response.ok) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Accept': fileType === FileType.XML ? 'application/xml' : 'text/csv',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error(`HTTP помилка: ${response.status} ${response.statusText}`);
+        return {
+          success: false,
+          message: `Помилка завантаження файлу: ${response.status} ${response.statusText}`,
+          fileType
+        };
+      }
+      
+      const content = await response.text();
+      console.log(`Файл успішно завантажено, розмір: ${content.length} байт`);
+      
+      // Обробляємо файл відповідно до його типу
+      if (fileType === FileType.XML) {
+        return processXmlData(content);
+      } else if (fileType === FileType.CSV) {
+        return processCsvData(content);
+      } else {
+        return {
+          success: false,
+          message: "Непідтримуваний формат файлу",
+          fileType
+        };
+      }
+    } catch (fetchError) {
+      console.error("Помилка завантаження файлу:", fetchError);
       return {
         success: false,
-        message: `Помилка завантаження файлу: ${response.status} ${response.statusText}`,
-        fileType
-      };
-    }
-    
-    const content = await response.text();
-    
-    // Обробляємо файл відповідно до його типу
-    if (fileType === FileType.XML) {
-      return processXmlData(content);
-    } else if (fileType === FileType.CSV) {
-      return processCsvData(content);
-    } else {
-      return {
-        success: false,
-        message: "Непідтримуваний формат файлу",
+        message: `Помилка завантаження файлу: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`,
         fileType
       };
     }

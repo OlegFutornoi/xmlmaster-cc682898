@@ -29,6 +29,35 @@ export const useUserSubscriptions = () => {
   const [subscriptionHistory, setSubscriptionHistory] = useState<Subscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const checkSubscriptionExpiry = async (subscription: Subscription) => {
+    if (!user) return false;
+    
+    // Якщо підписка постійна, вона не може закінчитися
+    if (subscription.tariff_plan.is_permanent) return true;
+    
+    // Якщо є кінцева дата, перевіряємо, чи не минула вона
+    if (subscription.end_date) {
+      const endDate = new Date(subscription.end_date);
+      const now = new Date();
+      
+      // Якщо дата закінчення вже минула, деактивуємо підписку
+      if (endDate < now && subscription.is_active) {
+        const { error } = await supabase
+          .from('user_tariff_subscriptions')
+          .update({ is_active: false })
+          .eq('id', subscription.id);
+          
+        if (error) {
+          console.error('Помилка деактивації підписки:', error);
+        }
+        
+        return false;
+      }
+    }
+    
+    return subscription.is_active;
+  };
+
   const fetchUserSubscriptions = async () => {
     if (!user) return;
 
@@ -75,7 +104,17 @@ export const useUserSubscriptions = () => {
             }
           }
         };
-        setActiveSubscription(formattedActive);
+
+        // Перевіряємо, чи не закінчився термін дії підписки
+        const isStillActive = await checkSubscriptionExpiry(formattedActive);
+        
+        if (isStillActive) {
+          setActiveSubscription(formattedActive);
+        } else {
+          setActiveSubscription(null);
+        }
+      } else {
+        setActiveSubscription(null);
       }
 
       // Отримуємо історію підписок
@@ -136,7 +175,21 @@ export const useUserSubscriptions = () => {
     if (user) {
       fetchUserSubscriptions();
     }
-  }, [user]);
+    
+    // Періодично перевіряємо статус підписки
+    const interval = setInterval(() => {
+      if (user && activeSubscription) {
+        checkSubscriptionExpiry(activeSubscription)
+          .then(isActive => {
+            if (!isActive) {
+              setActiveSubscription(null);
+            }
+          });
+      }
+    }, 60000); // Перевіряємо кожну хвилину
+    
+    return () => clearInterval(interval);
+  }, [user, activeSubscription]);
 
   return {
     activeSubscription,

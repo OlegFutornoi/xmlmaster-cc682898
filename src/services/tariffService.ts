@@ -1,6 +1,7 @@
 
 // Сервіс для роботи з тарифними планами
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 export const assignTariffPlan = async (userId: string, selectedPlanId: string, activeSubscriptionId?: string) => {
   // Отримуємо вибраний тарифний план
@@ -26,10 +27,13 @@ export const assignTariffPlan = async (userId: string, selectedPlanId: string, a
 
   // Розраховуємо кінцеву дату підписки
   let endDate = null;
-  if (!selectedPlan.is_permanent) {
+  if (!selectedPlan.is_permanent && selectedPlan.duration_days) {
     const startDate = new Date();
     endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + (selectedPlan.duration_days || 0));
+    endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+    
+    // Форматуємо дату у формат ISO для зберігання в базі
+    endDate = format(endDate, "yyyy-MM-dd'T'HH:mm:ss'Z'");
   }
 
   // Якщо є активна підписка, деактивуємо її
