@@ -1,6 +1,7 @@
 
 // Сервіс для роботи з постачальниками
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { FileProcessingResult, FileType, Product, ProductCategory, Supplier } from '@/types/supplier';
 import { processSupplierFile } from '@/utils/fileProcessing';
 import { toast } from 'sonner';
@@ -317,7 +318,7 @@ export const updateSupplierProducts = async (
     }
     
     // Видаляємо старі дані
-    const { error: deleteError } = await supabase.rpc('delete_supplier_data', {
+    const { error: deleteError } = await extendedSupabase.rpc('delete_supplier_data', {
       supplier_id_param: supplierId
     });
     
