@@ -73,7 +73,7 @@ const TariffTabsContent: React.FC<TariffTabsContentProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {id && <TariffItems tariffPlanId={id} editMode={true} />}
+              {id && <TariffItems tariffPlanId={id} />}
             </CardContent>
           </Card>
         </TabsContent>

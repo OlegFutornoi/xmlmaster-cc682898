@@ -18,6 +18,7 @@ import UserHome from "./pages/user/UserHome";
 import UserTariffs from "./pages/user/UserTariffs";
 import UserStores from "./pages/user/UserStores";
 import UserSettings from "./pages/user/UserSettings";
+import UserSuppliers from "./pages/user/UserSuppliers";
 import UserRoute from "./components/auth/UserRoute";
 
 // Admin pages

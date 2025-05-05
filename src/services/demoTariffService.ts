@@ -40,8 +40,8 @@ export const createDemoTariffIfNotExist = async () => {
         name: 'Демо доступ',
         price: 0,
         currency_id: currency.id,
-        is_permanent: false, // Змінили на false, щоб використовувати duration_days
-        duration_days: 14 // Додали тривалість пробного періоду (наприклад, 14 днів)
+        is_permanent: true,
+        duration_days: null
       })
       .select('id')
       .single();
@@ -59,12 +59,8 @@ export const createDemoTariffIfNotExist = async () => {
 };
 
 // Виконати при завантаженні застосунку
-try {
-  createDemoTariffIfNotExist().then(id => {
-    if (id) {
-      console.log('Demo tariff plan checked/created with ID:', id);
-    }
-  });
-} catch (error) {
-  console.error('Error initializing demo tariff:', error);
-}
+createDemoTariffIfNotExist().then(id => {
+  if (id) {
+    console.log('Demo tariff plan checked/created with ID:', id);
+  }
+});

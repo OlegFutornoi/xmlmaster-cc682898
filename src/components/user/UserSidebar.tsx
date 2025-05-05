@@ -6,14 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Home, 
-  Menu, 
+  ChevronLeft,
+  ChevronRight,
   LogOut, 
-  User, 
   Store, 
   Settings, 
-  CreditCard
+  CreditCard,
+  Package
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import UserAvatar from './UserAvatar';
 
 const UserSidebar = () => {
   const { user, logout } = useAuth();
@@ -89,17 +91,17 @@ const UserSidebar = () => {
     return () => clearInterval(interval);
   }, [user, location.pathname]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/user/login');
-  };
-
   // Redirect to tariffs if no active subscription
   useEffect(() => {
     if (!isSubscriptionLoading && !activeSubscription && location.pathname !== '/user/dashboard/tariffs' && user) {
       navigate('/user/dashboard/tariffs');
     }
   }, [activeSubscription, isSubscriptionLoading, navigate, location.pathname, user]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/user/login');
+  };
 
   const menuItems = [
     {
@@ -109,16 +111,22 @@ const UserSidebar = () => {
       requiresSubscription: true
     },
     {
-      name: 'Тарифи',
-      path: '/user/dashboard/tariffs',
-      icon: <CreditCard className="h-5 w-5" />,
-      requiresSubscription: false
-    },
-    {
       name: 'Магазини',
       path: '/user/dashboard/stores',
       icon: <Store className="h-5 w-5" />,
       requiresSubscription: true
+    },
+    {
+      name: 'Постачальники',
+      path: '/user/dashboard/suppliers',
+      icon: <Package className="h-5 w-5" />,
+      requiresSubscription: true
+    },
+    {
+      name: 'Тарифи',
+      path: '/user/dashboard/tariffs',
+      icon: <CreditCard className="h-5 w-5" />,
+      requiresSubscription: false
     },
     {
       name: 'Налаштування',
@@ -133,7 +141,6 @@ const UserSidebar = () => {
       className={`h-screen bg-sidebar transition-all duration-300 flex flex-col border-r border-sidebar-border ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}
-      id="user-sidebar"
     >
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
@@ -145,7 +152,10 @@ const UserSidebar = () => {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent"
         >
-          <Menu className="h-5 w-5" />
+          {isCollapsed ? 
+            <ChevronRight className="h-5 w-5" /> : 
+            <ChevronLeft className="h-5 w-5" />
+          }
         </Button>
       </div>
 
@@ -173,7 +183,6 @@ const UserSidebar = () => {
                     navigate('/user/dashboard/tariffs');
                   }
                 }}
-                id={`sidebar-link-${item.name.toLowerCase()}`}
               >
                 {item.icon}
                 {!isCollapsed && <span className="ml-3">{item.name}</span>}
@@ -184,36 +193,32 @@ const UserSidebar = () => {
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
-        {!isCollapsed && (
-          <div className="flex flex-col gap-2 mb-3">
-            <div className="flex items-center">
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-                <User className="h-4 w-4" />
-              </div>
-              <div className="ml-3 truncate">
-                <p className="text-sm font-medium text-sidebar-foreground">
-                  {user?.username || 'Користувач'}
-                </p>
-              </div>
+        {!isCollapsed ? (
+          <div className="flex items-center mb-4">
+            <UserAvatar size="md" showStatus={true} />
+            <div className="ml-3 truncate">
+              <p className="text-sm font-medium text-sidebar-foreground">
+                {user?.username || 'Користувач'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {user?.email || ''}
+              </p>
             </div>
-            {user && (
-              <Badge 
-                variant={user.is_active ? "success" : "destructive"} 
-                className="text-xs self-start ml-11"
-              >
-                {user.is_active ? 'Активний' : 'Неактивний'}
-              </Badge>
-            )}
+          </div>
+        ) : (
+          <div className="flex justify-center mb-4">
+            <UserAvatar size="sm" showStatus={true} />
           </div>
         )}
         <Button
           variant="ghost"
-          size="icon"
           onClick={handleLogout}
-          className={`w-full flex justify-center items-center text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
-          id="logout-button"
+          className={`w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+            isCollapsed ? 'justify-center px-0' : ''
+          }`}
         >
           <LogOut className="h-5 w-5" />
+          {!isCollapsed && <span className="ml-2">Вихід</span>}
         </Button>
       </div>
     </div>
