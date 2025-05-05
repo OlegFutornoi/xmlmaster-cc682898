@@ -1,6 +1,7 @@
 
+// Компонент для управління тарифними планами в адмін-панелі
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, Outlet } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -149,7 +150,7 @@ const AdminTariffs = () => {
       <div className="flex-1 overflow-auto p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Тарифи</h1>
-          <Button onClick={() => navigate('/admin/tariffs/new')}>
+          <Button onClick={() => navigate('/admin/tariffs/new')} id="add-tariff-button">
             <Plus className="mr-2 h-4 w-4" />
             Додати тариф
           </Button>
@@ -198,6 +199,7 @@ const AdminTariffs = () => {
                           size="sm"
                           className="mr-2"
                           onClick={() => navigate(`/admin/tariffs/${plan.id}`)}
+                          id={`tariff-details-${plan.id}`}
                         >
                           Деталі
                         </Button>
@@ -208,6 +210,7 @@ const AdminTariffs = () => {
                               variant="destructive"
                               size="sm"
                               disabled={isDeleting}
+                              id={`tariff-delete-${plan.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -252,8 +255,6 @@ const AdminTariffs = () => {
             )}
           </TabsContent>
         </Tabs>
-        
-        <Outlet />
       </div>
     </div>
   );
