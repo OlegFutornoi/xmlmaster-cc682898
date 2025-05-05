@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,16 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Home, 
-  ChevronLeft,
-  ChevronRight,
+  Menu, 
   LogOut, 
+  User, 
   Store, 
   Settings, 
   CreditCard,
-  Package
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import UserAvatar from './UserAvatar';
+import { format } from 'date-fns';
+import { uk } from 'date-fns/locale';
 
 const UserSidebar = () => {
   const { user, logout } = useAuth();
@@ -89,7 +89,12 @@ const UserSidebar = () => {
     const interval = setInterval(fetchSubscription, 60000); // Check every minute
     
     return () => clearInterval(interval);
-  }, [user, location.pathname]);
+  }, [user, location.pathname]); // Додано явну залежність від location.pathname
+
+  const handleLogout = () => {
+    logout();
+    navigate('/user/login');
+  };
 
   // Redirect to tariffs if no active subscription
   useEffect(() => {
@@ -97,11 +102,6 @@ const UserSidebar = () => {
       navigate('/user/dashboard/tariffs');
     }
   }, [activeSubscription, isSubscriptionLoading, navigate, location.pathname, user]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/user/login');
-  };
 
   const menuItems = [
     {
@@ -111,22 +111,16 @@ const UserSidebar = () => {
       requiresSubscription: true
     },
     {
-      name: 'Магазини',
-      path: '/user/dashboard/stores',
-      icon: <Store className="h-5 w-5" />,
-      requiresSubscription: true
-    },
-    {
-      name: 'Постачальники',
-      path: '/user/dashboard/suppliers',
-      icon: <Package className="h-5 w-5" />,
-      requiresSubscription: true
-    },
-    {
       name: 'Тарифи',
       path: '/user/dashboard/tariffs',
       icon: <CreditCard className="h-5 w-5" />,
       requiresSubscription: false
+    },
+    {
+      name: 'Магазини',
+      path: '/user/dashboard/stores',
+      icon: <Store className="h-5 w-5" />,
+      requiresSubscription: true
     },
     {
       name: 'Налаштування',
@@ -152,12 +146,24 @@ const UserSidebar = () => {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent"
         >
-          {isCollapsed ? 
-            <ChevronRight className="h-5 w-5" /> : 
-            <ChevronLeft className="h-5 w-5" />
-          }
+          <Menu className="h-5 w-5" />
         </Button>
       </div>
+
+      {!isCollapsed && activeSubscription && (
+        <div className="p-3 border-b border-sidebar-border bg-blue-50">
+          <div className="text-sm font-medium mb-1">Активний тариф:</div>
+          <div className="flex flex-col">
+            <span className="font-semibold text-blue-700">{activeSubscription.tariff_plans.name}</span>
+            {!activeSubscription.tariff_plans.is_permanent && (
+              <span className="text-xs text-gray-600 flex items-center mt-1">
+                <Calendar className="h-3 w-3 mr-1" />
+                До {format(new Date(activeSubscription.end_date), "dd MMMM yyyy", { locale: uk })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 py-4 overflow-y-auto">
         <nav className="px-2 space-y-1">
@@ -193,21 +199,26 @@ const UserSidebar = () => {
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
-        {!isCollapsed ? (
+        {!isCollapsed && (
           <div className="flex items-center mb-4">
-            <UserAvatar size="md" showStatus={true} />
-            <div className="ml-3 truncate">
-              <p className="text-sm font-medium text-sidebar-foreground">
-                {user?.username || 'Користувач'}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.email || ''}
-              </p>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+              <User className="h-4 w-4" />
             </div>
-          </div>
-        ) : (
-          <div className="flex justify-center mb-4">
-            <UserAvatar size="sm" showStatus={true} />
+            <div className="ml-3 truncate">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-sidebar-foreground">
+                  {user?.username || 'Користувач'}
+                </p>
+                {user && (
+                  <Badge 
+                    variant={user.is_active ? "success" : "destructive"} 
+                    className="text-xs"
+                  >
+                    {user.is_active ? 'Активний' : 'Неактивний'}
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
         )}
         <Button
