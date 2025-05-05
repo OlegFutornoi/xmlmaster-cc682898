@@ -13,12 +13,11 @@ export const activateUserPlan = async (
     // Отримуємо дані тарифного плану
     const { data: planData, error: planError } = await supabase
       .from('tariff_plans')
-      .select('id, name, price, duration_days, is_permanent, currency_id')
+      .select('*')
       .eq('id', planId)
       .single();
     
     if (planError) {
-      console.error('Error fetching tariff plan:', planError);
       throw new Error('Не вдалося отримати деталі тарифного плану');
     }
 
@@ -45,7 +44,6 @@ export const activateUserPlan = async (
       const end = new Date(startDate);
       end.setDate(end.getDate() + planData.duration_days);
       endDate = end.toISOString();
-      console.log(`Встановлюємо кінцеву дату підписки: ${endDate} (${planData.duration_days} днів від ${startDate.toISOString()})`);
     }
 
     // Створюємо нову підписку
@@ -61,7 +59,6 @@ export const activateUserPlan = async (
       .select();
     
     if (subscriptionError) {
-      console.error('Error creating subscription:', subscriptionError);
       throw subscriptionError;
     }
     

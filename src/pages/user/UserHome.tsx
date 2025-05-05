@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,18 +6,19 @@ import { Calendar, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays } from 'date-fns';
 import { uk } from 'date-fns/locale';
-
 const UserHome = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [activeSubscription, setActiveSubscription] = useState(null);
-
   useEffect(() => {
     const fetchSubscription = async () => {
       if (user) {
         try {
-          const { data, error } = await supabase
-            .from('user_tariff_subscriptions')
-            .select(`
+          const {
+            data,
+            error
+          } = await supabase.from('user_tariff_subscriptions').select(`
               id,
               start_date,
               end_date,
@@ -31,11 +31,7 @@ const UserHome = () => {
                 duration_days,
                 currencies (name, code)
               )
-            `)
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .maybeSingle();
-
+            `).eq('user_id', user.id).eq('is_active', true).maybeSingle();
           if (error) {
             console.error('Error fetching subscription:', error);
           } else {
@@ -46,29 +42,28 @@ const UserHome = () => {
         }
       }
     };
-
     fetchSubscription();
   }, [user]);
 
   // Функція для форматування дати закінчення підписки
-  const formatEndDate = (subscription) => {
+  const formatEndDate = subscription => {
     if (!subscription || !subscription.tariff_plans) return '';
-    
     if (subscription.end_date) {
-      return format(new Date(subscription.end_date), "dd MMMM yyyy", { locale: uk });
+      return format(new Date(subscription.end_date), "dd MMMM yyyy", {
+        locale: uk
+      });
     } else if (subscription.start_date && subscription.tariff_plans.duration_days) {
       // Якщо end_date відсутня, але є start_date і duration_days, обчислюємо дату закінчення
       const startDate = new Date(subscription.start_date);
       const endDate = addDays(startDate, subscription.tariff_plans.duration_days);
-      return format(endDate, "dd MMMM yyyy", { locale: uk });
+      return format(endDate, "dd MMMM yyyy", {
+        locale: uk
+      });
     }
-    
     return '';
   };
-
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Ласкаво просимо, {user?.username}!</h1>
+  return <div className="container mx-auto py-8 px-4">
+      <h1 className="font-bold mb-8 text-xl">Ласкаво просимо, {user?.username}!</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
@@ -86,8 +81,7 @@ const UserHome = () => {
           </CardContent>
         </Card>
 
-        {activeSubscription && (
-          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+        {activeSubscription && <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-blue-600" />
@@ -104,19 +98,14 @@ const UserHome = () => {
                     {activeSubscription.tariff_plans.name}
                   </h3>
                   <p className="text-sm text-blue-600">
-                    {activeSubscription.tariff_plans.price > 0 
-                      ? `${activeSubscription.tariff_plans.price} ${activeSubscription.tariff_plans.currencies.code}` 
-                      : "Демонстраційний тариф"}
+                    {activeSubscription.tariff_plans.price > 0 ? `${activeSubscription.tariff_plans.price} ${activeSubscription.tariff_plans.currencies.code}` : "Демонстраційний тариф"}
                   </p>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {activeSubscription.tariff_plans.is_permanent ? (
-                    <Badge className="bg-green-100 text-green-800">
+                  {activeSubscription.tariff_plans.is_permanent ? <Badge className="bg-green-100 text-green-800">
                       Постійний доступ
-                    </Badge>
-                  ) : (
-                    <>
+                    </Badge> : <>
                       <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         Термін дії: {activeSubscription.tariff_plans.duration_days} днів
@@ -124,13 +113,11 @@ const UserHome = () => {
                       <p className="text-sm text-gray-600">
                         до {formatEndDate(activeSubscription)}
                       </p>
-                    </>
-                  )}
+                    </>}
                 </div>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
       </div>
       
       <Card>
@@ -157,8 +144,6 @@ const UserHome = () => {
           </ol>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default UserHome;
