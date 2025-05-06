@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління тарифами користувача
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import TariffCard from '@/components/user/tariffs/TariffCard';
 import CurrentSubscription from '@/components/user/tariffs/CurrentSubscription';
 import SubscriptionHistory from '@/components/user/tariffs/SubscriptionHistory';
 import PlanConfirmDialog from '@/components/user/tariffs/PlanConfirmDialog';
+
 const UserTariffs = () => {
   const {
     user
@@ -36,10 +38,17 @@ const UserTariffs = () => {
     planItems,
     isLoading: detailsLoading
   } = usePlanDetails(selectedPlanId);
+
   const handlePlanClick = (planId: string) => {
     setSelectedPlanId(planId);
     setIsConfirmDialogOpen(true);
   };
+  
+  const handleViewDetails = (planId: string) => {
+    setSelectedPlanId(planId);
+    setIsConfirmDialogOpen(true);
+  };
+
   const handleActivatePlan = async () => {
     if (!selectedPlanId || !user) {
       toast({
@@ -71,13 +80,14 @@ const UserTariffs = () => {
       setIsActivating(false);
     }
   };
+
   if (subscriptionsLoading || plansLoading) {
     return <p>Завантаження...</p>;
   }
+  
   const selectedPlan = tariffPlans.find(plan => plan.id === selectedPlanId) || null;
+
   return <div className="container mx-auto px-4 py-4" id="user-tariffs-container">
-      
-      
       <div className="mb-4">
         <CurrentSubscription subscription={activeSubscription} />
       </div>
@@ -87,13 +97,31 @@ const UserTariffs = () => {
           <h2 className="text-sm font-medium text-muted-foreground">Доступні тарифи</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tariffPlans.map(plan => <TariffCard key={plan.id} plan={plan} isActive={activeSubscription?.tariff_plan.id === plan.id} onSelect={handlePlanClick} />)}
+          {tariffPlans.map(plan => (
+            <TariffCard 
+              key={plan.id} 
+              plan={plan} 
+              isActive={activeSubscription?.tariff_plan.id === plan.id} 
+              onSelect={handlePlanClick}
+              onViewDetails={handleViewDetails}
+            />
+          ))}
         </div>
       </div>
 
       <SubscriptionHistory history={subscriptionHistory} />
 
-      <PlanConfirmDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen} selectedPlan={selectedPlan} planItems={planItems} planLimitations={planLimitations} activeSubscription={activeSubscription} isActivating={isActivating} onActivate={handleActivatePlan} />
+      <PlanConfirmDialog 
+        open={isConfirmDialogOpen} 
+        onOpenChange={setIsConfirmDialogOpen} 
+        selectedPlan={selectedPlan} 
+        planItems={planItems} 
+        planLimitations={planLimitations} 
+        activeSubscription={activeSubscription} 
+        isActivating={isActivating} 
+        onActivate={handleActivatePlan} 
+      />
     </div>;
 };
+
 export default UserTariffs;

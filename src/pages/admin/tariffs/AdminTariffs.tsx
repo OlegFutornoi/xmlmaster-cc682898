@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Plus, Clock, CheckSquare, Trash2 } from 'lucide-react';
+import { DollarSign, Plus, Clock, CheckSquare, Trash2, Copy } from 'lucide-react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,12 +20,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const AdminTariffs = () => {
   const [tariffPlans, setTariffPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [planToDelete, setPlanToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -144,6 +146,81 @@ const AdminTariffs = () => {
     }
   };
 
+  const handleCopyPlan = async (plan) => {
+    setIsCopying(true);
+    try {
+      // Створюємо копію тарифного плану
+      const { data: newPlan, error: planError } = await supabase
+        .from('tariff_plans')
+        .insert({
+          name: `${plan.name} (копія)`,
+          price: plan.price,
+          duration_days: plan.duration_days,
+          is_permanent: plan.is_permanent,
+          currency_id: plan.currencies.id || null
+        })
+        .select()
+        .single();
+
+      if (planError) {
+        throw planError;
+      }
+
+      // Копіюємо пов'язані обмеження
+      const { data: limitations, error: limitationsError } = await supabase
+        .from('tariff_plan_limitations')
+        .select('limitation_type_id, value')
+        .eq('tariff_plan_id', plan.id);
+
+      if (!limitationsError && limitations?.length > 0) {
+        const newLimitations = limitations.map(item => ({
+          tariff_plan_id: newPlan.id,
+          limitation_type_id: item.limitation_type_id,
+          value: item.value
+        }));
+
+        await supabase
+          .from('tariff_plan_limitations')
+          .insert(newLimitations);
+      }
+
+      // Копіюємо пов'язані пункти
+      const { data: items, error: itemsError } = await supabase
+        .from('tariff_plan_items')
+        .select('tariff_item_id, is_active')
+        .eq('tariff_plan_id', plan.id);
+
+      if (!itemsError && items?.length > 0) {
+        const newItems = items.map(item => ({
+          tariff_plan_id: newPlan.id,
+          tariff_item_id: item.tariff_item_id,
+          is_active: item.is_active
+        }));
+
+        await supabase
+          .from('tariff_plan_items')
+          .insert(newItems);
+      }
+
+      toast({
+        title: "Успішно",
+        description: "Тарифний план скопійовано",
+      });
+
+      // Оновлюємо список тарифних планів
+      fetchTariffPlans();
+    } catch (error) {
+      console.error('Помилка копіювання тарифного плану:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося скопіювати тарифний план: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   return (
     <div className="flex h-screen">
       <AdminSidebar />
@@ -204,11 +281,32 @@ const AdminTariffs = () => {
                           Деталі
                         </Button>
                         
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="secondary"
+                                size="icon"
+                                className="mr-2 h-9 w-9"
+                                onClick={() => handleCopyPlan(plan)}
+                                disabled={isCopying}
+                                id={`tariff-copy-${plan.id}`}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Копіювати тариф</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="destructive"
-                              size="sm"
+                              size="icon"
+                              className="h-9 w-9"
                               disabled={isDeleting}
                               id={`tariff-delete-${plan.id}`}
                             >

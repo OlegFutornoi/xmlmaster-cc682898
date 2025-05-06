@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 import { createDemoTariffIfNotExist } from './demoTariffService';
 
 // Активація тарифного плану для користувача
@@ -42,7 +41,9 @@ export const activateUserPlan = async (
     
     if (!planData.is_permanent && planData.duration_days) {
       const end = new Date(startDate);
+      // Встановлюємо кінець дня для дати закінчення
       end.setDate(end.getDate() + planData.duration_days);
+      end.setHours(23, 59, 59, 999); // Встановлюємо час на кінець дня (23:59:59.999)
       endDate = end.toISOString();
     }
 

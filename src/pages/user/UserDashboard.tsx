@@ -14,21 +14,6 @@ const UserDashboard = () => {
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Додаємо залежність від пошукового параметра, щоб компонент перемонтувався після зміни URL
-  const [location, setLocation] = useState(window.location.pathname);
-
-  // Оновлюємо стан розташування при зміні URL
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setLocation(window.location.pathname);
-    };
-
-    window.addEventListener('popstate', handleLocationChange);
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, []);
-
   useEffect(() => {
     const fetchSubscription = async () => {
       if (user) {
@@ -61,6 +46,7 @@ const UserDashboard = () => {
               const now = new Date();
               
               if (endDate < now) {
+                console.log('Підписка закінчилась, деактивуємо її');
                 // Підписка закінчилась - деактивуємо її
                 const { error: updateError } = await supabase
                   .from('user_tariff_subscriptions')
@@ -74,8 +60,10 @@ const UserDashboard = () => {
               } else {
                 setActiveSubscription(data);
               }
-            } else {
+            } else if (data) {
               setActiveSubscription(data);
+            } else {
+              setActiveSubscription(null);
             }
           }
         } catch (error) {
@@ -87,7 +75,14 @@ const UserDashboard = () => {
     };
 
     fetchSubscription();
-  }, [user, location]); // Додаємо location в залежності
+    
+    // Встановлюємо інтервал для перевірки активності підписки кожну хвилину
+    const intervalId = setInterval(fetchSubscription, 60000);
+    
+    return () => {
+      clearInterval(intervalId); // Очищаємо інтервал при розмонтуванні компонента
+    };
+  }, [user]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Завантаження...</div>;

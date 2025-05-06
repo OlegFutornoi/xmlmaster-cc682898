@@ -1,6 +1,7 @@
+
 // Компонент для відображення поточної підписки користувача
 import React from 'react';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Infinity, AlertCircle, Store } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 interface Subscription {
   id: string;
   is_active: boolean;
@@ -24,13 +26,16 @@ interface Subscription {
     };
   };
 }
+
 interface CurrentSubscriptionProps {
   subscription: Subscription | null;
 }
+
 const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({
   subscription
 }) => {
   const navigate = useNavigate();
+  
   if (!subscription) {
     return <Alert variant="default">
         <AlertCircle className="h-4 w-4" />
@@ -49,9 +54,9 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({
           Постійний доступ
         </Badge>;
     } else if (subscription.end_date) {
-      // Перевіряємо, що дата закінчення валідна (не 1970 рік)
-      const endDate = new Date(subscription.end_date);
-      if (endDate.getFullYear() > 1970) {
+      // Перевіряємо валідність дати закінчення
+      const endDate = parseISO(subscription.end_date);
+      if (isValid(endDate)) {
         return <Badge variant="outline" className="flex items-center gap-1 text-xs">
             <Clock className="h-3 w-3" />
             До {format(endDate, "d MMMM yyyy", {
@@ -67,6 +72,7 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({
         Активний тариф
       </Badge>;
   };
+  
   return <Card className="mb-4">
       <CardHeader className="py-0 px-4 bg-muted/30 border-b flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
@@ -84,4 +90,5 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({
       </CardHeader>
     </Card>;
 };
+
 export default CurrentSubscription;

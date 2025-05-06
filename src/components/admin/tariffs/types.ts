@@ -16,6 +16,7 @@ export interface TariffPlan {
   currency: {
     code: string;
     name: string;
+    id?: string;
   };
 }
 

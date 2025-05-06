@@ -57,8 +57,45 @@ export const useUserSubscriptions = () => {
 
       if (activeError) throw activeError;
 
-      // Перетворюємо дані
-      if (activeData) {
+      // Перевіряємо чи не закінчився термін підписки
+      if (activeData && !activeData.tariff_plans.is_permanent && activeData.end_date) {
+        const endDate = new Date(activeData.end_date);
+        const now = new Date();
+        
+        if (endDate < now) {
+          console.log('Підписка закінчилась, деактивуємо її');
+          // Підписка закінчилась - деактивуємо її
+          const { error: updateError } = await supabase
+            .from('user_tariff_subscriptions')
+            .update({ is_active: false })
+            .eq('id', activeData.id);
+          
+          if (updateError) {
+            console.error('Помилка деактивації закінченої підписки:', updateError);
+          }
+          // Не встановлюємо активну підписку, так як вона закінчилась
+        } else {
+          // Перетворюємо дані для активної підписки
+          const formattedActive = {
+            id: activeData.id,
+            is_active: activeData.is_active,
+            start_date: activeData.start_date,
+            end_date: activeData.end_date,
+            tariff_plan: {
+              id: activeData.tariff_plans.id,
+              name: activeData.tariff_plans.name,
+              price: activeData.tariff_plans.price,
+              duration_days: activeData.tariff_plans.duration_days,
+              is_permanent: activeData.tariff_plans.is_permanent,
+              currency: {
+                code: activeData.tariff_plans.currencies.code
+              }
+            }
+          };
+          setActiveSubscription(formattedActive);
+        }
+      } else if (activeData && activeData.tariff_plans.is_permanent) {
+        // Постійна підписка
         const formattedActive = {
           id: activeData.id,
           is_active: activeData.is_active,
@@ -76,6 +113,9 @@ export const useUserSubscriptions = () => {
           }
         };
         setActiveSubscription(formattedActive);
+      } else {
+        // Немає активної підписки
+        setActiveSubscription(null);
       }
 
       // Отримуємо історію підписок
