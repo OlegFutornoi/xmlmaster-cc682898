@@ -74,44 +74,15 @@ export const useUserSubscriptions = () => {
             console.error('Помилка деактивації закінченої підписки:', updateError);
           }
           // Не встановлюємо активну підписку, так як вона закінчилась
+          setActiveSubscription(null);
         } else {
           // Перетворюємо дані для активної підписки
-          const formattedActive = {
-            id: activeData.id,
-            is_active: activeData.is_active,
-            start_date: activeData.start_date,
-            end_date: activeData.end_date,
-            tariff_plan: {
-              id: activeData.tariff_plans.id,
-              name: activeData.tariff_plans.name,
-              price: activeData.tariff_plans.price,
-              duration_days: activeData.tariff_plans.duration_days,
-              is_permanent: activeData.tariff_plans.is_permanent,
-              currency: {
-                code: activeData.tariff_plans.currencies.code
-              }
-            }
-          };
+          const formattedActive = formatSubscriptionData(activeData);
           setActiveSubscription(formattedActive);
         }
       } else if (activeData && activeData.tariff_plans.is_permanent) {
         // Постійна підписка
-        const formattedActive = {
-          id: activeData.id,
-          is_active: activeData.is_active,
-          start_date: activeData.start_date,
-          end_date: activeData.end_date,
-          tariff_plan: {
-            id: activeData.tariff_plans.id,
-            name: activeData.tariff_plans.name,
-            price: activeData.tariff_plans.price,
-            duration_days: activeData.tariff_plans.duration_days,
-            is_permanent: activeData.tariff_plans.is_permanent,
-            currency: {
-              code: activeData.tariff_plans.currencies.code
-            }
-          }
-        };
+        const formattedActive = formatSubscriptionData(activeData);
         setActiveSubscription(formattedActive);
       } else {
         // Немає активної підписки
@@ -142,22 +113,7 @@ export const useUserSubscriptions = () => {
       if (historyError) throw historyError;
 
       if (historyData) {
-        const formattedHistory = historyData.map(item => ({
-          id: item.id,
-          is_active: item.is_active,
-          start_date: item.start_date,
-          end_date: item.end_date,
-          tariff_plan: {
-            id: item.tariff_plans.id,
-            name: item.tariff_plans.name,
-            price: item.tariff_plans.price,
-            duration_days: item.tariff_plans.duration_days,
-            is_permanent: item.tariff_plans.is_permanent,
-            currency: {
-              code: item.tariff_plans.currencies.code
-            }
-          }
-        }));
+        const formattedHistory = historyData.map(item => formatSubscriptionData(item));
         setSubscriptionHistory(formattedHistory);
       }
     } catch (error) {
@@ -170,6 +126,26 @@ export const useUserSubscriptions = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Функція для форматування даних підписки
+  const formatSubscriptionData = (data: any): Subscription => {
+    return {
+      id: data.id,
+      is_active: data.is_active,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      tariff_plan: {
+        id: data.tariff_plans.id,
+        name: data.tariff_plans.name,
+        price: data.tariff_plans.price,
+        duration_days: data.tariff_plans.duration_days,
+        is_permanent: data.tariff_plans.is_permanent,
+        currency: {
+          code: data.tariff_plans.currencies ? data.tariff_plans.currencies.code : 'UAH'
+        }
+      }
+    };
   };
 
   useEffect(() => {

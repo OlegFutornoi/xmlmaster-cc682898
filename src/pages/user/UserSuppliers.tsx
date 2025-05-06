@@ -1,8 +1,7 @@
-
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, FileText, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { Package, PlusCircle, Trash2, Pencil, ExternalLink, FilePlus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,110 +12,50 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useIsMobile } from '@/hooks/use-mobile';
-
-// Схема валідації для форми постачальника
-const supplierSchema = z.object({
-  name: z.string().min(2, "Назва повинна містити щонайменше 2 символи"),
-  url: z.string()
-    .url("Неправильний формат URL")
-    .refine(
-      (url) => {
-        const lowerUrl = url.toLowerCase();
-        return lowerUrl.endsWith('.xml') || 
-               lowerUrl.endsWith('.csv') || 
-               lowerUrl.includes('xml') || 
-               lowerUrl.includes('csv');
-      }, 
-      { message: "URL повинен вказувати на XML або CSV файл" }
-    ).optional().or(z.literal(''))
-});
-
-type SupplierFormValues = z.infer<typeof supplierSchema>;
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { uk } from 'date-fns/locale';
+import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 
 interface Supplier {
   id: string;
   name: string;
   url: string | null;
   created_at: string;
-  is_active: boolean;
-  product_count: number;
 }
-
-const getFileTypeFromUrl = (url: string | null): string => {
-  if (!url) return 'Не вказано';
-  const lowerUrl = url.toLowerCase();
-  
-  if (lowerUrl.endsWith('.xml') || lowerUrl.includes('xml')) {
-    return 'XML';
-  } else if (lowerUrl.endsWith('.csv') || lowerUrl.includes('csv')) {
-    return 'CSV';
-  }
-  
-  return 'Невідомий';
-};
 
 const UserSuppliers = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const { activeSubscription, refetchSubscriptions } = useUserSubscriptions();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
+  const [supplierName, setSupplierName] = useState('');
+  const [supplierUrl, setSupplierUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliersLimit, setSuppliersLimit] = useState<number | null>(null);
   const [canCreateSupplier, setCanCreateSupplier] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  
-  const form = useForm<SupplierFormValues>({
-    resolver: zodResolver(supplierSchema),
-    defaultValues: {
-      name: '',
-      url: ''
-    }
-  });
+  const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
+    // Оновлюємо підписку при завантаженні сторінки
+    refetchSubscriptions();
     fetchUserSuppliers();
   }, []);
 
-  // Окремий useEffect для викликання fetchUserLimitations після завантаження постачальників
+  // Окремий useEffect для викликання fetchUserLimitations після завантаження постачальників або при зміні активної підписки
   useEffect(() => {
-    if (suppliers.length > 0 || !isLoading) {
+    if (suppliers.length > 0 || !isLoading || activeSubscription) {
       fetchUserLimitations();
     }
-  }, [suppliers, isLoading]);
-
-  // Встановлюємо значення форми при редагуванні
-  useEffect(() => {
-    if (editingSupplier) {
-      form.reset({
-        name: editingSupplier.name,
-        url: editingSupplier.url || ''
-      });
-    } else {
-      form.reset({
-        name: '',
-        url: ''
-      });
-    }
-  }, [editingSupplier, form]);
+  }, [suppliers, isLoading, activeSubscription]);
 
   const fetchUserSuppliers = async () => {
     if (!user) return;
@@ -130,7 +69,7 @@ const UserSuppliers = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Помилка отримання постачальників:', error);
+        console.error('Error fetching suppliers:', error);
         toast({
           title: 'Помилка',
           description: 'Не вдалося завантажити постачальників',
@@ -140,36 +79,20 @@ const UserSuppliers = () => {
         setSuppliers(data || []);
       }
     } catch (error) {
-      console.error('Помилка:', error);
+      console.error('Error:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const fetchUserLimitations = async () => {
-    if (!user) return;
+    if (!user || !activeSubscription) {
+      setSuppliersLimit(0);
+      setCanCreateSupplier(false);
+      return;
+    }
     
     try {
-      // Отримуємо активну підписку користувача
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('user_tariff_subscriptions')
-        .select('tariff_plan_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (subscriptionError) {
-        console.error('Помилка отримання активної підписки:', subscriptionError);
-        return;
-      }
-
-      if (!subscriptionData) {
-        // Якщо немає активної підписки, користувач не може створювати постачальників
-        setSuppliersLimit(0);
-        setCanCreateSupplier(false);
-        return;
-      }
-
       // Отримуємо обмеження для активного тарифу користувача
       const { data: limitationData, error: limitationError } = await extendedSupabase
         .from('tariff_plan_limitations')
@@ -177,16 +100,16 @@ const UserSuppliers = () => {
           value,
           limitation_types:limitation_type_id (name, description)
         `)
-        .eq('tariff_plan_id', subscriptionData.tariff_plan_id)
+        .eq('tariff_plan_id', activeSubscription.tariff_plan.id)
         .eq('limitation_types.name', 'suppliers_count');
 
       if (limitationError) {
-        console.error('Помилка отримання обмежень:', limitationError);
+        console.error('Error fetching limitations:', limitationError);
         return;
       }
 
       if (limitationData && limitationData.length > 0) {
-        const suppliersLimitValue = limitationData[0].value;
+        const suppliersLimitValue = parseInt(limitationData[0].value);
         setSuppliersLimit(suppliersLimitValue);
         
         // Перевіряємо кількість постачальників строго менше ліміту
@@ -197,11 +120,42 @@ const UserSuppliers = () => {
         setCanCreateSupplier(false);
       }
     } catch (error) {
-      console.error('Помилка отримання обмежень:', error);
+      console.error('Error fetching limitations:', error);
     }
   };
 
-  const handleSaveSupplier = async (values: SupplierFormValues) => {
+  const validateUrl = (url: string): string => {
+    if (!url) return '';
+    try {
+      new URL(url);
+      return '';
+    } catch (e: any) {
+      return 'Невірний формат URL';
+    }
+  };
+
+  const handleCreateSupplier = async () => {
+    const urlError = validateUrl(supplierUrl);
+    setUrlError(urlError);
+    
+    if (!supplierName.trim()) {
+      toast({
+        title: 'Помилка',
+        description: 'Введіть назву постачальника',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (urlError) {
+      toast({
+        title: 'Помилка',
+        description: urlError,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!user) {
       toast({
         title: 'Помилка',
@@ -212,7 +166,7 @@ const UserSuppliers = () => {
     }
 
     // Додаткова перевірка перед створенням - чи не перевищено ліміт
-    if (!editingSupplier && suppliersLimit !== null && suppliers.length >= suppliersLimit) {
+    if (suppliersLimit !== null && suppliers.length >= suppliersLimit) {
       toast({
         title: 'Помилка',
         description: 'Ви досягли ліміту створення постачальників. Оновіть тарифний план.',
@@ -223,51 +177,34 @@ const UserSuppliers = () => {
 
     setIsSubmitting(true);
     try {
-      if (editingSupplier) {
-        // Оновлення існуючого постачальника
-        const { error } = await extendedSupabase
-          .from('suppliers')
-          .update({
-            name: values.name,
-            url: values.url || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingSupplier.id)
-          .eq('user_id', user.id);
+      const { data, error } = await extendedSupabase
+        .from('suppliers')
+        .insert({
+          user_id: user.id,
+          name: supplierName.trim(),
+          url: supplierUrl.trim() || null
+        })
+        .select();
 
-        if (error) throw error;
-
-        toast({
-          title: 'Успішно',
-          description: 'Постачальника успішно оновлено',
-        });
-      } else {
-        // Створення нового постачальника
-        const { error } = await extendedSupabase
-          .from('suppliers')
-          .insert({
-            user_id: user.id,
-            name: values.name,
-            url: values.url || null
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: 'Успішно',
-          description: 'Постачальника успішно створено',
-        });
+      if (error) {
+        throw error;
       }
+
+      toast({
+        title: 'Успішно',
+        description: 'Постачальника успішно створено',
+      });
       
-      form.reset();
+      setSupplierName('');
+      setSupplierUrl('');
+      setUrlError('');
       setIsDialogOpen(false);
-      setEditingSupplier(null);
       fetchUserSuppliers();
     } catch (error) {
-      console.error('Помилка збереження постачальника:', error);
+      console.error('Error creating supplier:', error);
       toast({
         title: 'Помилка',
-        description: 'Не вдалося зберегти постачальника',
+        description: 'Не вдалося створити постачальника',
         variant: 'destructive',
       });
     } finally {
@@ -275,9 +212,64 @@ const UserSuppliers = () => {
     }
   };
 
-  const handleEditSupplier = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
-    setIsDialogOpen(true);
+  const handleEditSupplier = async () => {
+    if (!currentSupplier) return;
+    
+    const urlError = validateUrl(supplierUrl);
+    setUrlError(urlError);
+    
+    if (!supplierName.trim()) {
+      toast({
+        title: 'Помилка',
+        description: 'Введіть назву постачальника',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (urlError) {
+      toast({
+        title: 'Помилка',
+        description: urlError,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('suppliers')
+        .update({
+          name: supplierName.trim(),
+          url: supplierUrl.trim() || null
+        })
+        .eq('id', currentSupplier.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Успішно',
+        description: 'Постачальника успішно оновлено',
+      });
+      
+      setSupplierName('');
+      setSupplierUrl('');
+      setUrlError('');
+      setIsDialogOpen(false);
+      fetchUserSuppliers();
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося оновити постачальника',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteSupplier = async () => {
@@ -304,7 +296,7 @@ const UserSuppliers = () => {
       setSupplierToDelete(null);
       fetchUserSuppliers();
     } catch (error) {
-      console.error('Помилка видалення постачальника:', error);
+      console.error('Error deleting supplier:', error);
       toast({
         title: 'Помилка',
         description: 'Не вдалося видалити постачальника',
@@ -315,18 +307,18 @@ const UserSuppliers = () => {
     }
   };
 
+  const openEditDialog = (supplier: Supplier) => {
+    setIsEditMode(true);
+    setCurrentSupplier(supplier);
+    setSupplierName(supplier.name);
+    setSupplierUrl(supplier.url || '');
+    setUrlError('');
+    setIsDialogOpen(true);
+  };
+
   const openDeleteDialog = (supplier: Supplier) => {
     setSupplierToDelete(supplier);
     setIsDeleteDialogOpen(true);
-  };
-
-  const openCreateDialog = () => {
-    setEditingSupplier(null);
-    form.reset({
-      name: '',
-      url: ''
-    });
-    setIsDialogOpen(true);
   };
 
   return (
@@ -337,7 +329,7 @@ const UserSuppliers = () => {
         <div className="flex items-center gap-2">
           {suppliersLimit !== null && (
             <Badge variant="outline" className="flex items-center px-2 py-1 text-xs">
-              <FileText className="h-3 w-3 mr-1 text-blue-600" />
+              <Package className="h-3 w-3 mr-1 text-blue-600" />
               <span className="text-muted-foreground">
                 {suppliers.length} з {suppliersLimit}
               </span>
@@ -353,16 +345,23 @@ const UserSuppliers = () => {
                     size="icon"
                     className="rounded-full"
                     disabled={!canCreateSupplier}
-                    onClick={openCreateDialog}
+                    onClick={() => {
+                      setIsEditMode(false);
+                      setCurrentSupplier(null);
+                      setSupplierName('');
+                      setSupplierUrl('');
+                      setUrlError('');
+                      setIsDialogOpen(true);
+                    }}
                     id="create-supplier-button"
                   >
-                    <Plus className="h-5 w-5" />
+                    <PlusCircle className="h-5 w-5" />
                   </Button>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
                 {canCreateSupplier 
-                  ? "Створити постачальника" 
+                  ? "Додати постачальника" 
                   : `Досягнуто ліміт постачальників (${suppliersLimit})`
                 }
               </TooltipContent>
@@ -374,94 +373,96 @@ const UserSuppliers = () => {
       {isLoading ? (
         <p>Завантаження постачальників...</p>
       ) : suppliers.length > 0 ? (
-        <Card>
-          <CardContent className="p-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Назва</TableHead>
-                  <TableHead>Тип файлу</TableHead>
-                  <TableHead>К-ть товарів</TableHead>
-                  <TableHead className="text-right">Дії</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {suppliers.map((supplier) => (
-                  <TableRow key={supplier.id} id={`supplier-row-${supplier.id}`}>
-                    <TableCell className="font-medium">{supplier.name}</TableCell>
-                    <TableCell>
-                      {supplier.url ? (
-                        <div className="flex items-center gap-1">
-                          <Badge variant="outline">
-                            {getFileTypeFromUrl(supplier.url)}
-                          </Badge>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <a 
-                                  href={supplier.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-500 hover:text-blue-700"
-                                >
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                </a>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs max-w-[200px] break-all">{supplier.url}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      ) : (
-                        <Badge variant="outline">Не вказано</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{supplier.product_count}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleEditSupplier(supplier)}
-                        id={`edit-supplier-${supplier.id}`}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4 text-blue-500" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => openDeleteDialog(supplier)}
-                        id={`delete-supplier-${supplier.id}`}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Назва</TableHead>
+              <TableHead>URL</TableHead>
+              <TableHead>Дата створення</TableHead>
+              <TableHead className="text-right">Дії</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {suppliers.map(supplier => (
+              <TableRow key={supplier.id}>
+                <TableCell className="font-medium">{supplier.name}</TableCell>
+                <TableCell>
+                  {supplier.url ? (
+                    <a href={supplier.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
+                      <ExternalLink className="h-4 w-4" />
+                      Відкрити
+                    </a>
+                  ) : (
+                    <span className="text-gray-500">Не вказано</span>
+                  )}
+                </TableCell>
+                <TableCell>{format(new Date(supplier.created_at), "dd.MM.yyyy", { locale: uk })}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => openEditDialog(supplier)}
+                            id={`edit-supplier-${supplier.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Редагувати</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => openDeleteDialog(supplier)}
+                            id={`delete-supplier-${supplier.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Видалити</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">У вас ще немає постачальників</CardTitle>
             <CardDescription className="text-sm">
-              Додайте постачальників для імпорту товарів
+              Додайте своїх постачальників, щоб почати роботу
             </CardDescription>
           </CardHeader>
           <CardContent>
             {canCreateSupplier ? (
-              <Button onClick={openCreateDialog} size="sm" id="add-first-supplier">
-                <Plus className="mr-2 h-4 w-4" />
+              <Button onClick={() => {
+                  setIsEditMode(false);
+                  setCurrentSupplier(null);
+                  setSupplierName('');
+                  setSupplierUrl('');
+                  setUrlError('');
+                  setIsDialogOpen(true);
+                }} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
                 Додати постачальника
               </Button>
             ) : (
-              <p className="text-sm text-gray-600">
-                Для додавання постачальників необхідно оновити тарифний план
-              </p>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <p className="text-sm text-gray-600">
+                  Для додавання постачальників необхідно оновити тарифний план
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -469,78 +470,45 @@ const UserSuppliers = () => {
 
       {/* Діалог створення/редагування постачальника */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingSupplier ? 'Редагувати постачальника' : 'Додати постачальника'}
-            </DialogTitle>
+            <DialogTitle>{isEditMode ? 'Редагувати постачальника' : 'Додати нового постачальника'}</DialogTitle>
             <DialogDescription>
-              {editingSupplier 
-                ? 'Відредагуйте інформацію про постачальника' 
-                : 'Введіть інформацію про нового постачальника'}
+              {isEditMode ? 'Змініть інформацію про постачальника' : 'Введіть дані нового постачальника'}
             </DialogDescription>
           </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSaveSupplier)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Назва постачальника</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="Введіть назву постачальника" 
-                        id="supplier-name-input"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="supplier-name">Назва постачальника</Label>
+              <Input 
+                id="supplier-name" 
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                placeholder="Введіть назву постачальника"
               />
-              
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Посилання на файл (XML або CSV)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="https://example.com/feed.xml" 
-                        id="supplier-url-input"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="supplier-url">URL (не обов'язково)</Label>
+              <Input 
+                id="supplier-url" 
+                value={supplierUrl}
+                onChange={(e) => setSupplierUrl(e.target.value)}
+                placeholder="Введіть URL постачальника"
               />
-              
-              <DialogFooter className="mt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Скасувати
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting 
-                    ? 'Збереження...' 
-                    : editingSupplier 
-                      ? 'Зберегти зміни' 
-                      : 'Додати постачальника'
-                  }
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              {urlError && <p className="text-red-500 text-sm">{urlError}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Скасувати
+            </Button>
+            <Button 
+              onClick={isEditMode ? handleEditSupplier : handleCreateSupplier}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Збереження...' : 'Зберегти'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
