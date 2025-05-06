@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,6 @@ import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 
 interface UserStore {
   id: string;
@@ -26,7 +26,6 @@ interface UserStore {
 const UserStores = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { activeSubscription, refetchSubscriptions } = useUserSubscriptions();
   const [stores, setStores] = useState<UserStore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,17 +38,15 @@ const UserStores = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    // Оновлюємо підписку при завантаженні сторінки
-    refetchSubscriptions();
     fetchUserStores();
   }, []);
 
-  // Окремий useEffect для викликання fetchUserLimitations після завантаження магазинів або при зміні активної підписки
+  // Окремий useEffect для викликання fetchUserLimitations після завантаження магазинів
   useEffect(() => {
-    if (stores.length > 0 || !isLoading || activeSubscription) {
+    if (stores.length > 0 || !isLoading) {
       fetchUserLimitations();
     }
-  }, [stores, isLoading, activeSubscription]);
+  }, [stores, isLoading]);
 
   const fetchUserStores = async () => {
     if (!user) return;
@@ -80,13 +77,29 @@ const UserStores = () => {
   };
 
   const fetchUserLimitations = async () => {
-    if (!user || !activeSubscription) {
-      setStoresLimit(0);
-      setCanCreateStore(false);
-      return;
-    }
+    if (!user) return;
     
     try {
+      // Отримуємо активну підписку користувача
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('user_tariff_subscriptions')
+        .select('tariff_plan_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (subscriptionError) {
+        console.error('Error fetching active subscription:', subscriptionError);
+        return;
+      }
+
+      if (!subscriptionData) {
+        // Якщо немає активної підписки, користувач не може створювати магазини
+        setStoresLimit(0);
+        setCanCreateStore(false);
+        return;
+      }
+
       // Отримуємо обмеження для активного тарифу користувача
       const { data: limitationData, error: limitationError } = await extendedSupabase
         .from('tariff_plan_limitations')
@@ -94,7 +107,7 @@ const UserStores = () => {
           value,
           limitation_types:limitation_type_id (name, description)
         `)
-        .eq('tariff_plan_id', activeSubscription.tariff_plan.id)
+        .eq('tariff_plan_id', subscriptionData.tariff_plan_id)
         .eq('limitation_types.name', 'stores_count');
 
       if (limitationError) {
@@ -103,7 +116,7 @@ const UserStores = () => {
       }
 
       if (limitationData && limitationData.length > 0) {
-        const storesLimitValue = parseInt(limitationData[0].value);
+        const storesLimitValue = limitationData[0].value;
         setStoresLimit(storesLimitValue);
         
         // Перевіряємо кількість магазинів строго менше ліміту
@@ -305,7 +318,7 @@ const UserStores = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">У вас ще немає ��агазинів</CardTitle>
+            <CardTitle className="text-base">У вас ще немає магазинів</CardTitle>
             <CardDescription className="text-sm">
               Створіть свій перший магазин, щоб почати роботу
             </CardDescription>

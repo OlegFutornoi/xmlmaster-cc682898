@@ -1,14 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Home, Store, Package, Settings, LogOut, Menu, X, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Store, Package, Settings, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const UserSidebar = () => {
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
@@ -23,20 +22,6 @@ const UserSidebar = () => {
     if (isMobile) {
       setCollapsed(true);
     }
-  };
-
-  // Отримуємо ініціали користувача для аватара
-  const getUserInitials = () => {
-    if (!user || !user.email) return '?';
-    
-    // Спробуємо отримати ініціали з email
-    const emailParts = user.email.split('@')[0].split('.');
-    if (emailParts.length > 1) {
-      return (emailParts[0][0] + emailParts[1][0]).toUpperCase();
-    }
-    
-    // Якщо email не містить крапки, повертаємо першу літеру
-    return user.email[0].toUpperCase();
   };
 
   // Меню займає всю висоту в мобільній версії
@@ -137,20 +122,6 @@ const UserSidebar = () => {
       </div>
 
       <div className="mb-4 px-2">
-        {/* Інформація про користувача */}
-        <div className={`border-t pt-2 mb-2 ${collapsed ? 'text-center' : 'px-4'}`}>
-          <div className={`flex ${collapsed ? 'justify-center' : 'items-center gap-2'}`}>
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>{getUserInitials()}</AvatarFallback>
-            </Avatar>
-            {!collapsed && (
-              <div className="overflow-hidden">
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      
         <button 
           onClick={logout}
           className="flex w-full items-center py-2 px-4 rounded-md text-red-500 hover:bg-red-50"

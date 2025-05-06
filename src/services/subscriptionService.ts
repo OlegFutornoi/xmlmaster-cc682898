@@ -88,7 +88,6 @@ export const tryActivateDefaultPlan = async (userId: string) => {
 
     // Якщо користувач уже має активну підписку, не створюємо нову
     if (existingSubscription) {
-      console.log('User already has an active subscription:', existingSubscription);
       return existingSubscription;
     }
 
@@ -97,17 +96,6 @@ export const tryActivateDefaultPlan = async (userId: string) => {
     if (!demoTariffId) {
       console.error('Could not create or find demo tariff');
       return null;
-    }
-
-    // Деактивуємо будь-які існуючі підписки для цього користувача (якщо вони чомусь існують але не активні)
-    const { error: deactivateError } = await supabase
-      .from('user_tariff_subscriptions')
-      .update({ is_active: false })
-      .eq('user_id', userId)
-      .neq('is_active', true);
-      
-    if (deactivateError) {
-      console.warn('Error deactivating existing subscriptions:', deactivateError);
     }
 
     // Активуємо демо-тариф для користувача
