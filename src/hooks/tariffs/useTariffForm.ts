@@ -53,6 +53,12 @@ export const useTariffForm = (planId: string | undefined) => {
     }
     
     setCurrencies(data || []);
+    
+    // Якщо немає вибраної валюти і є доступні валюти, встановлюємо першу валюту за замовчуванням
+    const currentCurrencyId = form.getValues("currency_id");
+    if (!currentCurrencyId && data && data.length > 0) {
+      form.setValue("currency_id", data[0].id);
+    }
   };
 
   const fetchTariffPlan = async () => {
@@ -60,7 +66,14 @@ export const useTariffForm = (planId: string | undefined) => {
     
     const { data, error } = await supabase
       .from('tariff_plans')
-      .select('*')
+      .select(`
+        *,
+        currencies:currency_id (
+          id,
+          code,
+          name
+        )
+      `)
       .eq('id', planId)
       .single();
       

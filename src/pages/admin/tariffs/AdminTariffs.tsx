@@ -149,6 +149,32 @@ const AdminTariffs = () => {
   const handleCopyPlan = async (plan) => {
     setIsCopying(true);
     try {
+      console.log('Copying plan:', plan);
+      
+      // Отримуємо ID валюти з currency_id або отримуємо з бази даних
+      let currencyId = null;
+      
+      if (!plan.currency_id) {
+        // Отримуємо ID валюти з бази даних, якщо його немає в об'єкті plan
+        const { data: planData, error: planFetchError } = await supabase
+          .from('tariff_plans')
+          .select('currency_id')
+          .eq('id', plan.id)
+          .single();
+        
+        if (planFetchError) {
+          throw new Error('Не вдалося отримати інформацію про валюту тарифного плану');
+        }
+        
+        currencyId = planData.currency_id;
+      } else {
+        currencyId = plan.currency_id;
+      }
+      
+      if (!currencyId) {
+        throw new Error('ID валюти не знайдено');
+      }
+
       // Створюємо копію тарифного плану
       const { data: newPlan, error: planError } = await supabase
         .from('tariff_plans')
@@ -157,7 +183,7 @@ const AdminTariffs = () => {
           price: plan.price,
           duration_days: plan.duration_days,
           is_permanent: plan.is_permanent,
-          currency_id: plan.currencies.id || null
+          currency_id: currencyId
         })
         .select()
         .single();

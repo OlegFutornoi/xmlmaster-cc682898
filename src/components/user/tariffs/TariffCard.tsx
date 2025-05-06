@@ -87,6 +87,7 @@ const TariffCard: React.FC<TariffCardProps> = ({ plan, isActive, onSelect, onVie
           variant={isActive ? "outline" : "default"}
           onClick={() => onSelect(plan.id)}
           id={`tariff-select-${plan.id}`}
+          disabled={isActive}
         >
           {isActive ? (
             <>
