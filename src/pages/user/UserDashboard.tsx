@@ -9,83 +9,30 @@ import UserSuppliers from './UserSuppliers';
 import UserSettings from './UserSettings';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 
 const UserDashboard = () => {
   const { user } = useAuth();
-  const [activeSubscription, setActiveSubscription] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    activeSubscription, 
+    isLoading: subscriptionsLoading, 
+    refetchSubscriptions 
+  } = useUserSubscriptions();
   
+  // Ефект для регулярного оновлення підписки
   useEffect(() => {
-    const fetchSubscription = async () => {
-      if (user) {
-        try {
-          setIsLoading(true);
-          const { data, error } = await supabase
-            .from('user_tariff_subscriptions')
-            .select(`
-              id,
-              is_active,
-              start_date,
-              end_date,
-              tariff_plans (
-                id,
-                name,
-                duration_days,
-                is_permanent
-              )
-            `)
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error fetching subscription:', error);
-          } else {
-            // Перевіряємо чи не закінчився термін підписки
-            if (data && !data.tariff_plans.is_permanent && data.end_date) {
-              const endDate = new Date(data.end_date);
-              const now = new Date();
-              
-              if (endDate < now) {
-                console.log('Підписка закінчилась, деактивуємо її');
-                // Підписка закінчилась - деактивуємо її
-                const { error: updateError } = await supabase
-                  .from('user_tariff_subscriptions')
-                  .update({ is_active: false })
-                  .eq('id', data.id);
-                
-                if (updateError) {
-                  console.error('Error deactivating expired subscription:', updateError);
-                }
-                setActiveSubscription(null);
-              } else {
-                setActiveSubscription(data);
-              }
-            } else if (data) {
-              setActiveSubscription(data);
-            } else {
-              setActiveSubscription(null);
-            }
-          }
-        } catch (error) {
-          console.error('Error:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchSubscription();
+    // Початкове завантаження
+    refetchSubscriptions();
     
     // Встановлюємо інтервал для перевірки активності підписки кожну хвилину
-    const intervalId = setInterval(fetchSubscription, 60000);
+    const intervalId = setInterval(refetchSubscriptions, 60000);
     
     return () => {
       clearInterval(intervalId); // Очищаємо інтервал при розмонтуванні компонента
     };
   }, [user]);
 
-  if (isLoading) {
+  if (subscriptionsLoading) {
     return <div className="flex justify-center items-center h-screen">Завантаження...</div>;
   }
 
