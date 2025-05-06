@@ -16,6 +16,7 @@ import PlanLimitationsList from '@/components/admin/tariffs/PlanLimitationsList'
 import { TariffPlan, PlanLimitation } from '@/components/admin/tariffs/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PlanConfirmDialogProps {
   open: boolean;
@@ -40,6 +41,8 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
 }) => {
   // Якщо немає вибраного плану, не відображати діалогове вікно
   if (!selectedPlan) return null;
+  
+  const isMobile = useIsMobile();
   
   // Визначаємо, чи є вибраний тариф активним
   const isActivePlan = activeSubscription?.tariff_plan.id === selectedPlan.id;
@@ -79,7 +82,10 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl">
+      <DialogContent 
+        className={`${isMobile ? 'w-[95%] max-w-[95%]' : 'sm:max-w-md md:max-w-lg lg:max-w-xl'}`}
+        id="tariff-plan-info-dialog"
+      >
         <DialogHeader>
           <DialogTitle>{selectedPlan.name}</DialogTitle>
           <DialogDescription>
@@ -106,23 +112,23 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
           </div>
         </div>
         
-        <ScrollArea className="max-h-[55vh] mt-2">
+        <ScrollArea className="max-h-[55vh] mt-2 w-full pr-4" id="tariff-plan-info-scroll">
           <div className="space-y-4">
-            {planItems?.length > 0 && (
+            {planItems && planItems.length > 0 && (
               <div className="border rounded-md p-3">
                 <h3 className="text-sm font-medium mb-2">Включені функції:</h3>
                 <ul className="space-y-1">
                   {planItems.map((item, idx) => (
                     <li key={idx} className="text-sm flex items-center">
-                      <CheckCircle2 className="text-green-500 mr-2 h-4 w-4" />
-                      {item.tariff_items?.description}
+                      <CheckCircle2 className="text-green-500 mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>{item.description}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             
-            {planLimitations?.length > 0 && (
+            {planLimitations && planLimitations.length > 0 && (
               <div>
                 <PlanLimitationsList planLimitations={planLimitations} />
               </div>
@@ -143,6 +149,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full sm:w-auto"
+            id="close-tariff-info-button"
           >
             Закрити
           </Button>
@@ -152,6 +159,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
               onClick={onActivate}
               disabled={isActivating}
               className="w-full sm:w-auto"
+              id="activate-tariff-button"
             >
               {isActivating ? "Активація..." : "Активувати тариф"}
             </Button>

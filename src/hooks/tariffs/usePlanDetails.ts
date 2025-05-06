@@ -68,11 +68,12 @@ export const usePlanDetails = (planId: string | null) => {
       }
 
       if (itemsData) {
+        // Виправляємо виведення описів функцій в діалозі
         const formattedItems = itemsData
           .filter(item => item.is_active)
           .map(item => ({
-            id: item.tariff_items.id,
-            description: item.tariff_items.description,
+            id: item.tariff_items?.id || '',
+            description: item.tariff_items?.description || '',
             is_active: item.is_active
           }));
         setPlanItems(formattedItems);

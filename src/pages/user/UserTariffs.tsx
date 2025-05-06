@@ -12,14 +12,13 @@ import TariffCard from '@/components/user/tariffs/TariffCard';
 import CurrentSubscription from '@/components/user/tariffs/CurrentSubscription';
 import SubscriptionHistory from '@/components/user/tariffs/SubscriptionHistory';
 import PlanConfirmDialog from '@/components/user/tariffs/PlanConfirmDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const UserTariffs = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  
   const {
     tariffPlans,
     isLoading: plansLoading
@@ -82,12 +81,17 @@ const UserTariffs = () => {
   };
 
   if (subscriptionsLoading || plansLoading) {
-    return <p>Завантаження...</p>;
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center">
+        <p>Завантаження...</p>
+      </div>
+    );
   }
   
   const selectedPlan = tariffPlans.find(plan => plan.id === selectedPlanId) || null;
 
-  return <div className="container mx-auto px-4 py-4" id="user-tariffs-container">
+  return (
+    <div className={`container mx-auto ${isMobile ? 'px-3 py-3' : 'px-4 py-4'}`} id="user-tariffs-container">
       <div className="mb-4">
         <CurrentSubscription subscription={activeSubscription} />
       </div>
@@ -121,7 +125,8 @@ const UserTariffs = () => {
         isActivating={isActivating} 
         onActivate={handleActivatePlan} 
       />
-    </div>;
+    </div>
+  );
 };
 
 export default UserTariffs;

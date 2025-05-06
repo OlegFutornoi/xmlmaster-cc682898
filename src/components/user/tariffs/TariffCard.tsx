@@ -4,11 +4,12 @@ import React from 'react';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Info, Check } from 'lucide-react';
+import { Info, Check, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TariffPlan } from '@/components/admin/tariffs/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TariffCardProps {
   plan: TariffPlan;
@@ -18,6 +19,8 @@ interface TariffCardProps {
 }
 
 const TariffCard: React.FC<TariffCardProps> = ({ plan, isActive, onSelect, onViewDetails }) => {
+  const isMobile = useIsMobile();
+  
   // Розрахунок дати закінчення для відображення
   const getExpiryDate = () => {
     if (plan.is_permanent) {
@@ -63,41 +66,57 @@ const TariffCard: React.FC<TariffCardProps> = ({ plan, isActive, onSelect, onVie
         </div>
       </CardContent>
       
-      <CardFooter className="flex justify-between">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={() => onViewDetails(plan.id)}
-                id={`tariff-details-${plan.id}`}
-              >
-                <Info className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Детальна інформація</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        <Button 
-          className="flex-1 ml-2" 
-          variant={isActive ? "outline" : "default"}
-          onClick={() => onSelect(plan.id)}
-          id={`tariff-select-${plan.id}`}
-          disabled={isActive}
-        >
-          {isActive ? (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Активний тариф
-            </>
-          ) : (
-            'Вибрати тариф'
+      <CardFooter className={`flex ${isMobile ? 'flex-col space-y-2' : 'justify-between'}`}>
+        <div className={`flex ${isMobile ? 'w-full justify-between' : ''}`}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => onViewDetails(plan.id)}
+                  id={`tariff-details-${plan.id}`}
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Детальна інформація</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          {isMobile && (
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => onSelect(plan.id)}
+              id={`tariff-select-icon-${plan.id}`}
+              disabled={isActive}
+            >
+              <CheckCircle2 className={`h-4 w-4 ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
+            </Button>
           )}
-        </Button>
+        </div>
+        
+        {!isMobile && (
+          <Button 
+            className="ml-2" 
+            variant={isActive ? "outline" : "default"}
+            onClick={() => onSelect(plan.id)}
+            id={`tariff-select-${plan.id}`}
+            disabled={isActive}
+          >
+            {isActive ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Активний тариф
+              </>
+            ) : (
+              'Вибрати тариф'
+            )}
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
