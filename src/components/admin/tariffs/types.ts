@@ -21,11 +21,13 @@ export interface TariffPlan {
 }
 
 export interface LimitationType {
+  id: string;
   name: string;
   description: string;
 }
 
 export interface PlanLimitation {
+  id: string;
   limitation_type: LimitationType;
   value: number;
 }

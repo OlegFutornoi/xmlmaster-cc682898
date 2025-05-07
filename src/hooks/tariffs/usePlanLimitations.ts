@@ -2,7 +2,7 @@
 // Хук для отримання обмежень тарифного плану
 import { useState, useEffect } from 'react';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
-import { PlanLimitation } from '@/components/admin/tariffs/types';
+import { PlanLimitation, LimitationType } from '@/components/admin/tariffs/types';
 
 export const usePlanLimitations = (selectedPlanId: string) => {
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
