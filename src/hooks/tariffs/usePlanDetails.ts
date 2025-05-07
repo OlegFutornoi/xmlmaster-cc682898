@@ -33,8 +33,9 @@ export const usePlanDetails = (planId: string | null) => {
       const { data: limitationsData, error: limitationsError } = await extendedSupabase
         .from('tariff_plan_limitations')
         .select(`
+          id,
           value,
-          limitation_types:limitation_type_id (name, description)
+          limitation_types:limitation_type_id (id, name, description)
         `)
         .eq('tariff_plan_id', id);
 
@@ -53,13 +54,11 @@ export const usePlanDetails = (planId: string | null) => {
       if (limitationsData) {
         // Виправлене перетворення даних
         const formattedLimitations: PlanLimitation[] = (limitationsData || []).map(item => ({
+          id: item.id,
           limitation_type: {
-            name: item.limitation_types && typeof item.limitation_types === 'object' && 'name' in item.limitation_types 
-              ? String(item.limitation_types.name || '') 
-              : '',
-            description: item.limitation_types && typeof item.limitation_types === 'object' && 'description' in item.limitation_types 
-              ? String(item.limitation_types.description || '') 
-              : ''
+            id: item.limitation_types?.id || '',
+            name: item.limitation_types?.name || '',
+            description: item.limitation_types?.description || ''
           },
           value: item.value
         }));
