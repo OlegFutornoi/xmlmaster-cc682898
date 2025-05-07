@@ -37,9 +37,9 @@ export const usePlanLimitations = (selectedPlanId: string) => {
           const formattedLimitations: PlanLimitation[] = data.map(item => ({
             id: item.id,
             limitation_type: {
-              id: item.limitation_types?.id || '',
-              name: item.limitation_types?.name || '',
-              description: item.limitation_types?.description || ''
+              id: item.limitation_types ? item.limitation_types.id : '',
+              name: item.limitation_types ? item.limitation_types.name : '',
+              description: item.limitation_types ? item.limitation_types.description : ''
             },
             value: item.value
           }));

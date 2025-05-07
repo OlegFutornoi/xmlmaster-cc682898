@@ -53,12 +53,12 @@ export const usePlanDetails = (planId: string | null) => {
 
       if (limitationsData) {
         // Виправлене перетворення даних
-        const formattedLimitations: PlanLimitation[] = (limitationsData || []).map(item => ({
+        const formattedLimitations: PlanLimitation[] = limitationsData.map(item => ({
           id: item.id,
           limitation_type: {
-            id: item.limitation_types?.id || '',
-            name: item.limitation_types?.name || '',
-            description: item.limitation_types?.description || ''
+            id: item.limitation_types ? item.limitation_types.id : '',
+            name: item.limitation_types ? item.limitation_types.name : '',
+            description: item.limitation_types ? item.limitation_types.description : ''
           },
           value: item.value
         }));
