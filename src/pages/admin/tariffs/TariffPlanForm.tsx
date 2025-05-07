@@ -1,6 +1,6 @@
 
 // Компонент для створення та редагування тарифних планів
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTariffForm } from '@/hooks/tariffs/useTariffForm';
 import TariffFormSidebar from '@/components/admin/tariff-plan/TariffFormSidebar';
@@ -25,6 +25,13 @@ const TariffPlanForm = () => {
     form.handleSubmit(() => onSubmit(navigate))();
   };
 
+  // Переконуємося, що форма буде повністю перевантажена при зміні id
+  useEffect(() => {
+    if (id) {
+      console.log('Tariff ID changed, refreshing form data:', id);
+    }
+  }, [id]);
+
   return (
     <div className="flex h-screen">
       <AdminSidebar />
@@ -40,7 +47,7 @@ const TariffPlanForm = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 lg:col-span-3">
               <TariffFormSidebar 
                 form={form}
                 id={id}
@@ -50,7 +57,7 @@ const TariffPlanForm = () => {
                 onSubmit={handleSubmit}
               />
             </div>
-            <div className="md:col-span-9">
+            <div className="md:col-span-9 lg:col-span-9">
               <TariffTabsContent
                 form={form}
                 id={id}

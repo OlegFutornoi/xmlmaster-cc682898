@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,17 +46,36 @@ const UserSuppliers = () => {
   const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
-    // Оновлюємо підписку при завантаженні сторінки
-    refetchSubscriptions();
-    fetchUserSuppliers();
-  }, []);
+    // Оновлюємо підписку при кожному заході на сторінку
+    const refreshData = async () => {
+      if (user) {
+        await refetchSubscriptions();
+        await fetchUserSuppliers();
+      }
+    };
+    
+    refreshData();
+    
+    // Встановлюємо інтервал для регулярної перевірки підписки і обмежень
+    const intervalId = setInterval(async () => {
+      if (user) {
+        await refetchSubscriptions();
+        fetchUserLimitations();
+      }
+    }, 60000); // перевірка кожну хвилину
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [user]);
 
-  // Окремий useEffect для викликання fetchUserLimitations після завантаження постачальників або при зміні активної підписки
+  // Окремий useEffect для оновлення обмежень після оновлення підписки
   useEffect(() => {
-    if (suppliers.length > 0 || !isLoading || activeSubscription) {
+    if (activeSubscription) {
+      console.log('Active subscription updated, refreshing limitations');
       fetchUserLimitations();
     }
-  }, [suppliers, isLoading, activeSubscription]);
+  }, [activeSubscription]);
 
   const fetchUserSuppliers = async () => {
     if (!user) return;
@@ -93,6 +113,8 @@ const UserSuppliers = () => {
     }
     
     try {
+      console.log('Fetching limitations for tariff plan:', activeSubscription.tariff_plan.id);
+      
       // Отримуємо обмеження для активного тарифу користувача
       const { data: limitationData, error: limitationError } = await extendedSupabase
         .from('tariff_plan_limitations')
@@ -110,12 +132,14 @@ const UserSuppliers = () => {
 
       if (limitationData && limitationData.length > 0) {
         const suppliersLimitValue = parseInt(limitationData[0].value);
+        console.log('Suppliers limit from DB:', suppliersLimitValue);
         setSuppliersLimit(suppliersLimitValue);
         
         // Перевіряємо кількість постачальників строго менше ліміту
         setCanCreateSupplier(suppliers.length < suppliersLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
+        console.log('No suppliers limit found, setting to 0');
         setSuppliersLimit(0);
         setCanCreateSupplier(false);
       }

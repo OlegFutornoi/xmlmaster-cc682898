@@ -24,6 +24,8 @@ const UserDashboard = () => {
     const checkAndActivateDemoPlan = async () => {
       if (!user) return;
       
+      await refetchSubscriptions();
+      
       // Якщо у користувача немає активної підписки, пробуємо активувати демо-план
       if (!activeSubscription) {
         console.log('No active subscription found, trying to activate demo plan');
@@ -39,12 +41,16 @@ const UserDashboard = () => {
     checkAndActivateDemoPlan();
     
     // Встановлюємо інтервал для регулярної перевірки підписки
-    const intervalId = setInterval(refetchSubscriptions, 60000);
+    const intervalId = setInterval(() => {
+      if (user) {
+        refetchSubscriptions();
+      }
+    }, 120000); // перевірка кожні 2 хвилини
     
     return () => {
       clearInterval(intervalId); // Очищаємо інтервал при розмонтуванні компонента
     };
-  }, [user, activeSubscription]);
+  }, [user]);
 
   if (subscriptionsLoading) {
     return <div className="flex justify-center items-center h-screen">Завантаження...</div>;

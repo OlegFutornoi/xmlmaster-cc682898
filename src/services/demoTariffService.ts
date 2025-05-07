@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const createDemoTariffIfNotExist = async () => {
   try {
+    console.log("Checking for demo tariff plan");
+    
     // Перевірка наявності демо-тарифного плану
     const { data: existingPlan, error: checkError } = await supabase
       .from('tariff_plans')
@@ -42,7 +44,7 @@ export const createDemoTariffIfNotExist = async () => {
         name: 'Демо доступ',
         price: 0,
         currency_id: currency.id,
-        is_permanent: false, // 
+        is_permanent: false,
         duration_days: 14 // 14 днів демо-доступу
       })
       .select('id')
@@ -54,6 +56,34 @@ export const createDemoTariffIfNotExist = async () => {
     }
 
     console.log('Created new demo tariff plan:', newPlan.id);
+    
+    // Отримуємо типи обмежень для магазинів та постачальників
+    const { data: limitationTypes, error: typesError } = await supabase
+      .from('limitation_types')
+      .select('id, name')
+      .in('name', ['stores_count', 'suppliers_count']);
+      
+    if (typesError) {
+      console.error('Error fetching limitation types:', typesError);
+    } else if (limitationTypes && limitationTypes.length > 0) {
+      // Додаємо обмеження для демо-тарифу
+      const limitations = limitationTypes.map(type => ({
+        tariff_plan_id: newPlan.id,
+        limitation_type_id: type.id,
+        value: type.name === 'stores_count' ? 1 : 2 // 1 магазин і 2 постачальники
+      }));
+      
+      const { error: limitError } = await supabase
+        .from('tariff_plan_limitations')
+        .insert(limitations);
+        
+      if (limitError) {
+        console.error('Error setting limitations for demo tariff:', limitError);
+      } else {
+        console.log('Added limitations for demo tariff');
+      }
+    }
+    
     return newPlan.id;
   } catch (error) {
     console.error('Error in createDemoTariffIfNotExist:', error);
