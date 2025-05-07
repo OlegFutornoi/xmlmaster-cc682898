@@ -60,12 +60,13 @@ export const usePlanDetails = (planId: string | null) => {
             id: string;
             name: string;
             description: string | null;
-          } | null;
+          };
         };
         
         // Виправлене перетворення даних
         const formattedLimitations: PlanLimitation[] = limitationsData.map(item => {
-          const typedItem = item as LimitationResponse;
+          // Використовуємо приведення типу через unknown, щоб уникнути помилок TypeScript
+          const typedItem = item as unknown as LimitationResponse;
           
           return {
             id: typedItem.id,

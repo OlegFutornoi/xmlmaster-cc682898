@@ -43,10 +43,11 @@ export const usePlanLimitations = (selectedPlanId: string) => {
                 id: string;
                 name: string;
                 description: string | null;
-              } | null;
+              };
             };
             
-            const typedItem = item as LimitationResponse;
+            // Використовуємо приведення типу через unknown, щоб уникнути помилок TypeScript
+            const typedItem = item as unknown as LimitationResponse;
             
             return {
               id: typedItem.id,
