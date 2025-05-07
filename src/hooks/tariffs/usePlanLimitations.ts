@@ -34,15 +34,30 @@ export const usePlanLimitations = (selectedPlanId: string) => {
         }
 
         if (data) {
-          const formattedLimitations: PlanLimitation[] = data.map(item => ({
-            id: item.id,
-            limitation_type: {
-              id: item.limitation_types?.id || '',
-              name: item.limitation_types?.name || '',
-              description: item.limitation_types?.description || ''
-            },
-            value: item.value
-          }));
+          const formattedLimitations: PlanLimitation[] = data.map(item => {
+            // Типи для більшої чіткості
+            type LimitationResponse = {
+              id: string;
+              value: number;
+              limitation_types: {
+                id: string;
+                name: string;
+                description: string | null;
+              } | null;
+            };
+            
+            const typedItem = item as LimitationResponse;
+            
+            return {
+              id: typedItem.id,
+              limitation_type: {
+                id: typedItem.limitation_types?.id || '',
+                name: typedItem.limitation_types?.name || '',
+                description: typedItem.limitation_types?.description || ''
+              },
+              value: typedItem.value
+            };
+          });
           
           console.log('Fetched limitations:', formattedLimitations);
           setPlanLimitations(formattedLimitations);

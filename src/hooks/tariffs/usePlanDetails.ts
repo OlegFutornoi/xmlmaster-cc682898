@@ -52,16 +52,31 @@ export const usePlanDetails = (planId: string | null) => {
       if (itemsError) throw itemsError;
 
       if (limitationsData) {
+        // Типи для більшої чіткості
+        type LimitationResponse = {
+          id: string;
+          value: number;
+          limitation_types: {
+            id: string;
+            name: string;
+            description: string | null;
+          } | null;
+        };
+        
         // Виправлене перетворення даних
-        const formattedLimitations: PlanLimitation[] = limitationsData.map(item => ({
-          id: item.id,
-          limitation_type: {
-            id: item.limitation_types?.id || '',
-            name: item.limitation_types?.name || '',
-            description: item.limitation_types?.description || ''
-          },
-          value: item.value
-        }));
+        const formattedLimitations: PlanLimitation[] = limitationsData.map(item => {
+          const typedItem = item as LimitationResponse;
+          
+          return {
+            id: typedItem.id,
+            limitation_type: {
+              id: typedItem.limitation_types?.id || '',
+              name: typedItem.limitation_types?.name || '',
+              description: typedItem.limitation_types?.description || ''
+            },
+            value: typedItem.value
+          };
+        });
         
         setPlanLimitations(formattedLimitations);
       }
