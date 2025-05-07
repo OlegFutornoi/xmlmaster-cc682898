@@ -34,19 +34,19 @@ export const usePlanLimitations = (selectedPlanId: string) => {
         }
 
         if (data) {
-          const formattedLimitations: PlanLimitation[] = data.map(item => {
-            // Типи для більшої чіткості
-            type LimitationResponse = {
+          // Типи для більшої чіткості
+          type LimitationResponse = {
+            id: string;
+            value: number;
+            limitation_types: {
               id: string;
-              value: number;
-              limitation_types: {
-                id: string;
-                name: string;
-                description: string | null;
-              };
+              name: string;
+              description: string | null;
             };
-            
-            // Використовуємо приведення типу через unknown, щоб уникнути помилок TypeScript
+          };
+          
+          // Використовуємо приведення типу через unknown, щоб уникнути помилок TypeScript
+          const formattedLimitations: PlanLimitation[] = data.map(item => {
             const typedItem = item as unknown as LimitationResponse;
             
             return {

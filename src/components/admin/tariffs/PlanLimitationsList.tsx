@@ -73,6 +73,20 @@ export const PlanLimitationsList = ({ selectedPlanId, planLimitations: propsPlan
     }
   };
 
+  // Функція для відображення правильної назви обмеження на основі контексту
+  const getCorrectLimitationName = (limitation: PlanLimitation) => {
+    // Якщо обмеження має назву stores_count, але це сторінка постачальників,
+    // показуємо його як suppliers_count
+    if (limitation.limitation_type.name === 'stores_count') {
+      // Перевірка чи поточна сторінка - постачальники
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('suppliers')) {
+        return 'suppliers_count';
+      }
+    }
+    return limitation.limitation_type.name;
+  };
+
   if (limitations.length === 0) {
     return <p className="text-sm text-muted-foreground">Немає обмежень для цього тарифного плану</p>;
   }
@@ -87,7 +101,7 @@ export const PlanLimitationsList = ({ selectedPlanId, planLimitations: propsPlan
             id={`limitation-${limitation.id}`}
           >
             <div className="flex-1">
-              <p className="font-medium">{limitation.limitation_type.name}</p>
+              <p className="font-medium">{getCorrectLimitationName(limitation)}</p>
               <p className="text-sm text-muted-foreground">{limitation.limitation_type.description}</p>
             </div>
             

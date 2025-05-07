@@ -83,9 +83,9 @@ export const usePlanDetails = (planId: string | null) => {
       }
 
       if (itemsData) {
-        // Виправляємо виведення описів функцій в діалозі
+        // Перевіряємо і фільтруємо елементи перед перетворенням
         const formattedItems = itemsData
-          .filter(item => item.is_active)
+          .filter(item => item.is_active && item.tariff_items)
           .map(item => ({
             id: item.tariff_items?.id || '',
             description: item.tariff_items?.description || '',
