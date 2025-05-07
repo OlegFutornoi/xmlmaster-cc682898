@@ -258,9 +258,8 @@ const TariffLimitations: React.FC<TariffLimitationsProps> = ({ tariffPlanId }) =
             value={selectedLimitationTypeId}
             onValueChange={setSelectedLimitationTypeId}
             disabled={availableLimitationTypes.length === 0}
-            id="limitation-type-select"
           >
-            <SelectTrigger>
+            <SelectTrigger id="limitation-type-select" className="w-full">
               <SelectValue placeholder="Виберіть тип" />
             </SelectTrigger>
             <SelectContent>
