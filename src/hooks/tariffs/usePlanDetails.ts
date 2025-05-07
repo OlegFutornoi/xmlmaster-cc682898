@@ -105,10 +105,18 @@ export const usePlanDetails = (planId: string | null) => {
     }
   };
 
+  // Допоміжна функція для отримання обмеження за його назвою
+  const getLimitationByName = (name: string): PlanLimitation | undefined => {
+    return planLimitations.find(limitation => 
+      limitation.limitation_type.name === name
+    );
+  };
+
   return {
     planLimitations,
     planItems,
     isLoading,
-    fetchPlanDetails
+    fetchPlanDetails,
+    getLimitationByName
   };
 };

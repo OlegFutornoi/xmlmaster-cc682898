@@ -1,12 +1,13 @@
 
 // Компонент для відображення і редагування обмежень тарифного плану
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { usePlanLimitations } from '@/hooks/tariffs/usePlanLimitations';
 import { PlanLimitation } from './types';
+import { useLocation } from 'react-router-dom';
 
 interface PlanLimitationsListProps {
   selectedPlanId?: string;
@@ -24,6 +25,7 @@ export const PlanLimitationsList = ({ selectedPlanId, planLimitations: propsPlan
   const [editingLimitation, setEditingLimitation] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const { toast } = useToast();
+  const location = useLocation();
 
   const handleStartEdit = (limitation: PlanLimitation) => {
     setEditingLimitation(limitation.id);
@@ -75,17 +77,45 @@ export const PlanLimitationsList = ({ selectedPlanId, planLimitations: propsPlan
 
   // Функція для відображення правильної назви обмеження на основі контексту
   const getCorrectLimitationName = (limitation: PlanLimitation) => {
-    // Якщо обмеження має назву stores_count, але це сторінка постачальників,
+    const pathname = location.pathname;
+    
+    // Якщо це обмеження stores_count, але ми на сторінці постачальників,
     // показуємо його як suppliers_count
-    if (limitation.limitation_type.name === 'stores_count') {
-      // Перевірка чи поточна сторінка - постачальники
-      const currentPath = window.location.pathname;
-      if (currentPath.includes('suppliers')) {
-        return 'suppliers_count';
-      }
+    if (limitation.limitation_type.name === 'stores_count' && pathname.includes('suppliers')) {
+      return 'suppliers_count';
     }
+    
+    // Якщо це обмеження suppliers_count, але ми на сторінці магазинів,
+    // показуємо його як stores_count
+    if (limitation.limitation_type.name === 'suppliers_count' && pathname.includes('stores')) {
+      return 'stores_count';
+    }
+    
     return limitation.limitation_type.name;
   };
+  
+  // Функція для фільтрації обмежень відповідно до поточної сторінки
+  const getFilteredLimitations = () => {
+    const pathname = location.pathname;
+    
+    return limitations.filter(limitation => {
+      // На сторінці suppliers показуємо лише suppliers_count
+      if (pathname.includes('suppliers')) {
+        return limitation.limitation_type.name === 'suppliers_count';
+      }
+      
+      // На сторінці stores показуємо лише stores_count
+      if (pathname.includes('stores')) {
+        return limitation.limitation_type.name === 'stores_count';
+      }
+      
+      // На інших сторінках показуємо всі обмеження
+      return true;
+    });
+  };
+
+  // Отримуємо відфільтровані обмеження
+  const filteredLimitations = getFilteredLimitations();
 
   if (limitations.length === 0) {
     return <p className="text-sm text-muted-foreground">Немає обмежень для цього тарифного плану</p>;
@@ -94,7 +124,7 @@ export const PlanLimitationsList = ({ selectedPlanId, planLimitations: propsPlan
   return (
     <div className="space-y-2" id="plan-limitations-list">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {limitations.map((limitation) => (
+        {filteredLimitations.map((limitation) => (
           <div 
             key={limitation.id}
             className="flex items-center justify-between p-2 border rounded-md"

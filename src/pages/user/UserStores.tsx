@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
+import { usePlanDetails } from '@/hooks/tariffs/usePlanDetails';
 
 interface UserStore {
   id: string;
@@ -37,6 +38,9 @@ const UserStores = () => {
   const [storeToDelete, setStoreToDelete] = useState<UserStore | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Використовуємо хук usePlanDetails для отримання деталей плану
+  const { planLimitations, isLoading: detailsLoading, getLimitationByName } = usePlanDetails(activeSubscription?.tariff_plan.id || null);
 
   useEffect(() => {
     // Оновлюємо підписку при завантаженні сторінки
@@ -44,12 +48,12 @@ const UserStores = () => {
     fetchUserStores();
   }, []);
 
-  // Окремий useEffect для викликання fetchUserLimitations після завантаження магазинів або при зміні активної підписки
+  // Окремий useEffect для оновлення обмежень після отримання даних магазинів та підписки
   useEffect(() => {
-    if (stores.length > 0 || !isLoading || activeSubscription) {
-      fetchUserLimitations();
+    if (!detailsLoading && activeSubscription) {
+      updateStoresLimitation();
     }
-  }, [stores, isLoading, activeSubscription]);
+  }, [detailsLoading, activeSubscription, planLimitations, stores]);
 
   const fetchUserStores = async () => {
     if (!user) return;
@@ -79,42 +83,32 @@ const UserStores = () => {
     }
   };
 
-  const fetchUserLimitations = async () => {
-    if (!user || !activeSubscription) {
+  const updateStoresLimitation = () => {
+    if (!activeSubscription) {
       setStoresLimit(0);
       setCanCreateStore(false);
       return;
     }
     
     try {
-      // Отримуємо обмеження для активного тарифу користувача
-      const { data: limitationData, error: limitationError } = await extendedSupabase
-        .from('tariff_plan_limitations')
-        .select(`
-          value,
-          limitation_types:limitation_type_id (name, description)
-        `)
-        .eq('tariff_plan_id', activeSubscription.tariff_plan.id)
-        .eq('limitation_types.name', 'stores_count');
-
-      if (limitationError) {
-        console.error('Error fetching limitations:', limitationError);
-        return;
-      }
-
-      if (limitationData && limitationData.length > 0) {
-        const storesLimitValue = parseInt(limitationData[0].value);
+      // Отримуємо конкретне обмеження за назвою
+      const storesLimitation = getLimitationByName('stores_count');
+      
+      if (storesLimitation) {
+        const storesLimitValue = storesLimitation.value;
+        console.log('Stores limit from limitation:', storesLimitValue);
         setStoresLimit(storesLimitValue);
         
         // Перевіряємо кількість магазинів строго менше ліміту
         setCanCreateStore(stores.length < storesLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
+        console.log('No stores_count limitation found, setting to 0');
         setStoresLimit(0);
         setCanCreateStore(false);
       }
     } catch (error) {
-      console.error('Error fetching limitations:', error);
+      console.error('Error updating stores limitation:', error);
     }
   };
 
