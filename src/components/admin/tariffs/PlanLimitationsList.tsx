@@ -9,11 +9,18 @@ import { usePlanLimitations } from '@/hooks/tariffs/usePlanLimitations';
 import { PlanLimitation } from './types';
 
 interface PlanLimitationsListProps {
-  selectedPlanId: string;
+  selectedPlanId?: string;
+  planLimitations?: PlanLimitation[];
 }
 
-export const PlanLimitationsList = ({ selectedPlanId }: PlanLimitationsListProps) => {
-  const { planLimitations, updateLimitationValue } = usePlanLimitations(selectedPlanId);
+export const PlanLimitationsList = ({ selectedPlanId, planLimitations: propsPlanLimitations }: PlanLimitationsListProps) => {
+  // Використовуємо хук лише якщо передано selectedPlanId
+  const { planLimitations: hookPlanLimitations, updateLimitationValue } = 
+    selectedPlanId ? usePlanLimitations(selectedPlanId) : { planLimitations: [], updateLimitationValue: null };
+  
+  // Визначаємо, які дані обмежень використовувати
+  const limitations = propsPlanLimitations || hookPlanLimitations;
+  
   const [editingLimitation, setEditingLimitation] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const { toast } = useToast();
@@ -29,6 +36,15 @@ export const PlanLimitationsList = ({ selectedPlanId }: PlanLimitationsListProps
   };
 
   const handleSaveEdit = async (limitationId: string) => {
+    if (!updateLimitationValue) {
+      toast({
+        title: 'Помилка',
+        description: 'Редагування недоступне в режимі перегляду',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     const numValue = Number(editValue);
     
     if (isNaN(numValue) || numValue < 0) {
@@ -57,14 +73,14 @@ export const PlanLimitationsList = ({ selectedPlanId }: PlanLimitationsListProps
     }
   };
 
-  if (planLimitations.length === 0) {
+  if (limitations.length === 0) {
     return <p className="text-sm text-muted-foreground">Немає обмежень для цього тарифного плану</p>;
   }
 
   return (
     <div className="space-y-2" id="plan-limitations-list">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {planLimitations.map((limitation) => (
+        {limitations.map((limitation) => (
           <div 
             key={limitation.id}
             className="flex items-center justify-between p-2 border rounded-md"
@@ -75,7 +91,7 @@ export const PlanLimitationsList = ({ selectedPlanId }: PlanLimitationsListProps
               <p className="text-sm text-muted-foreground">{limitation.limitation_type.description}</p>
             </div>
             
-            {editingLimitation === limitation.id ? (
+            {updateLimitationValue && editingLimitation === limitation.id ? (
               <div className="flex items-center space-x-2">
                 <Input
                   type="number"
@@ -105,14 +121,16 @@ export const PlanLimitationsList = ({ selectedPlanId }: PlanLimitationsListProps
             ) : (
               <div className="flex items-center space-x-2">
                 <span className="font-semibold">{limitation.value}</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleStartEdit(limitation)}
-                  id={`edit-limitation-${limitation.id}`}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
+                {updateLimitationValue && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleStartEdit(limitation)}
+                    id={`edit-limitation-${limitation.id}`}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             )}
           </div>

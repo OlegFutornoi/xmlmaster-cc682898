@@ -88,7 +88,9 @@ export const AddTariffPlanDialog: React.FC<TariffDialogProps> = ({
             </Badge>
             
             {/* Список обмежень */}
-            <PlanLimitationsList planLimitations={planLimitations} />
+            {planLimitations.length > 0 && (
+              <PlanLimitationsList planLimitations={planLimitations} />
+            )}
             
             {activeSubscription && (
               <Alert className="mt-4">

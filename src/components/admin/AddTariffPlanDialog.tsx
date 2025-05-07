@@ -121,7 +121,7 @@ const AddTariffPlanDialog = ({ userId, isOpen, onClose, onTariffAdded }: AddTari
             </Select>
           </div>
           
-          <PlanLimitationsList planLimitations={planLimitations} />
+          <PlanLimitationsList selectedPlanId={selectedPlanId} />
         </div>
         
         <DialogFooter>
