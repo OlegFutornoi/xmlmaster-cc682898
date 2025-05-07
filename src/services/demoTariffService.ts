@@ -4,11 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const createDemoTariffIfNotExist = async () => {
   try {
-    // Перевірка наявності тарифного плану з ціною 0
+    // Перевірка наявності демо-тарифного плану
     const { data: existingPlan, error: checkError } = await supabase
       .from('tariff_plans')
       .select('id')
       .eq('price', 0)
+      .eq('name', 'Демо доступ')
       .maybeSingle();
 
     if (checkError) {
@@ -18,6 +19,7 @@ export const createDemoTariffIfNotExist = async () => {
 
     // Якщо план вже існує, повертаємо його ID
     if (existingPlan) {
+      console.log('Demo tariff already exists:', existingPlan.id);
       return existingPlan.id;
     }
 
@@ -40,8 +42,8 @@ export const createDemoTariffIfNotExist = async () => {
         name: 'Демо доступ',
         price: 0,
         currency_id: currency.id,
-        is_permanent: false, // Змінили на false, щоб використовувати duration_days
-        duration_days: 14 // Додали тривалість пробного періоду (наприклад, 14 днів)
+        is_permanent: false, // 
+        duration_days: 14 // 14 днів демо-доступу
       })
       .select('id')
       .single();
@@ -51,6 +53,7 @@ export const createDemoTariffIfNotExist = async () => {
       return null;
     }
 
+    console.log('Created new demo tariff plan:', newPlan.id);
     return newPlan.id;
   } catch (error) {
     console.error('Error in createDemoTariffIfNotExist:', error);

@@ -20,6 +20,7 @@ export const useTariffForm = (planId: string | undefined) => {
   const { toast } = useToast();
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const form = useForm<z.infer<typeof tariffFormSchema>>({
     resolver: zodResolver(tariffFormSchema),
@@ -32,12 +33,23 @@ export const useTariffForm = (planId: string | undefined) => {
     },
   });
 
+  // Завантаження валют та даних тарифного плану
   useEffect(() => {
-    fetchCurrencies();
+    const initialize = async () => {
+      setIsLoading(true);
+      
+      // Завантажуємо спочатку валюти
+      await fetchCurrencies();
+      
+      // Завантажуємо дані тарифного плану, якщо це редагування
+      if (planId) {
+        await fetchTariffPlan();
+      }
+      
+      setIsLoading(false);
+    };
     
-    if (planId) {
-      fetchTariffPlan();
-    }
+    initialize();
   }, [planId]);
 
   const fetchCurrencies = async () => {
@@ -87,6 +99,7 @@ export const useTariffForm = (planId: string | undefined) => {
       return;
     }
     
+    // Заповнюємо форму отриманими даними
     form.reset({
       name: data.name,
       price: data.price,
@@ -94,6 +107,8 @@ export const useTariffForm = (planId: string | undefined) => {
       is_permanent: data.is_permanent,
       duration_days: data.duration_days,
     });
+    
+    console.log('Loaded tariff plan data:', data);
   };
 
   const onSubmit = async (navigate: (path: string) => void) => {
@@ -101,6 +116,7 @@ export const useTariffForm = (planId: string | undefined) => {
     
     try {
       const values = form.getValues();
+      console.log('Saving tariff plan values:', values);
       
       if (planId) {
         // Оновлення існуючого тарифу
@@ -156,6 +172,7 @@ export const useTariffForm = (planId: string | undefined) => {
     form,
     currencies,
     isSubmitting,
+    isLoading,
     onSubmit
   };
 };

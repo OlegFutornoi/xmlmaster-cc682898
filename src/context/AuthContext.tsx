@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import * as bcrypt from 'bcryptjs';
+import { tryActivateDefaultPlan } from '@/services/subscriptionService';
 
 interface User {
   id: string;
@@ -160,42 +161,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const assignFreePlan = async (userId: string) => {
-    try {
-      // Пошук безкоштовного тарифного плану "Демо доступ"
-      const { data: freePlan, error: freePlanError } = await supabase
-        .from('tariff_plans')
-        .select('id')
-        .eq('price', 0)
-        .maybeSingle();
-
-      if (freePlanError) {
-        console.error('Error finding free plan:', freePlanError);
-        return;
-      }
-
-      // Якщо знайдено безкоштовний план, активуємо його для користувача
-      if (freePlan) {
-        // Створюємо підписку для користувача
-        const { error: subscriptionError } = await supabase
-          .from('user_tariff_subscriptions')
-          .insert({
-            user_id: userId,
-            tariff_plan_id: freePlan.id,
-            is_active: true,
-            // Для безкоштовного плану end_date може бути null
-            end_date: null
-          });
-
-        if (subscriptionError) {
-          console.error('Error creating subscription:', subscriptionError);
-        }
-      }
-    } catch (error) {
-      console.error('Error assigning free plan:', error);
-    }
-  };
-
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
       // Check if email already exists
@@ -235,9 +200,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error('Помилка при створенні облікового запису');
       }
 
-      // Якщо користувач успішно створений, активуємо для нього безкоштовний план
+      // Автоматична активація демо-тарифу для нового користувача
       if (data && data.length > 0) {
-        await assignFreePlan(data[0].id);
+        console.log('Activating default plan for new user:', data[0].id);
+        await tryActivateDefaultPlan(data[0].id);
       }
 
       return true;

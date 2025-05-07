@@ -34,6 +34,8 @@ export const useUserSubscriptions = () => {
 
     setIsLoading(true);
     try {
+      console.log('Fetching subscriptions for user:', user.id);
+      
       // Отримуємо активну підписку
       const { data: activeData, error: activeError } = await supabase
         .from('user_tariff_subscriptions')
@@ -63,7 +65,7 @@ export const useUserSubscriptions = () => {
         const now = new Date();
         
         if (endDate < now) {
-          console.log('Підписка закінчилась, деактивуємо її');
+          console.log('Subscription expired, deactivating:', activeData.id);
           // Підписка закінчилась - деактивуємо її
           const { error: updateError } = await supabase
             .from('user_tariff_subscriptions')
@@ -71,20 +73,23 @@ export const useUserSubscriptions = () => {
             .eq('id', activeData.id);
           
           if (updateError) {
-            console.error('Помилка деактивації закінченої підписки:', updateError);
+            console.error('Error deactivating expired subscription:', updateError);
           }
           // Не встановлюємо активну підписку, так як вона закінчилась
           setActiveSubscription(null);
         } else {
+          console.log('Active subscription found:', activeData.id);
           // Перетворюємо дані для активної підписки
           const formattedActive = formatSubscriptionData(activeData);
           setActiveSubscription(formattedActive);
         }
-      } else if (activeData && activeData.tariff_plans.is_permanent) {
+      } else if (activeData && (activeData.tariff_plans.is_permanent || !activeData.end_date)) {
+        console.log('Permanent active subscription found:', activeData.id);
         // Постійна підписка
         const formattedActive = formatSubscriptionData(activeData);
         setActiveSubscription(formattedActive);
       } else {
+        console.log('No active subscription found');
         // Немає активної підписки
         setActiveSubscription(null);
       }

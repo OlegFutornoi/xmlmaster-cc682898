@@ -10,6 +10,7 @@ import UserSettings from './UserSettings';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
+import { tryActivateDefaultPlan } from '@/services/subscriptionService';
 
 const UserDashboard = () => {
   const { user } = useAuth();
@@ -19,18 +20,31 @@ const UserDashboard = () => {
     refetchSubscriptions 
   } = useUserSubscriptions();
   
-  // Ефект для регулярного оновлення підписки
   useEffect(() => {
-    // Початкове завантаження
-    refetchSubscriptions();
+    const checkAndActivateDemoPlan = async () => {
+      if (!user) return;
+      
+      // Якщо у користувача немає активної підписки, пробуємо активувати демо-план
+      if (!activeSubscription) {
+        console.log('No active subscription found, trying to activate demo plan');
+        const result = await tryActivateDefaultPlan(user.id);
+        if (result) {
+          console.log('Demo plan activated:', result);
+          await refetchSubscriptions();
+        }
+      }
+    };
     
-    // Встановлюємо інтервал для перевірки активності підписки кожну хвилину
+    // Перевіряємо підписку та активуємо демо-план при потребі
+    checkAndActivateDemoPlan();
+    
+    // Встановлюємо інтервал для регулярної перевірки підписки
     const intervalId = setInterval(refetchSubscriptions, 60000);
     
     return () => {
       clearInterval(intervalId); // Очищаємо інтервал при розмонтуванні компонента
     };
-  }, [user]);
+  }, [user, activeSubscription]);
 
   if (subscriptionsLoading) {
     return <div className="flex justify-center items-center h-screen">Завантаження...</div>;

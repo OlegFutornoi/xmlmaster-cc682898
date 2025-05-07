@@ -42,16 +42,16 @@ const TariffTabsContent: React.FC<TariffTabsContentProps> = ({
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsContent value="details">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl break-words">
                 Основна інформація про тарифний план
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <TariffDetailsForm form={form} currencies={currencies} />
             </CardContent>
             {id && (
-              <CardFooter>
+              <CardFooter className="p-4 md:p-6">
                 <Button
                   type="button"
                   className="ml-auto"
@@ -67,12 +67,12 @@ const TariffTabsContent: React.FC<TariffTabsContentProps> = ({
 
         <TabsContent value="items">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-xl flex justify-between items-center">
-                <span>Функції тарифного плану</span>
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl flex justify-between items-center flex-wrap gap-2">
+                <span className="break-words">Функції тарифного плану</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               {id && <TariffItems tariffPlanId={id} editMode={true} />}
             </CardContent>
           </Card>
@@ -80,10 +80,10 @@ const TariffTabsContent: React.FC<TariffTabsContentProps> = ({
 
         <TabsContent value="limitations">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-xl flex justify-between items-center">
-                <span>Обмеження тарифного плану</span>
-                <div className="flex items-center space-x-2">
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="text-lg md:text-xl flex justify-between items-center flex-wrap gap-2">
+                <span className="break-words">Обмеження тарифного плану</span>
+                <div className="flex items-center">
                   <LimitationTypeButton 
                     onLimitationTypeAdded={() => {
                       // Можемо тут оновити список типів обмежень, якщо потрібно
@@ -92,7 +92,7 @@ const TariffTabsContent: React.FC<TariffTabsContentProps> = ({
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               {id && <TariffLimitations tariffPlanId={id} />}
             </CardContent>
           </Card>
