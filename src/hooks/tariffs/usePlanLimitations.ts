@@ -107,10 +107,17 @@ export const usePlanLimitations = (selectedPlanId: string | null) => {
     );
   };
 
+  // Допоміжна функція для отримання значення обмеження за назвою
+  const getLimitationValueByName = (name: string): number => {
+    const limitation = getLimitationByName(name);
+    return limitation?.value || 0;
+  };
+
   return { 
     planLimitations, 
     isLoading,
     updateLimitationValue,
-    getLimitationByName
+    getLimitationByName,
+    getLimitationValueByName
   };
 };

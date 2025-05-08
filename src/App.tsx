@@ -17,6 +17,8 @@ import UserDashboard from "./pages/user/UserDashboard";
 import UserHome from "./pages/user/UserHome";
 import UserTariffs from "./pages/user/UserTariffs";
 import UserStores from "./pages/user/UserStores";
+import UserProducts from "./pages/user/UserProducts";
+import UserSuppliers from "./pages/user/UserSuppliers";
 import UserSettings from "./pages/user/UserSettings";
 import UserRoute from "./components/auth/UserRoute";
 
