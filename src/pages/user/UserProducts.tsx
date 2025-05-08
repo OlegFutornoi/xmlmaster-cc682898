@@ -8,14 +8,17 @@ import {
   ShoppingBag, 
   Upload, 
   Filter, 
-  Store, 
-  Package, 
-  AlertCircle,
-  Save,
-  CheckCircle2,
+  Check,
   X,
+  Plus,
+  Tag,
+  Image as ImageIcon,
+  Edit,
+  Eye,
+  Trash,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Filter
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +43,14 @@ import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 import { usePlanLimitations } from '@/hooks/tariffs/usePlanLimitations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -48,6 +59,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Типи для даних
 interface UserStore {
@@ -59,6 +71,7 @@ interface Supplier {
   id: string;
   name: string;
   url: string | null;
+  file_path: string | null;
 }
 
 interface Category {
@@ -76,6 +89,8 @@ interface Product {
   selected: boolean;
   category_id: string;
   images: string[];
+  vendor?: string;
+  stock_quantity?: number;
 }
 
 interface ParsedData {
@@ -106,6 +121,7 @@ const UserProducts = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
   
   // Обмеження за тарифним планом
   const { getLimitationValueByName } = usePlanLimitations(activeSubscription?.tariff_plan?.id || null);
@@ -196,7 +212,272 @@ const UserProducts = () => {
     }
   };
 
-  // Функція для завантаження XML файлу
+  // Завантаження файлу з посилання постачальника
+  const loadFileFromUrl = async () => {
+    if (!selectedSupplier) return;
+    
+    const supplier = suppliers.find(s => s.id === selectedSupplier);
+    if (!supplier || !supplier.url) {
+      toast({
+        title: 'Помилка',
+        description: 'У постачальника не вказано URL для завантаження файлу',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsLoadingFile(true);
+    setIsUploadDialogOpen(true);
+    setUploadStatus('parsing');
+    setIsParsingFile(true);
+    
+    try {
+      // Зробимо запит до URL постачальника
+      const response = await fetch(supplier.url);
+      if (!response.ok) {
+        throw new Error(`Помилка HTTP: ${response.status}`);
+      }
+      
+      const xmlText = await response.text();
+      parseXml(xmlText);
+    } catch (error) {
+      console.error('Error loading file from URL:', error);
+      setUploadStatus('error');
+      setIsParsingFile(false);
+      
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося завантажити файл з URL постачальника',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingFile(false);
+    }
+  };
+
+  // Універсальна функція для парсингу XML
+  const parseXml = async (xmlText: string) => {
+    try {
+      // Емуляція процесу парсингу з прогресом
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Парсимо XML
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      console.log('XML parsed:', xmlDoc);
+      
+      // Масиви для категорій та товарів
+      const parsedCategories: Category[] = [];
+      const parsedProducts: Product[] = [];
+      const categoryMap: { [key: string]: string } = {}; // Для зберігання відповідності id -> name
+      
+      // Спроба знайти категорії в різних форматах
+      // 1. Формат YML - категорії у <categories><category>
+      const ymlCategories = xmlDoc.querySelectorAll('categories > category');
+      if (ymlCategories.length > 0) {
+        console.log('Found YML categories:', ymlCategories.length);
+        
+        ymlCategories.forEach((element, index) => {
+          const id = element.getAttribute('id') || `category-${index}`;
+          const name = element.textContent || `Category ${index}`;
+          
+          parsedCategories.push({
+            id,
+            name,
+            selected: false,
+            products: []
+          });
+          
+          categoryMap[id] = name;
+        });
+      }
+      
+      // 2. Інший формат - категорії як окремі теги
+      if (ymlCategories.length === 0) {
+        const simpleCategories = xmlDoc.querySelectorAll('category');
+        if (simpleCategories.length > 0) {
+          console.log('Found simple categories:', simpleCategories.length);
+          
+          simpleCategories.forEach((element, index) => {
+            const id = element.getAttribute('id') || `category-${index}`;
+            const name = element.textContent || `Category ${index}`;
+            
+            parsedCategories.push({
+              id,
+              name,
+              selected: false,
+              products: []
+            });
+            
+            categoryMap[id] = name;
+          });
+        }
+      }
+      
+      // Вивести в консоль знайдені категорії
+      console.log('Parsed categories:', parsedCategories);
+      console.log('Category map:', categoryMap);
+      
+      // Спроба знайти товари в різних форматах
+      // 1. Формат YML - товари в <offers><offer>
+      const ymlOffers = xmlDoc.querySelectorAll('offers > offer');
+      if (ymlOffers.length > 0) {
+        console.log('Found YML offers:', ymlOffers.length);
+        
+        ymlOffers.forEach((offer, index) => {
+          const id = offer.getAttribute('id') || `product-${index}`;
+          const name = offer.querySelector('name')?.textContent || `Product ${index}`;
+          const priceElement = offer.querySelector('price');
+          const price = priceElement ? parseFloat(priceElement.textContent || '0') : 0;
+          const description = offer.querySelector('description')?.textContent || '';
+          const categoryId = offer.querySelector('categoryId')?.textContent || '';
+          const vendor = offer.querySelector('vendor')?.textContent || undefined;
+          const stockQuantity = offer.querySelector('stock_quantity')?.textContent || undefined;
+          
+          // Зображення товару - можуть бути як <picture> так і <image>
+          const images: string[] = [];
+          
+          // Перевіряємо теги <picture>
+          const pictureElements = offer.querySelectorAll('picture');
+          if (pictureElements.length > 0) {
+            pictureElements.forEach(pic => {
+              if (pic.textContent) {
+                images.push(pic.textContent);
+              }
+            });
+          }
+          
+          // Якщо немає <picture>, перевіряємо теги <image>
+          if (images.length === 0) {
+            const imageElements = offer.querySelectorAll('image');
+            imageElements.forEach(img => {
+              if (img.textContent) {
+                images.push(img.textContent);
+              }
+            });
+          }
+          
+          parsedProducts.push({
+            id,
+            name,
+            price,
+            description,
+            selected: false,
+            category_id: categoryId,
+            images,
+            vendor,
+            stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined
+          });
+        });
+      }
+      
+      // 2. Формат з <item> таг замість <offer>
+      if (parsedProducts.length === 0) {
+        const itemElements = xmlDoc.querySelectorAll('item');
+        if (itemElements.length > 0) {
+          console.log('Found item elements:', itemElements.length);
+          
+          itemElements.forEach((item, index) => {
+            const id = item.getAttribute('id') || `product-${index}`;
+            const name = item.querySelector('name')?.textContent || `Product ${index}`;
+            
+            // Ціна може бути в різних тегах
+            let price = 0;
+            const priceElements = ['price', 'priceusd', 'priceUSD', 'priceUah'];
+            for (const priceTag of priceElements) {
+              const priceElement = item.querySelector(priceTag);
+              if (priceElement && priceElement.textContent) {
+                price = parseFloat(priceElement.textContent);
+                break;
+              }
+            }
+            
+            const description = item.querySelector('description')?.textContent || '';
+            const categoryId = item.querySelector('categoryId')?.textContent || '';
+            const vendor = item.querySelector('vendor')?.textContent || undefined;
+            const stockQuantity = item.querySelector('stock_quantity')?.textContent || undefined;
+            
+            // Зображення товару
+            const images: string[] = [];
+            
+            // Перевіряємо різні типи тегів для зображень
+            ['image', 'picture', 'img'].forEach(imgTag => {
+              const imgElements = item.querySelectorAll(imgTag);
+              imgElements.forEach(img => {
+                if (img.textContent) {
+                  images.push(img.textContent);
+                }
+              });
+            });
+            
+            parsedProducts.push({
+              id,
+              name,
+              price,
+              description,
+              selected: false,
+              category_id: categoryId,
+              images,
+              vendor,
+              stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined
+            });
+          });
+        }
+      }
+      
+      // Вивести в консоль знайдені товари
+      console.log('Parsed products:', parsedProducts);
+      
+      // Додаємо товари до відповідних категорій
+      parsedCategories.forEach(category => {
+        category.products = parsedProducts.filter(product => product.category_id === category.id);
+      });
+      
+      // Якщо категорій не знайдено, але є товари, створюємо категорію "Без категорії"
+      if (parsedCategories.length === 0 && parsedProducts.length > 0) {
+        const defaultCategory = {
+          id: 'default',
+          name: 'Без категорії',
+          selected: false,
+          products: parsedProducts
+        };
+        parsedCategories.push(defaultCategory);
+        
+        // Оновлюємо категорії товарів
+        parsedProducts.forEach(product => {
+          product.category_id = 'default';
+        });
+      }
+      
+      setParsedData({
+        categories: parsedCategories,
+        products: parsedProducts
+      });
+      
+      setUploadStatus('success');
+      setIsParsingFile(false);
+      
+      toast({
+        title: 'Успішно',
+        description: `Файл оброблено: знайдено ${parsedCategories.length} категорій та ${parsedProducts.length} товарів`,
+      });
+    } catch (error) {
+      console.error('Error parsing XML:', error);
+      setUploadStatus('error');
+      setIsParsingFile(false);
+      
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося обробити XML файл',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Функція для завантаження XML файлу з комп'ютера
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -209,96 +490,8 @@ const UserProducts = () => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       if (!e.target?.result) return;
-      
-      try {
-        // Емуляція процесу парсингу з прогресом
-        for (let i = 0; i <= 100; i += 10) {
-          setUploadProgress(i);
-          await new Promise(resolve => setTimeout(resolve, 150)); // Емуляція часу обробки
-        }
-        
-        // Парсимо XML
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(e.target.result as string, 'text/xml');
-        
-        // Отримуємо категорії
-        const categoriesElements = xmlDoc.getElementsByTagName('category');
-        const parsedCategories: Category[] = [];
-        
-        for (let i = 0; i < categoriesElements.length; i++) {
-          const element = categoriesElements[i];
-          if (element.textContent) {
-            parsedCategories.push({
-              id: element.getAttribute('id') || `category-${i}`,
-              name: element.textContent,
-              selected: false,
-              products: []
-            });
-          }
-        }
-        
-        // Отримуємо товари
-        const offersElements = xmlDoc.getElementsByTagName('offer');
-        const parsedProducts: Product[] = [];
-        
-        for (let i = 0; i < offersElements.length; i++) {
-          const offer = offersElements[i];
-          
-          const name = offer.getElementsByTagName('name')[0]?.textContent || `Product ${i}`;
-          const price = parseFloat(offer.getElementsByTagName('price')[0]?.textContent || '0');
-          const description = offer.getElementsByTagName('description')[0]?.textContent || '';
-          const categoryId = offer.getElementsByTagName('categoryId')[0]?.textContent || '';
-          
-          // Зображення товару
-          const pictureElements = offer.getElementsByTagName('picture');
-          const images: string[] = [];
-          
-          for (let j = 0; j < pictureElements.length; j++) {
-            if (pictureElements[j].textContent) {
-              images.push(pictureElements[j].textContent!);
-            }
-          }
-          
-          parsedProducts.push({
-            id: offer.getAttribute('id') || `product-${i}`,
-            name,
-            price,
-            description,
-            selected: false,
-            category_id: categoryId,
-            images
-          });
-        }
-        
-        // Додамо товари до відповідних категорій
-        parsedCategories.forEach(category => {
-          category.products = parsedProducts.filter(product => product.category_id === category.id);
-        });
-        
-        setParsedData({
-          categories: parsedCategories,
-          products: parsedProducts
-        });
-        
-        setUploadStatus('success');
-        setIsParsingFile(false);
-        
-        toast({
-          title: 'Успішно',
-          description: `Файл оброблено: знайдено ${parsedCategories.length} категорій та ${parsedProducts.length} товарів`,
-        });
-        
-      } catch (error) {
-        console.error('Error parsing XML:', error);
-        setUploadStatus('error');
-        setIsParsingFile(false);
-        
-        toast({
-          title: 'Помилка',
-          description: 'Не вдалося обробити XML файл',
-          variant: 'destructive'
-        });
-      }
+      const xmlText = e.target.result as string;
+      parseXml(xmlText);
     };
     
     reader.onerror = () => {
@@ -382,10 +575,98 @@ const UserProducts = () => {
       setSelectedProducts(newSelectedProducts);
     }
   };
+  
+  // Вибір всіх товарів в категорії
+  const selectAllInCategory = (categoryId: string) => {
+    const updatedCategories = parsedData?.categories.map(category => {
+      if (category.id === categoryId) {
+        // Встановлюємо всі товари в категорії як вибрані
+        const updatedProducts = category.products.map(product => ({ 
+          ...product, 
+          selected: true 
+        }));
+        
+        return {
+          ...category,
+          products: updatedProducts,
+          selected: updatedProducts.length > 0
+        };
+      }
+      return category;
+    });
+    
+    if (updatedCategories) {
+      // Оновлюємо список продуктів
+      const allProducts = updatedCategories.flatMap(c => c.products);
+      
+      setParsedData({
+        categories: updatedCategories,
+        products: allProducts
+      });
+      
+      // Оновлюємо список вибраних категорій
+      const newSelectedCategories = updatedCategories
+        .filter(category => category.selected)
+        .map(category => category.id);
+        
+      setSelectedCategories(newSelectedCategories);
+      
+      // Оновлюємо список вибраних продуктів
+      const newSelectedProducts = allProducts
+        .filter(product => product.selected)
+        .map(product => product.id);
+        
+      setSelectedProducts(newSelectedProducts);
+    }
+  };
+  
+  // Скасування вибору всіх товарів в категорії
+  const deselectAllInCategory = (categoryId: string) => {
+    const updatedCategories = parsedData?.categories.map(category => {
+      if (category.id === categoryId) {
+        // Встановлюємо всі товари в категорії як не вибрані
+        const updatedProducts = category.products.map(product => ({ 
+          ...product, 
+          selected: false 
+        }));
+        
+        return {
+          ...category,
+          products: updatedProducts,
+          selected: false
+        };
+      }
+      return category;
+    });
+    
+    if (updatedCategories) {
+      // Оновлюємо список продуктів
+      const allProducts = updatedCategories.flatMap(c => c.products);
+      
+      setParsedData({
+        categories: updatedCategories,
+        products: allProducts
+      });
+      
+      // Оновлюємо список вибраних категорій
+      const newSelectedCategories = updatedCategories
+        .filter(category => category.selected)
+        .map(category => category.id);
+        
+      setSelectedCategories(newSelectedCategories);
+      
+      // Оновлюємо список вибраних продуктів
+      const newSelectedProducts = allProducts
+        .filter(product => product.selected)
+        .map(product => product.id);
+        
+      setSelectedProducts(newSelectedProducts);
+    }
+  };
 
   // Функція для збереження вибраних товарів
   const saveSelectedProducts = async () => {
-    if (!selectedStore || !parsedData) return;
+    if (!selectedStore || !selectedSupplier || !parsedData) return;
     
     const selectedProductsData = parsedData.products.filter(product => product.selected);
     
@@ -411,6 +692,7 @@ const UserProducts = () => {
         description: product.description || null,
         price: product.price,
         category_id: product.category_id,
+        manufacturer: product.vendor || null,
         created_at: new Date().toISOString()
       }));
       
@@ -448,6 +730,16 @@ const UserProducts = () => {
       // Оновлюємо лічильник товарів
       fetchStoreProductsCount();
       
+      // Оновлюємо лічильник товарів у постачальника
+      const { error: supplierError } = await extendedSupabase
+        .from('suppliers')
+        .update({ product_count: selectedProductsData.length })
+        .eq('id', selectedSupplier);
+      
+      if (supplierError) {
+        console.error('Error updating supplier product count:', supplierError);
+      }
+      
       toast({
         title: 'Успішно',
         description: `Додано ${selectedProductsData.length} товарів до магазину`,
@@ -479,7 +771,8 @@ const UserProducts = () => {
   // Фільтрація продуктів за пошуком та категоріями
   const filteredProducts = parsedData?.products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                         (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (product.vendor && product.vendor.toLowerCase().includes(searchQuery.toLowerCase()));
     
     // Якщо вибрано категорії, фільтруємо за ними, інакше показуємо всі продукти, що відповідають пошуку
     const matchesCategory = selectedCategories.length === 0 || 
@@ -500,6 +793,15 @@ const UserProducts = () => {
     });
   }
 
+  // Функція форматування ціни
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('uk-UA', {
+      style: 'currency',
+      currency: 'UAH',
+      minimumFractionDigits: 2,
+    }).format(price);
+  }
+
   return (
     <div className="container mx-auto py-4 px-4">
       <div className="flex justify-between items-center mb-4">
@@ -516,16 +818,46 @@ const UserProducts = () => {
             </Badge>
           )}
           
-          {/* Кнопка завантаження XML */}
-          <Button 
-            variant="outline" 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!selectedStore || !selectedSupplier}
-            id="upload-xml-button"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Завантажити XML
-          </Button>
+          {/* Кнопки для завантаження */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!selectedStore || !selectedSupplier}
+                  id="upload-xml-button"
+                  size="sm"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  З комп'ютера
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Завантажити XML-файл з комп'ютера
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="secondary" 
+                  onClick={loadFileFromUrl}
+                  disabled={!selectedStore || !selectedSupplier || !suppliers.find(s => s.id === selectedSupplier)?.url}
+                  id="load-from-url-button"
+                  size="sm"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  З сайту
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Завантажити XML-файл з URL постачальника
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <input 
             type="file" 
             accept=".xml" 
@@ -570,7 +902,10 @@ const UserProducts = () => {
             </SelectTrigger>
             <SelectContent>
               {suppliers.map((supplier) => (
-                <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                  {supplier.url && <span className="ml-2 text-xs text-green-600">(є URL)</span>}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -579,7 +914,10 @@ const UserProducts = () => {
       
       {/* Основний контент сторінки */}
       {isLoading ? (
-        <p>Завантаження...</p>
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+          <span className="ml-3">Завантаження...</span>
+        </div>
       ) : stores.length === 0 ? (
         <Card>
           <CardHeader>
@@ -593,7 +931,7 @@ const UserProducts = () => {
               onClick={() => navigate('/user/dashboard/stores')} 
               variant="secondary"
             >
-              <Store className="h-4 w-4 mr-2" />
+              <ShoppingBag className="h-4 w-4 mr-2" />
               Перейти до сторінки магазинів
             </Button>
           </CardContent>
@@ -611,7 +949,7 @@ const UserProducts = () => {
               onClick={() => navigate('/user/dashboard/suppliers')} 
               variant="secondary"
             >
-              <Package className="h-4 w-4 mr-2" />
+              <Tag className="h-4 w-4 mr-2" />
               Перейти до сторінки постачальників
             </Button>
           </CardContent>
@@ -643,7 +981,7 @@ const UserProducts = () => {
           <CardContent>
             {!canAddProducts ? (
               <div className="flex flex-col items-center p-4 border rounded bg-red-50">
-                <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
+                <X className="h-10 w-10 text-red-500 mb-2" />
                 <p className="font-medium text-center">
                   Ви досягли ліміту товарів для цього магазину
                 </p>
@@ -660,15 +998,28 @@ const UserProducts = () => {
               </div>
             ) : (
               <div className="text-center">
-                <Button 
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="secondary"
-                  className="mx-auto"
-                  id="upload-xml-central-button"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Завантажити XML-файл
-                </Button>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button 
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="secondary"
+                    className="flex-grow-0"
+                    id="upload-xml-central-button"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Завантажити XML з комп'ютера
+                  </Button>
+                  
+                  <Button 
+                    onClick={loadFileFromUrl}
+                    variant="outline"
+                    className="flex-grow-0"
+                    id="load-url-central-button"
+                    disabled={!suppliers.find(s => s.id === selectedSupplier)?.url}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Завантажити XML з сайту постачальника
+                  </Button>
+                </div>
                 <p className="mt-2 text-sm text-gray-500">
                   Завантажте XML-файл від постачальника для імпорту товарів
                 </p>
@@ -680,11 +1031,11 @@ const UserProducts = () => {
       
       {/* Діалог обробки завантаженого XML */}
       <Dialog open={isUploadDialogOpen} onOpenChange={(open) => {
-        if (!isParsingFile && !isSaving) {
+        if (!isParsingFile && !isSaving && !isLoadingFile) {
           setIsUploadDialogOpen(open);
         }
       }}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {isParsingFile 
@@ -714,11 +1065,11 @@ const UserProducts = () => {
             </div>
           ) : uploadStatus === 'error' ? (
             <div className="flex flex-col items-center py-10">
-              <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+              <X className="h-16 w-16 text-red-500 mb-4" />
               <p className="text-center">Не вдалося обробити файл. Перевірте формат XML та спробуйте знову.</p>
             </div>
           ) : parsedData && (
-            <>
+            <div className="flex flex-col h-full overflow-hidden">
               {/* Пошук та фільтрація */}
               <div className="mb-4 flex items-center gap-2">
                 <Input
@@ -739,136 +1090,193 @@ const UserProducts = () => {
                 </Button>
               </div>
               
-              {/* Вкладки для перегляду категорій та товарів */}
-              <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-                <TabsList className="w-full mb-4">
-                  <TabsTrigger value="products" className="flex-1">
-                    Товари ({filteredProducts.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="categories" className="flex-1">
-                    Категорії ({filteredCategories.length})
-                  </TabsTrigger>
-                </TabsList>
-                
-                {/* Вкладка з товарами */}
-                <TabsContent value="products" className="max-h-[50vh] overflow-y-auto">
-                  {filteredProducts.length === 0 ? (
-                    <p className="text-center py-10 text-gray-500">Немає товарів, що відповідають критеріям пошуку</p>
-                  ) : (
-                    <div>
-                      <div className="flex justify-between mb-2 text-sm font-medium text-gray-500">
-                        <span>Вибрано: {selectedProducts.length} товарів</span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {Object.entries(productsByCategory).map(([categoryId, products]) => {
-                          // Перевіряємо, чи є відфільтровані товари в цій категорії
-                          const categoryProducts = products.filter(p => 
-                            filteredProducts.some(fp => fp.id === p.id)
-                          );
-                          
-                          if (categoryProducts.length === 0) return null;
-                          
-                          // Знаходимо категорію
-                          const category = parsedData.categories.find(c => c.id === categoryId);
-                          
-                          return (
-                            <Accordion type="single" collapsible key={categoryId}>
-                              <AccordionItem value={categoryId}>
-                                <AccordionTrigger className="py-2">
-                                  <div className="flex items-center">
-                                    <span>{category?.name || "Без категорії"}</span>
-                                    <Badge variant="secondary" className="ml-2">
-                                      {categoryProducts.length}
-                                    </Badge>
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="space-y-1">
-                                    {categoryProducts.map(product => (
-                                      <div 
-                                        key={product.id} 
-                                        className={`rounded-md p-2 flex items-center gap-2 ${
-                                          product.selected ? 'bg-blue-50' : 'hover:bg-gray-50'
-                                        }`}
-                                      >
-                                        <Checkbox 
-                                          id={`product-${product.id}`} 
-                                          checked={product.selected}
-                                          onCheckedChange={() => handleProductSelect(product.id)}
-                                        />
-                                        <div className="flex-1 ml-2">
-                                          <label 
-                                            htmlFor={`product-${product.id}`}
-                                            className="flex justify-between cursor-pointer"
-                                          >
-                                            <span className="font-medium">{product.name}</span>
-                                            <span className="text-blue-600 font-medium">
-                                              {product.price.toFixed(2)} грн
-                                            </span>
-                                          </label>
-                                          {product.description && (
-                                            <p className="text-xs text-gray-500 truncate">
-                                              {product.description.substring(0, 100)}
-                                              {product.description.length > 100 ? '...' : ''}
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                {/* Вкладка з категоріями */}
-                <TabsContent value="categories" className="max-h-[50vh] overflow-y-auto">
-                  {filteredCategories.length === 0 ? (
-                    <p className="text-center py-10 text-gray-500">Немає категорій, що відповідають критеріям пошуку</p>
-                  ) : (
-                    <div>
-                      <div className="flex justify-between mb-2 text-sm font-medium text-gray-500">
-                        <span>Вибрано: {selectedCategories.length} категорій</span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {filteredCategories.map(category => (
-                          <div 
-                            key={category.id} 
-                            className={`rounded-md p-3 flex items-center gap-2 ${
-                              category.selected ? 'bg-blue-50' : 'hover:bg-gray-50'
-                            }`}
-                          >
-                            <Checkbox 
-                              id={`category-${category.id}`} 
-                              checked={category.selected}
-                              onCheckedChange={() => handleCategorySelect(category.id)}
-                            />
-                            <div className="flex-1 ml-2">
+              {/* Статистика і вибрані товари */}
+              <div className="flex justify-between items-center mb-2 text-sm font-medium">
+                <div>
+                  <Badge variant="secondary">
+                    {parsedData.products.length} товарів
+                  </Badge>
+                  <Badge variant="outline" className="ml-2">
+                    {parsedData.categories.length} категорій
+                  </Badge>
+                </div>
+                <div>
+                  <Badge variant={selectedProducts.length > remainingProductsLimit ? "destructive" : "default"}>
+                    Вибрано: {selectedProducts.length} товарів
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Двоколоночний вид для категорій та товарів */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[60vh] overflow-hidden">
+                {/* Ліва колонка - категорії */}
+                <div className="border rounded-md p-2 overflow-y-auto h-[60vh]">
+                  <div className="font-semibold mb-2 text-sm">Категорії</div>
+                  {filteredCategories.length > 0 ? (
+                    <div className="space-y-2">
+                      {filteredCategories.map(category => (
+                        <div 
+                          key={category.id} 
+                          className={`p-2 rounded-md cursor-pointer ${
+                            selectedCategories.includes(category.id)
+                              ? 'bg-blue-50 border border-blue-200'
+                              : 'hover:bg-gray-50 border border-transparent'
+                          }`}
+                          onClick={() => handleCategorySelect(category.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <Checkbox 
+                                checked={category.selected} 
+                                id={`category-${category.id}`}
+                              />
                               <label 
                                 htmlFor={`category-${category.id}`}
-                                className="flex justify-between cursor-pointer"
+                                className="ml-2 font-medium text-sm cursor-pointer flex-1"
                               >
-                                <span className="font-medium">{category.name}</span>
-                                <Badge variant="outline">
-                                  {category.products.length} товарів
-                                </Badge>
+                                {category.name}
                               </label>
                             </div>
+                            <Badge variant="outline" size="sm">
+                              {category.products.length}
+                            </Badge>
                           </div>
-                        ))}
-                      </div>
+                          
+                          <div className="mt-2 flex gap-1 justify-end">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectAllInCategory(category.id);
+                              }}
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              Вибрати всі
+                            </Button>
+                            
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deselectAllInCategory(category.id);
+                              }}
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Очистити
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center py-4 text-gray-500">Немає категорій, що відповідають пошуку</p>
+                  )}
+                </div>
+                
+                {/* Права колонка - товари */}
+                <div className="border rounded-md p-2 overflow-hidden md:col-span-2">
+                  <div className="font-semibold mb-2 text-sm flex justify-between">
+                    <span>Товари</span>
+                    <Badge variant="outline">
+                      {filteredProducts.length} товарів
+                    </Badge>
+                  </div>
+                  
+                  {filteredProducts.length > 0 ? (
+                    <div className="overflow-y-auto h-[56vh]">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-white">
+                          <TableRow>
+                            <TableHead className="w-12"></TableHead>
+                            <TableHead className="w-16"></TableHead>
+                            <TableHead>Назва</TableHead>
+                            <TableHead className="hidden md:table-cell">Виробник</TableHead>
+                            <TableHead className="text-right">Ціна</TableHead>
+                            <TableHead className="hidden md:table-cell text-right">Кількість</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredProducts.map(product => (
+                            <TableRow 
+                              key={product.id}
+                              className={product.selected ? 'bg-blue-50' : ''}
+                            >
+                              <TableCell className="p-2">
+                                <Checkbox 
+                                  checked={product.selected} 
+                                  id={`product-${product.id}`}
+                                  onCheckedChange={() => handleProductSelect(product.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                {product.images.length > 0 ? (
+                                  <div className="w-12 h-12 rounded overflow-hidden border">
+                                    <img 
+                                      src={product.images[0]} 
+                                      alt={product.name} 
+                                      className="w-full h-full object-contain"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = '/placeholder.svg';
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                                    <ImageIcon className="text-gray-400 h-5 w-5" />
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm font-medium">{product.name}</div>
+                                <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                                  ID: {product.id}
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                <div className="text-sm">{product.vendor || '-'}</div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="text-sm font-medium text-blue-700">{formatPrice(product.price)}</div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell text-right">
+                                {product.stock_quantity !== undefined ? (
+                                  <Badge variant={product.stock_quantity > 0 ? "outline" : "secondary"}>
+                                    {product.stock_quantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[56vh]">
+                      <Filter className="text-gray-400 h-10 w-10 mb-2" />
+                      <p className="text-gray-500">
+                        Немає товарів, що відповідають критеріям пошуку
+                      </p>
+                      <Button 
+                        variant="link" 
+                        size="sm"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedCategories([]);
+                        }}
+                      >
+                        Скинути фільтри
+                      </Button>
                     </div>
                   )}
-                </TabsContent>
-              </Tabs>
-            </>
+                </div>
+              </div>
+            </div>
           )}
           
           <DialogFooter>
@@ -890,12 +1298,12 @@ const UserProducts = () => {
                   {selectedProducts.length > 0 ? (
                     selectedProducts.length <= remainingProductsLimit ? (
                       <span className="flex items-center text-green-600">
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        <Check className="h-4 w-4 mr-1" />
                         Обрано: {selectedProducts.length} товарів
                       </span>
                     ) : (
                       <span className="flex items-center text-red-600">
-                        <AlertCircle className="h-4 w-4 mr-1" />
+                        <X className="h-4 w-4 mr-1" />
                         Перевищено ліміт на {selectedProducts.length - remainingProductsLimit} товарів
                       </span>
                     )
@@ -918,10 +1326,13 @@ const UserProducts = () => {
                   id="save-products-button"
                 >
                   {isSaving ? (
-                    <>Збереження...</>
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
+                      Збереження...
+                    </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Plus className="h-4 w-4 mr-2" />
                       Зберегти вибрані товари
                     </>
                   )}
