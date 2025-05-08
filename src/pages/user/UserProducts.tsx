@@ -18,6 +18,10 @@ import {
   Trash,
   ChevronDown,
   ChevronUp,
+  Maximize2,
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +63,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { toast } from "sonner";
 
 // Типи для даних
 interface UserStore {
@@ -80,16 +94,27 @@ interface Category {
   products: Product[];
 }
 
+interface ProductAttribute {
+  name: string;
+  value: string;
+}
+
 interface Product {
   id: string;
+  external_id?: string;
   name: string;
   price: number;
+  old_price?: number;
+  sale_price?: number;
   description?: string;
   selected: boolean;
   category_id: string;
   images: string[];
   vendor?: string;
+  vendor_code?: string;
   stock_quantity?: number;
+  sku?: string;
+  attributes: ProductAttribute[];
 }
 
 interface ParsedData {
@@ -121,6 +146,12 @@ const UserProducts = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [isFullscreenDialog, setIsFullscreenDialog] = useState(false);
+  
+  // Стани для режиму перегляду перед збереженням
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   
   // Обмеження за тарифним планом
   const { getLimitationValueByName } = usePlanLimitations(activeSubscription?.tariff_plan?.id || null);
@@ -331,10 +362,16 @@ const UserProducts = () => {
           const name = offer.querySelector('name')?.textContent || `Product ${index}`;
           const priceElement = offer.querySelector('price');
           const price = priceElement ? parseFloat(priceElement.textContent || '0') : 0;
+          const oldPriceElement = offer.querySelector('oldprice') || offer.querySelector('old_price');
+          const oldPrice = oldPriceElement ? parseFloat(oldPriceElement.textContent || '0') : undefined;
+          const salePriceElement = offer.querySelector('sale_price');
+          const salePrice = salePriceElement ? parseFloat(salePriceElement.textContent || '0') : undefined;
           const description = offer.querySelector('description')?.textContent || '';
           const categoryId = offer.querySelector('categoryId')?.textContent || '';
           const vendor = offer.querySelector('vendor')?.textContent || undefined;
+          const vendorCode = offer.querySelector('vendorCode')?.textContent || undefined;
           const stockQuantity = offer.querySelector('stock_quantity')?.textContent || undefined;
+          const sku = offer.querySelector('sku')?.textContent || undefined;
           
           // Зображення товару - можуть бути як <picture> так і <image>
           const images: string[] = [];
@@ -359,21 +396,42 @@ const UserProducts = () => {
             });
           }
           
+          // Збираємо атрибути товару (параметри)
+          const attributes: ProductAttribute[] = [];
+          const paramElements = offer.querySelectorAll('param');
+          
+          paramElements.forEach(param => {
+            const name = param.getAttribute('name') || '';
+            const value = param.textContent || '';
+            if (name && value) {
+              attributes.push({
+                name,
+                value
+              });
+            }
+          });
+          
           parsedProducts.push({
             id,
+            external_id: id,
             name,
             price,
+            old_price: oldPrice,
+            sale_price: salePrice,
             description,
             selected: false,
             category_id: categoryId,
             images,
             vendor,
-            stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined
+            vendor_code: vendorCode,
+            stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined,
+            sku,
+            attributes
           });
         });
       }
       
-      // 2. Формат з <item> таг замість <offer>
+      // 2. Формат з <item> тег замість <offer>
       if (parsedProducts.length === 0) {
         const itemElements = xmlDoc.querySelectorAll('item');
         if (itemElements.length > 0) {
@@ -394,10 +452,19 @@ const UserProducts = () => {
               }
             }
             
+            // Додаткові ціни
+            const oldPriceElement = item.querySelector('oldprice') || item.querySelector('old_price') || item.querySelector('priceOld');
+            const oldPrice = oldPriceElement ? parseFloat(oldPriceElement.textContent || '0') : undefined;
+            
+            const salePriceElement = item.querySelector('sale_price') || item.querySelector('salePrice');
+            const salePrice = salePriceElement ? parseFloat(salePriceElement.textContent || '0') : undefined;
+            
             const description = item.querySelector('description')?.textContent || '';
             const categoryId = item.querySelector('categoryId')?.textContent || '';
             const vendor = item.querySelector('vendor')?.textContent || undefined;
+            const vendorCode = item.querySelector('vendorCode')?.textContent || undefined;
             const stockQuantity = item.querySelector('stock_quantity')?.textContent || undefined;
+            const sku = item.querySelector('sku')?.textContent || item.querySelector('article')?.textContent || undefined;
             
             // Зображення товару
             const images: string[] = [];
@@ -412,16 +479,37 @@ const UserProducts = () => {
               });
             });
             
+            // Збираємо атрибути товару (параметри)
+            const attributes: ProductAttribute[] = [];
+            const paramElements = item.querySelectorAll('param');
+            
+            paramElements.forEach(param => {
+              const name = param.getAttribute('name') || '';
+              const value = param.textContent || '';
+              if (name && value) {
+                attributes.push({
+                  name,
+                  value
+                });
+              }
+            });
+            
             parsedProducts.push({
               id,
+              external_id: id,
               name,
               price,
+              old_price: oldPrice,
+              sale_price: salePrice,
               description,
               selected: false,
               category_id: categoryId,
               images,
               vendor,
-              stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined
+              vendor_code: vendorCode,
+              stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined,
+              sku,
+              attributes
             });
           });
         }
@@ -663,11 +751,10 @@ const UserProducts = () => {
     }
   };
 
-  // Функція для збереження вибраних товарів
-  const saveSelectedProducts = async () => {
-    if (!selectedStore || !selectedSupplier || !parsedData) return;
-    
-    const selectedProductsData = parsedData.products.filter(product => product.selected);
+  // Функція для переходу в режим перегляду товарів
+  const showProductsPreview = () => {
+    // Отримуємо всі вибрані товари
+    const selectedProductsData = parsedData?.products.filter(product => product.selected) || [];
     
     // Перевіряємо обмеження кількості товарів
     if (selectedProductsData.length > remainingProductsLimit) {
@@ -679,37 +766,81 @@ const UserProducts = () => {
       return;
     }
     
+    // Встановлюємо дані для перегляду
+    setPreviewProducts(selectedProductsData);
+    setCurrentPreviewIndex(0);
+    setIsPreviewMode(true);
+  };
+
+  // Функція для збереження вибраних товарів
+  const saveSelectedProducts = async () => {
+    if (!selectedStore || !selectedSupplier || !previewProducts.length) return;
+    
     setIsSaving(true);
     
     try {
-      // Підготовка даних для збереження
-      const productsToSave = selectedProductsData.map(product => ({
-        user_id: user?.id,
-        store_id: selectedStore,
-        supplier_id: selectedSupplier,
-        name: product.name,
-        description: product.description || null,
-        price: product.price,
-        category_id: product.category_id,
-        manufacturer: product.vendor || null,
-        created_at: new Date().toISOString()
-      }));
-      
-      // Зберігаємо товари
-      const { data, error } = await extendedSupabase
-        .from('products')
-        .insert(productsToSave)
-        .select();
+      // Для кожного товару з вибраних
+      for (const product of previewProducts) {
+        // 1. Спочатку перевіряємо, чи існує категорія, якщо ні - створюємо
+        let categoryId = product.category_id;
+        const categoryName = parsedData?.categories.find(c => c.id === product.category_id)?.name || 'Без категорії';
         
-      if (error) throw error;
-      
-      // Зберігаємо зображення товарів
-      for (let i = 0; i < selectedProductsData.length; i++) {
-        const product = selectedProductsData[i];
-        const savedProduct = data[i];
+        // Шукаємо категорію за назвою і магазином
+        const { data: existingCategories, error: categoryError } = await extendedSupabase
+          .from('product_categories')
+          .select('id')
+          .eq('name', categoryName)
+          .eq('store_id', selectedStore)
+          .eq('user_id', user?.id);
+          
+        if (categoryError) throw categoryError;
         
-        if (product.images.length > 0) {
-          // Зберігаємо посилання на зображення
+        if (!existingCategories?.length) {
+          // Створюємо нову категорію
+          const { data: newCategory, error } = await extendedSupabase
+            .from('product_categories')
+            .insert({
+              name: categoryName,
+              user_id: user?.id,
+              store_id: selectedStore,
+              supplier_id: selectedSupplier,
+              external_id: product.category_id
+            })
+            .select('id')
+            .single();
+            
+          if (error) throw error;
+          categoryId = newCategory.id;
+        } else {
+          categoryId = existingCategories[0].id;
+        }
+        
+        // 2. Зберігаємо товар
+        const { data: savedProduct, error: productError } = await extendedSupabase
+          .from('products')
+          .insert({
+            name: product.name,
+            description: product.description || null,
+            price: product.price,
+            old_price: product.old_price,
+            sale_price: product.sale_price,
+            stock_quantity: product.stock_quantity || 0,
+            sku: product.sku,
+            vendor: product.vendor,
+            vendor_code: product.vendor_code,
+            external_id: product.external_id,
+            category_id: categoryId,
+            supplier_id: selectedSupplier,
+            store_id: selectedStore,
+            user_id: user?.id
+          })
+          .select()
+          .single();
+          
+        if (productError) throw productError;
+        
+        // 3. Зберігаємо зображення товару
+        if (product.images?.length) {
           const productImages = product.images.map((imageUrl, index) => ({
             product_id: savedProduct.id,
             image_url: imageUrl,
@@ -724,15 +855,32 @@ const UserProducts = () => {
             console.error('Error saving product images:', imagesError);
           }
         }
+        
+        // 4. Зберігаємо атрибути товару
+        if (product.attributes?.length) {
+          const productAttributes = product.attributes.map(attr => ({
+            product_id: savedProduct.id,
+            attribute_name: attr.name,
+            attribute_value: attr.value
+          }));
+          
+          const { error: attributesError } = await extendedSupabase
+            .from('product_attributes')
+            .insert(productAttributes);
+            
+          if (attributesError) {
+            console.error('Error saving product attributes:', attributesError);
+          }
+        }
       }
       
-      // Оновлюємо лічильник товарів
+      // Оновлюємо лічильник товарів у магазині
       fetchStoreProductsCount();
       
       // Оновлюємо лічильник товарів у постачальника
       const { error: supplierError } = await extendedSupabase
         .from('suppliers')
-        .update({ product_count: selectedProductsData.length })
+        .update({ product_count: previewProducts.length })
         .eq('id', selectedSupplier);
       
       if (supplierError) {
@@ -741,7 +889,7 @@ const UserProducts = () => {
       
       toast({
         title: 'Успішно',
-        description: `Додано ${selectedProductsData.length} товарів до магазину`,
+        description: `Додано ${previewProducts.length} товарів до магазину`,
       });
       
       // Скидаємо дані після збереження
@@ -749,6 +897,8 @@ const UserProducts = () => {
       setSelectedCategories([]);
       setSelectedProducts([]);
       setIsUploadDialogOpen(false);
+      setIsPreviewMode(false);
+      setPreviewProducts([]);
       
     } catch (error) {
       console.error('Error saving products:', error);
@@ -760,6 +910,15 @@ const UserProducts = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Пересування між товарами у режимі перегляду
+  const goToPrevProduct = () => {
+    setCurrentPreviewIndex(prev => Math.max(0, prev - 1));
+  };
+  
+  const goToNextProduct = () => {
+    setCurrentPreviewIndex(prev => Math.min(previewProducts.length - 1, prev + 1));
   };
 
   // Фільтрація категорій за пошуком
@@ -800,6 +959,9 @@ const UserProducts = () => {
       minimumFractionDigits: 2,
     }).format(price);
   }
+
+  // Отримуємо поточний продукт для перегляду
+  const currentProduct = previewProducts[currentPreviewIndex];
 
   return (
     <div className="container mx-auto py-4 px-4">
@@ -1029,27 +1191,54 @@ const UserProducts = () => {
       )}
       
       {/* Діалог обробки завантаженого XML */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={(open) => {
-        if (!isParsingFile && !isSaving && !isLoadingFile) {
-          setIsUploadDialogOpen(open);
-        }
-      }}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>
-              {isParsingFile 
-                ? 'Обробка XML файлу...' 
-                : uploadStatus === 'error' 
-                  ? 'Помилка обробки файлу' 
-                  : 'Вибір товарів для імпорту'}
-            </DialogTitle>
-            <DialogDescription>
-              {isParsingFile 
-                ? 'Зачекайте будь ласка, триває обробка файлу...' 
-                : uploadStatus === 'error' 
-                  ? 'Сталася помилка під час обробки файлу. Спробуйте іще раз.' 
-                  : 'Виберіть категорії та товари для додавання до магазину'}
-            </DialogDescription>
+      <Dialog 
+        open={isUploadDialogOpen} 
+        onOpenChange={(open) => {
+          if (!isParsingFile && !isSaving && !isLoadingFile) {
+            setIsUploadDialogOpen(open);
+            // При закритті діалогу, також виходимо з режиму повного екрану
+            if (!open) setIsFullscreenDialog(false);
+          }
+        }}
+      >
+        <DialogContent 
+          className={`overflow-hidden transition-all duration-200 ${
+            isFullscreenDialog 
+              ? "sm:max-w-[100%] w-screen h-screen max-h-screen rounded-none m-0 p-6" 
+              : "sm:max-w-4xl max-h-[90vh]"
+          }`}
+        >
+          <DialogHeader className="flex flex-row justify-between items-center">
+            <div>
+              <DialogTitle>
+                {isParsingFile 
+                  ? 'Обробка XML файлу...' 
+                  : isPreviewMode
+                    ? 'Перегляд товарів перед збереженням'
+                    : uploadStatus === 'error' 
+                      ? 'Помилка обробки файлу' 
+                      : 'Вибір товарів для імпорту'}
+              </DialogTitle>
+              <DialogDescription>
+                {isParsingFile 
+                  ? 'Зачекайте будь ласка, триває обробка файлу...' 
+                  : isPreviewMode
+                    ? `Товар ${currentPreviewIndex + 1} з ${previewProducts.length}`
+                    : uploadStatus === 'error' 
+                      ? 'Сталася помилка під час обробки файлу. Спробуйте іще раз.' 
+                      : 'Виберіть категорії та товари для додавання до магазину'}
+              </DialogDescription>
+            </div>
+            {/* Кнопка розгортання на весь екран */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsFullscreenDialog(!isFullscreenDialog)}
+              className="ml-auto"
+              id="fullscreen-toggle"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
           </DialogHeader>
           
           {isParsingFile ? (
@@ -1066,6 +1255,188 @@ const UserProducts = () => {
             <div className="flex flex-col items-center py-10">
               <X className="h-16 w-16 text-red-500 mb-4" />
               <p className="text-center">Не вдалося обробити файл. Перевірте формат XML та спробуйте знову.</p>
+            </div>
+          ) : isPreviewMode && currentProduct ? (
+            <div className="flex flex-col h-full overflow-hidden">
+              {/* Товар для перегляду */}
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${isFullscreenDialog ? 'h-[calc(100vh-200px)]' : 'max-h-[60vh]'} overflow-y-auto p-2`}>
+                {/* Ліва частина - зображення */}
+                <div className="flex flex-col">
+                  <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border mb-4">
+                    {currentProduct.images && currentProduct.images.length > 0 ? (
+                      <Carousel className="w-full">
+                        <CarouselContent>
+                          {currentProduct.images.map((imageUrl, idx) => (
+                            <CarouselItem key={idx} className="flex justify-center items-center">
+                              <img 
+                                src={imageUrl} 
+                                alt={`${currentProduct.name} - зображення ${idx + 1}`} 
+                                className="object-contain w-full h-full max-h-[400px]" 
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                                }}
+                              />
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        {currentProduct.images.length > 1 && (
+                          <>
+                            <CarouselPrevious />
+                            <CarouselNext />
+                          </>
+                        )}
+                      </Carousel>
+                    ) : (
+                      <div className="flex justify-center items-center h-full">
+                        <ImageIcon className="h-16 w-16 text-gray-400" />
+                        <span className="text-gray-500">Немає зображень</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Мініатюри зображень */}
+                  {currentProduct.images && currentProduct.images.length > 1 && (
+                    <div className="flex flex-wrap gap-2">
+                      {currentProduct.images.map((imageUrl, idx) => (
+                        <div key={idx} className="w-16 h-16 border rounded overflow-hidden">
+                          <img 
+                            src={imageUrl} 
+                            alt={`Мініатюра ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/placeholder.svg';
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Права частина - інформація про товар */}
+                <div className="flex flex-col">
+                  {/* Код товару */}
+                  <div className="text-xs text-gray-500 mb-1">
+                    Код товару: {currentProduct.sku || currentProduct.external_id || 'Не вказано'}
+                  </div>
+                  
+                  {/* Назва товару */}
+                  <h2 className="text-xl font-semibold mb-3">{currentProduct.name}</h2>
+                  
+                  {/* Виробник */}
+                  {currentProduct.vendor && (
+                    <div className="flex items-center mb-3">
+                      <span className="text-sm font-medium text-gray-700">Виробник:</span>
+                      <Badge variant="outline" className="ml-2">{currentProduct.vendor}</Badge>
+                    </div>
+                  )}
+                  
+                  {/* Ціни */}
+                  <div className="flex flex-col mb-4">
+                    <div className="flex items-center mb-1">
+                      <span className="text-sm font-medium text-gray-700 mr-2">Ціна:</span>
+                      <span className="text-lg font-bold text-blue-700">{formatPrice(currentProduct.price)}</span>
+                    </div>
+                    
+                    {currentProduct.old_price && currentProduct.old_price > currentProduct.price && (
+                      <div className="flex items-center">
+                        <span className="text-sm text-gray-500 mr-2">Стара ціна:</span>
+                        <span className="text-sm line-through text-gray-500">{formatPrice(currentProduct.old_price)}</span>
+                      </div>
+                    )}
+                    
+                    {currentProduct.sale_price && currentProduct.sale_price < currentProduct.price && (
+                      <div className="flex items-center">
+                        <span className="text-sm text-green-600 mr-2">Акційна ціна:</span>
+                        <span className="text-sm font-medium text-green-600">{formatPrice(currentProduct.sale_price)}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Наявність */}
+                  <div className="flex items-center mb-4">
+                    <span className="text-sm font-medium text-gray-700 mr-2">Наявність:</span>
+                    <Badge variant={currentProduct.stock_quantity && currentProduct.stock_quantity > 0 ? "success" : "secondary"}>
+                      {currentProduct.stock_quantity && currentProduct.stock_quantity > 0 
+                        ? `В наявності (${currentProduct.stock_quantity} шт.)` 
+                        : "Немає в наявності"}
+                    </Badge>
+                  </div>
+                  
+                  {/* Опис товару */}
+                  {currentProduct.description && (
+                    <div className="mb-4">
+                      <h3 className="text-md font-medium mb-2">Опис</h3>
+                      <div 
+                        className="text-sm text-gray-700 bg-gray-50 p-3 rounded overflow-y-auto max-h-[100px]"
+                        dangerouslySetInnerHTML={{ __html: currentProduct.description }}
+                      ></div>
+                    </div>
+                  )}
+                  
+                  {/* Характеристики товару */}
+                  {currentProduct.attributes && currentProduct.attributes.length > 0 && (
+                    <div>
+                      <h3 className="text-md font-medium mb-2">Характеристики</h3>
+                      <ScrollArea className={`border rounded ${isFullscreenDialog ? 'h-[calc(100vh-600px)]' : 'max-h-[150px]'}`}>
+                        <div className="p-3">
+                          <table className="w-full">
+                            <tbody>
+                              {currentProduct.attributes.map((attr, idx) => (
+                                <tr key={idx} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                                  <td className="py-1 px-2 text-sm font-medium text-gray-700">{attr.name}</td>
+                                  <td className="py-1 px-2 text-sm">{attr.value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Навігація між товарами */}
+              <div className="flex justify-between items-center mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={goToPrevProduct}
+                  disabled={currentPreviewIndex === 0}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Попередній
+                </Button>
+                
+                <span className="text-sm text-gray-500">
+                  {currentPreviewIndex + 1} з {previewProducts.length}
+                </span>
+                
+                <Button 
+                  variant={currentPreviewIndex === previewProducts.length - 1 ? "default" : "outline"}
+                  onClick={currentPreviewIndex === previewProducts.length - 1 ? saveSelectedProducts : goToNextProduct}
+                  disabled={isSaving}
+                >
+                  {currentPreviewIndex === previewProducts.length - 1 ? (
+                    isSaving ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
+                        Збереження...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Зберегти всі товари
+                      </>
+                    )
+                  ) : (
+                    <>
+                      Наступний
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           ) : parsedData && (
             <div className="flex flex-col h-full overflow-hidden">
@@ -1107,9 +1478,11 @@ const UserProducts = () => {
               </div>
               
               {/* Двоколоночний вид для категорій та товарів */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[60vh] overflow-hidden">
+              <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden ${
+                isFullscreenDialog ? 'h-[calc(100vh-200px)]' : 'max-h-[60vh]'
+              }`}>
                 {/* Ліва колонка - категорії */}
-                <div className="border rounded-md p-2 overflow-y-auto h-[60vh]">
+                <div className="border rounded-md p-2 overflow-y-auto h-full">
                   <div className="font-semibold mb-2 text-sm">Категорії</div>
                   {filteredCategories.length > 0 ? (
                     <div className="space-y-2">
@@ -1186,7 +1559,7 @@ const UserProducts = () => {
                   </div>
                   
                   {filteredProducts.length > 0 ? (
-                    <div className="overflow-y-auto h-[56vh]">
+                    <div className={`overflow-y-auto ${isFullscreenDialog ? 'h-[calc(100vh-150px)]' : 'h-[56vh]'}`}>
                       <Table>
                         <TableHeader className="sticky top-0 bg-white">
                           <TableRow>
@@ -1291,6 +1664,17 @@ const UserProducts = () => {
               >
                 Закрити
               </Button>
+            ) : isPreviewMode ? (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsPreviewMode(false);
+                  setPreviewProducts([]);
+                }}
+                disabled={isSaving}
+              >
+                Повернутись до вибору товарів
+              </Button>
             ) : (
               <>
                 <div className="mr-auto text-sm text-gray-500">
@@ -1314,27 +1698,17 @@ const UserProducts = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => setIsUploadDialogOpen(false)}
-                  disabled={isSaving}
                 >
                   Скасувати
                 </Button>
                 
                 <Button 
-                  onClick={saveSelectedProducts}
-                  disabled={selectedProducts.length === 0 || selectedProducts.length > remainingProductsLimit || isSaving}
-                  id="save-products-button"
+                  onClick={showProductsPreview}
+                  disabled={selectedProducts.length === 0 || selectedProducts.length > remainingProductsLimit}
+                  id="preview-products-button"
                 >
-                  {isSaving ? (
-                    <>
-                      <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
-                      Збереження...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Зберегти вибрані товари
-                    </>
-                  )}
+                  <Eye className="h-4 w-4 mr-2" />
+                  Попередній перегляд і збереження
                 </Button>
               </>
             )}
