@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { PlanLimitation, LimitationType } from '@/components/admin/tariffs/types';
 
-export const usePlanLimitations = (selectedPlanId: string) => {
+export const usePlanLimitations = (selectedPlanId: string | null) => {
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 

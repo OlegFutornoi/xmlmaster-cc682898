@@ -1,4 +1,3 @@
-
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,10 +45,8 @@ const UserSuppliers = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [urlError, setUrlError] = useState('');
   
-  // Використовуємо хук usePlanLimitations, якщо є активна підписка
-  const { getLimitationByName } = activeSubscription?.tariff_plan?.id 
-    ? usePlanLimitations(activeSubscription.tariff_plan.id) 
-    : { getLimitationByName: () => undefined };
+  // Використовуємо хук usePlanLimitations з правильним аргументом (може бути null)
+  const { planLimitations, getLimitationByName } = usePlanLimitations(activeSubscription?.tariff_plan?.id || null);
 
   useEffect(() => {
     // Оновлюємо підписку при кожному заході на сторінку
@@ -75,13 +72,13 @@ const UserSuppliers = () => {
     };
   }, [user]);
 
-  // Окремий useEffect для оновлення обмежень після оновлення підписки
+  // Окремий useEffect для оновлення обмежень після оновлення підписки або планLimitations
   useEffect(() => {
-    if (activeSubscription) {
-      console.log('Active subscription updated, refreshing limitations');
+    if (activeSubscription && planLimitations.length > 0) {
+      console.log('Active subscription or limitations updated, refreshing limitations');
       fetchUserLimitations();
     }
-  }, [activeSubscription]);
+  }, [activeSubscription, planLimitations, suppliers.length]);
 
   const fetchUserSuppliers = async () => {
     if (!user) return;
