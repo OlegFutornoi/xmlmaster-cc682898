@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   ShoppingBag, 
   Upload, 
-  Filter, 
+  Filter as FilterIcon, 
   Check,
   X,
   Plus,
@@ -18,7 +18,6 @@ import {
   Trash,
   ChevronDown,
   ChevronUp,
-  Filter
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -1137,7 +1136,7 @@ const UserProducts = () => {
                                 {category.name}
                               </label>
                             </div>
-                            <Badge variant="outline" size="sm">
+                            <Badge variant="outline">
                               {category.products.length}
                             </Badge>
                           </div>
@@ -1258,7 +1257,7 @@ const UserProducts = () => {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-[56vh]">
-                      <Filter className="text-gray-400 h-10 w-10 mb-2" />
+                      <FilterIcon className="text-gray-400 h-10 w-10 mb-2" />
                       <p className="text-gray-500">
                         Немає товарів, що відповідають критеріям пошуку
                       </p>
