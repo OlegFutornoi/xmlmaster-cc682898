@@ -1,4 +1,3 @@
-
 // Компонент для роботи з товарами
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   ShoppingBag, 
   Upload, 
-  Filter as FilterIcon, 
   Check,
   X,
   Plus,
@@ -18,10 +16,11 @@ import {
   Trash,
   ChevronDown,
   ChevronUp,
-  Maximize2,
   ArrowLeft,
   ArrowRight,
   ExternalLink,
+  Save,
+  Undo2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -73,6 +72,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "sonner";
+import { FilterIcon } from 'lucide-react';
 
 // Типи для даних
 interface UserStore {
@@ -146,7 +146,7 @@ const UserProducts = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
-  const [isFullscreenDialog, setIsFullscreenDialog] = useState(false);
+  const [hideEmptyCategories, setHideEmptyCategories] = useState(false);
   
   // Стани для режиму перегляду перед збереженням
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -257,7 +257,6 @@ const UserProducts = () => {
     }
     
     setIsLoadingFile(true);
-    setIsUploadDialogOpen(true);
     setUploadStatus('parsing');
     setIsParsingFile(true);
     
@@ -547,20 +546,13 @@ const UserProducts = () => {
       setUploadStatus('success');
       setIsParsingFile(false);
       
-      toast({
-        title: 'Успішно',
-        description: `Файл оброблено: знайдено ${parsedCategories.length} категорій та ${parsedProducts.length} товарів`,
-      });
+      toast.success(`Файл оброблено: знайдено ${parsedCategories.length} категорій та ${parsedProducts.length} товарів`);
     } catch (error) {
       console.error('Error parsing XML:', error);
       setUploadStatus('error');
       setIsParsingFile(false);
       
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося обробити XML файл',
-        variant: 'destructive'
-      });
+      toast.error('Не вдалося обробити XML файл');
     }
   };
 
@@ -569,7 +561,6 @@ const UserProducts = () => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    setIsUploadDialogOpen(true);
     setUploadStatus('parsing');
     setIsParsingFile(true);
     
@@ -585,11 +576,7 @@ const UserProducts = () => {
       setUploadStatus('error');
       setIsParsingFile(false);
       
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося прочитати файл',
-        variant: 'destructive'
-      });
+      toast.error('Не вдалося прочитати файл');
     };
     
     reader.readAsText(file);
@@ -758,11 +745,7 @@ const UserProducts = () => {
     
     // Перевіряємо обмеження кількості товарів
     if (selectedProductsData.length > remainingProductsLimit) {
-      toast({
-        title: 'Перевищено ліміт',
-        description: `Ви можете додати лише ${remainingProductsLimit} товарів. Вибрано: ${selectedProductsData.length}`,
-        variant: 'destructive'
-      });
+      toast.error(`Ви можете додати лише ${remainingProductsLimit} товарів. Вибрано: ${selectedProductsData.length}`);
       return;
     }
     
@@ -887,26 +870,18 @@ const UserProducts = () => {
         console.error('Error updating supplier product count:', supplierError);
       }
       
-      toast({
-        title: 'Успішно',
-        description: `Додано ${previewProducts.length} товарів до магазину`,
-      });
+      toast.success(`Додано ${previewProducts.length} товарів до магазину`);
       
       // Скидаємо дані після збереження
       setParsedData(null);
       setSelectedCategories([]);
       setSelectedProducts([]);
-      setIsUploadDialogOpen(false);
       setIsPreviewMode(false);
       setPreviewProducts([]);
       
     } catch (error) {
       console.error('Error saving products:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося зберегти товари',
-        variant: 'destructive'
-      });
+      toast.error('Не вдалося зберегти товари');
     } finally {
       setIsSaving(false);
     }
@@ -922,9 +897,11 @@ const UserProducts = () => {
   };
 
   // Фільтрація категорій за пошуком
-  const filteredCategories = parsedData?.categories.filter(category => 
-    category.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredCategories = parsedData?.categories
+    .filter(category => 
+      category.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      (!hideEmptyCategories || category.products.length > 0)
+    ) || [];
 
   // Фільтрація продуктів за пошуком та категоріями
   const filteredProducts = parsedData?.products.filter(product => {
@@ -1116,153 +1093,355 @@ const UserProducts = () => {
           </CardContent>
         </Card>
       ) : !selectedStore || !selectedSupplier ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Виберіть магазин і постачальника</CardTitle>
-            <CardDescription>
-              Для роботи з товарами необхідно вибрати магазин і постачальника
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : (
+        <div className="text-center py-8">
+          <p>Будь ласка, виберіть магазин і постачальника для продовження</p>
+        </div>
+      ) : !canAddProducts ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Товари магазину</span>
-              <Badge variant={canAddProducts ? "secondary" : "destructive"} className="px-2 py-1">
-                {canAddProducts 
-                  ? `Доступно для додавання: ${remainingProductsLimit}` 
-                  : "Ліміт товарів вичерпано"}
+              <Badge variant="destructive" className="px-2 py-1">
+                Ліміт товарів вичерпано
               </Badge>
             </CardTitle>
-            <CardDescription>
-              Керуйте товарами магазину, завантажуючи їх з XML-файлів
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            {!canAddProducts ? (
-              <div className="flex flex-col items-center p-4 border rounded bg-red-50">
-                <X className="h-10 w-10 text-red-500 mb-2" />
-                <p className="font-medium text-center">
-                  Ви досягли ліміту товарів для цього магазину
-                </p>
-                <p className="text-sm text-gray-600 text-center mt-1">
-                  Оновіть тарифний план, щоб додати більше товарів
-                </p>
+            <div className="flex flex-col items-center p-4 border rounded bg-red-50">
+              <X className="h-10 w-10 text-red-500 mb-2" />
+              <p className="font-medium text-center">
+                Ви досягли ліміту товарів для цього магазину
+              </p>
+              <p className="text-sm text-gray-600 text-center mt-1">
+                Оновіть тарифний план, щоб додати більше товарів
+              </p>
+              <Button 
+                variant="outline" 
+                className="mt-4" 
+                onClick={() => navigate('/user/dashboard/tariffs')}
+              >
+                Перейти до тарифних планів
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : !parsedData ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Імпорт товарів</span>
+              <Badge variant="secondary" className="px-2 py-1">
+                Доступно для додавання: {remainingProductsLimit}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="flex flex-wrap justify-center gap-3">
                 <Button 
-                  variant="outline" 
-                  className="mt-4" 
-                  onClick={() => navigate('/user/dashboard/tariffs')}
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="secondary"
+                  className="flex-grow-0"
+                  id="upload-xml-central-button"
                 >
-                  Перейти до тарифних планів
+                  <Upload className="h-4 w-4 mr-2" />
+                  Завантажити XML з комп'ютера
+                </Button>
+                
+                <Button 
+                  onClick={loadFileFromUrl}
+                  variant="outline"
+                  className="flex-grow-0"
+                  id="load-url-central-button"
+                  disabled={!suppliers.find(s => s.id === selectedSupplier)?.url}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Завантажити XML з сайту постачальника
                 </Button>
               </div>
-            ) : (
-              <div className="text-center">
-                <div className="flex flex-wrap justify-center gap-3">
-                  <Button 
-                    onClick={() => fileInputRef.current?.click()}
-                    variant="secondary"
-                    className="flex-grow-0"
-                    id="upload-xml-central-button"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Завантажити XML з комп'ютера
-                  </Button>
-                  
-                  <Button 
-                    onClick={loadFileFromUrl}
-                    variant="outline"
-                    className="flex-grow-0"
-                    id="load-url-central-button"
-                    disabled={!suppliers.find(s => s.id === selectedSupplier)?.url}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Завантажити XML з сайту постачальника
-                  </Button>
-                </div>
-                <p className="mt-2 text-sm text-gray-500">
-                  Завантажте XML-файл від постачальника для імпорту товарів
-                </p>
+              <p className="mt-2 text-sm text-gray-500">
+                Завантажте XML-файл від постачальника для імпорту товарів
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-0">
+            <div className="flex items-center justify-between">
+              <CardTitle>Вибір товарів для імпорту</CardTitle>
+              <Badge variant={selectedProducts.length > 0 ? "default" : "secondary"} className="px-2 py-1">
+                Вибрано: {selectedProducts.length} товарів
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {/* Пошук та фільтрація */}
+            <div className="mb-4 flex flex-col md:flex-row gap-2 items-center">
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <Input
+                  placeholder="Пошук за назвою товару чи категорії..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1"
+                  id="search-input"
+                />
+                
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => setSearchQuery('')}
+                  disabled={!searchQuery}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+              
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hide-empty"
+                    checked={hideEmptyCategories}
+                    onCheckedChange={(checked) => {
+                      setHideEmptyCategories(checked as boolean);
+                    }}
+                  />
+                  <label
+                    htmlFor="hide-empty"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Приховати порожні категорії
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            {/* Статистика і вибрані товари */}
+            <div className="flex justify-between items-center mb-2 text-sm font-medium">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {parsedData.products.length} товарів
+                </Badge>
+                <Badge variant="outline">
+                  {parsedData.categories.length} категорій
+                </Badge>
+              </div>
+              <div>
+                <Button 
+                  onClick={showProductsPreview}
+                  disabled={selectedProducts.length === 0 || selectedProducts.length > remainingProductsLimit}
+                  size="sm"
+                  variant="default"
+                  id="preview-products-button"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Переглянути та зберегти
+                </Button>
+              </div>
+            </div>
+            
+            {/* Двоколоночний вид для категорій та товарів */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
+              {/* Ліва колонка - категорії */}
+              <div className="border rounded-md p-2 overflow-y-auto max-h-[calc(100vh-320px)]">
+                <div className="font-semibold mb-2 text-sm">Категорії</div>
+                {filteredCategories.length > 0 ? (
+                  <div className="space-y-2">
+                    {filteredCategories.map(category => (
+                      <div 
+                        key={category.id} 
+                        className={`p-2 rounded-md cursor-pointer ${
+                          selectedCategories.includes(category.id)
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'hover:bg-gray-50 border border-transparent'
+                        }`}
+                        onClick={() => handleCategorySelect(category.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Checkbox 
+                              checked={category.selected} 
+                              id={`category-${category.id}`}
+                            />
+                            <label 
+                              htmlFor={`category-${category.id}`}
+                              className="ml-2 font-medium text-sm cursor-pointer flex-1"
+                            >
+                              {category.name}
+                            </label>
+                          </div>
+                          <Badge variant="outline">
+                            {category.products.length}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-2 flex gap-1 justify-end">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              selectAllInCategory(category.id);
+                            }}
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Вибрати всі
+                          </Button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deselectAllInCategory(category.id);
+                            }}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Очистити
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center py-4 text-gray-500">Немає категорій, що відповідають пошуку</p>
+                )}
+              </div>
+              
+              {/* Права колонка - товари */}
+              <div className="border rounded-md p-2 overflow-hidden md:col-span-2">
+                <div className="font-semibold mb-2 text-sm flex justify-between">
+                  <span>Товари</span>
+                  <Badge variant="outline" className="ml-2">
+                    {filteredProducts.length} товарів
+                  </Badge>
+                </div>
+                
+                {filteredProducts.length > 0 ? (
+                  <div className="overflow-y-auto max-h-[calc(100vh-330px)]">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white">
+                        <TableRow>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead className="w-16"></TableHead>
+                          <TableHead>Назва</TableHead>
+                          <TableHead className="hidden md:table-cell">Виробник</TableHead>
+                          <TableHead className="text-right">Ціна</TableHead>
+                          <TableHead className="hidden md:table-cell text-right">Кількість</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts.map(product => (
+                          <TableRow 
+                            key={product.id}
+                            className={product.selected ? 'bg-blue-50' : ''}
+                          >
+                            <TableCell className="p-2">
+                              <Checkbox 
+                                checked={product.selected} 
+                                id={`product-${product.id}`}
+                                onCheckedChange={() => handleProductSelect(product.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="p-2">
+                              {product.images.length > 0 ? (
+                                <div className="w-12 h-12 rounded overflow-hidden border">
+                                  <img 
+                                    src={product.images[0]} 
+                                    alt={product.name} 
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = '/placeholder.svg';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                                  <ImageIcon className="text-gray-400 h-5 w-5" />
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm font-medium">{product.name}</div>
+                              <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                                ID: {product.id}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="text-sm">{product.vendor || '-'}</div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="text-sm font-medium text-blue-700">{formatPrice(product.price)}</div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-right">
+                              {product.stock_quantity !== undefined ? (
+                                <Badge variant={product.stock_quantity > 0 ? "outline" : "secondary"}>
+                                  {product.stock_quantity}
+                                </Badge>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[calc(100vh-350px)]">
+                    <FilterIcon className="text-gray-400 h-10 w-10 mb-2" />
+                    <p className="text-gray-500">
+                      Немає товарів, що відповідають критеріям пошуку
+                    </p>
+                    <Button 
+                      variant="link" 
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCategories([]);
+                      }}
+                    >
+                      Скинути фільтри
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
       
-      {/* Діалог обробки завантаженого XML */}
+      {/* Діалог перегляду товарів перед збереженням */}
       <Dialog 
-        open={isUploadDialogOpen} 
+        open={isPreviewMode} 
         onOpenChange={(open) => {
-          if (!isParsingFile && !isSaving && !isLoadingFile) {
-            setIsUploadDialogOpen(open);
-            // При закритті діалогу, також виходимо з режиму повного екрану
-            if (!open) setIsFullscreenDialog(false);
+          if (!isSaving) {
+            setIsPreviewMode(open);
+            if (!open) {
+              setPreviewProducts([]);
+            }
           }
         }}
       >
-        <DialogContent 
-          className={`overflow-hidden transition-all duration-200 ${
-            isFullscreenDialog 
-              ? "sm:max-w-[100%] w-screen h-screen max-h-screen rounded-none m-0 p-6" 
-              : "sm:max-w-4xl max-h-[90vh]"
-          }`}
-        >
+        <DialogContent className="overflow-y-auto max-w-4xl max-h-[90vh]">
           <DialogHeader className="flex flex-row justify-between items-center">
             <div>
-              <DialogTitle>
-                {isParsingFile 
-                  ? 'Обробка XML файлу...' 
-                  : isPreviewMode
-                    ? 'Перегляд товарів перед збереженням'
-                    : uploadStatus === 'error' 
-                      ? 'Помилка обробки файлу' 
-                      : 'Вибір товарів для імпорту'}
-              </DialogTitle>
+              <DialogTitle>Перегляд товарів перед збереженням</DialogTitle>
               <DialogDescription>
-                {isParsingFile 
-                  ? 'Зачекайте будь ласка, триває обробка файлу...' 
-                  : isPreviewMode
-                    ? `Товар ${currentPreviewIndex + 1} з ${previewProducts.length}`
-                    : uploadStatus === 'error' 
-                      ? 'Сталася помилка під час обробки файлу. Спробуйте іще раз.' 
-                      : 'Виберіть категорії та товари для додавання до магазину'}
+                Товар {currentPreviewIndex + 1} з {previewProducts.length}
               </DialogDescription>
             </div>
-            {/* Кнопка розгортання на весь екран */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsFullscreenDialog(!isFullscreenDialog)}
-              className="ml-auto"
-              id="fullscreen-toggle"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
           </DialogHeader>
           
-          {isParsingFile ? (
-            <div className="flex flex-col items-center py-10">
-              <div className="h-2 w-full bg-gray-200 rounded-full mb-4">
-                <div 
-                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-gray-500">{uploadProgress}% завершено</p>
-            </div>
-          ) : uploadStatus === 'error' ? (
-            <div className="flex flex-col items-center py-10">
-              <X className="h-16 w-16 text-red-500 mb-4" />
-              <p className="text-center">Не вдалося обробити файл. Перевірте формат XML та спробуйте знову.</p>
-            </div>
-          ) : isPreviewMode && currentProduct ? (
+          {currentProduct && (
             <div className="flex flex-col h-full overflow-hidden">
               {/* Товар для перегляду */}
-              <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${isFullscreenDialog ? 'h-[calc(100vh-200px)]' : 'max-h-[60vh]'} overflow-y-auto p-2`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                 {/* Ліва частина - зображення */}
                 <div className="flex flex-col">
-                  <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border mb-4">
+                  <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border mb-4 max-h-[300px]">
                     {currentProduct.images && currentProduct.images.length > 0 ? (
                       <Carousel className="w-full">
                         <CarouselContent>
@@ -1271,7 +1450,7 @@ const UserProducts = () => {
                               <img 
                                 src={imageUrl} 
                                 alt={`${currentProduct.name} - зображення ${idx + 1}`} 
-                                className="object-contain w-full h-full max-h-[400px]" 
+                                className="object-contain w-full h-full max-h-[300px]" 
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/placeholder.svg';
                                 }}
@@ -1378,7 +1557,7 @@ const UserProducts = () => {
                   {currentProduct.attributes && currentProduct.attributes.length > 0 && (
                     <div>
                       <h3 className="text-md font-medium mb-2">Характеристики</h3>
-                      <ScrollArea className={`border rounded ${isFullscreenDialog ? 'h-[calc(100vh-600px)]' : 'max-h-[150px]'}`}>
+                      <ScrollArea className="border rounded max-h-[150px]">
                         <div className="p-3">
                           <table className="w-full">
                             <tbody>
@@ -1396,322 +1575,82 @@ const UserProducts = () => {
                   )}
                 </div>
               </div>
-              
-              {/* Навігація між товарами */}
-              <div className="flex justify-between items-center mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={goToPrevProduct}
-                  disabled={currentPreviewIndex === 0}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Попередній
-                </Button>
-                
-                <span className="text-sm text-gray-500">
-                  {currentPreviewIndex + 1} з {previewProducts.length}
-                </span>
-                
-                <Button 
-                  variant={currentPreviewIndex === previewProducts.length - 1 ? "default" : "outline"}
-                  onClick={currentPreviewIndex === previewProducts.length - 1 ? saveSelectedProducts : goToNextProduct}
-                  disabled={isSaving}
-                >
-                  {currentPreviewIndex === previewProducts.length - 1 ? (
-                    isSaving ? (
-                      <>
-                        <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
-                        Збереження...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Зберегти всі товари
-                      </>
-                    )
-                  ) : (
-                    <>
-                      Наступний
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          ) : parsedData && (
-            <div className="flex flex-col h-full overflow-hidden">
-              {/* Пошук та фільтрація */}
-              <div className="mb-4 flex items-center gap-2">
-                <Input
-                  placeholder="Пошук за назвою товару чи категорії..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                  id="search-input"
-                />
-                
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => setSearchQuery('')}
-                  disabled={!searchQuery}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Статистика і вибрані товари */}
-              <div className="flex justify-between items-center mb-2 text-sm font-medium">
-                <div>
-                  <Badge variant="secondary">
-                    {parsedData.products.length} товарів
-                  </Badge>
-                  <Badge variant="outline" className="ml-2">
-                    {parsedData.categories.length} категорій
-                  </Badge>
-                </div>
-                <div>
-                  <Badge variant={selectedProducts.length > remainingProductsLimit ? "destructive" : "default"}>
-                    Вибрано: {selectedProducts.length} товарів
-                  </Badge>
-                </div>
-              </div>
-              
-              {/* Двоколоночний вид для категорій та товарів */}
-              <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden ${
-                isFullscreenDialog ? 'h-[calc(100vh-200px)]' : 'max-h-[60vh]'
-              }`}>
-                {/* Ліва колонка - категорії */}
-                <div className="border rounded-md p-2 overflow-y-auto h-full">
-                  <div className="font-semibold mb-2 text-sm">Категорії</div>
-                  {filteredCategories.length > 0 ? (
-                    <div className="space-y-2">
-                      {filteredCategories.map(category => (
-                        <div 
-                          key={category.id} 
-                          className={`p-2 rounded-md cursor-pointer ${
-                            selectedCategories.includes(category.id)
-                              ? 'bg-blue-50 border border-blue-200'
-                              : 'hover:bg-gray-50 border border-transparent'
-                          }`}
-                          onClick={() => handleCategorySelect(category.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Checkbox 
-                                checked={category.selected} 
-                                id={`category-${category.id}`}
-                              />
-                              <label 
-                                htmlFor={`category-${category.id}`}
-                                className="ml-2 font-medium text-sm cursor-pointer flex-1"
-                              >
-                                {category.name}
-                              </label>
-                            </div>
-                            <Badge variant="outline">
-                              {category.products.length}
-                            </Badge>
-                          </div>
-                          
-                          <div className="mt-2 flex gap-1 justify-end">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                selectAllInCategory(category.id);
-                              }}
-                            >
-                              <Check className="h-3 w-3 mr-1" />
-                              Вибрати всі
-                            </Button>
-                            
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deselectAllInCategory(category.id);
-                              }}
-                            >
-                              <X className="h-3 w-3 mr-1" />
-                              Очистити
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center py-4 text-gray-500">Немає категорій, що відповідають пошуку</p>
-                  )}
-                </div>
-                
-                {/* Права колонка - товари */}
-                <div className="border rounded-md p-2 overflow-hidden md:col-span-2">
-                  <div className="font-semibold mb-2 text-sm flex justify-between">
-                    <span>Товари</span>
-                    <Badge variant="outline">
-                      {filteredProducts.length} товарів
-                    </Badge>
-                  </div>
-                  
-                  {filteredProducts.length > 0 ? (
-                    <div className={`overflow-y-auto ${isFullscreenDialog ? 'h-[calc(100vh-150px)]' : 'h-[56vh]'}`}>
-                      <Table>
-                        <TableHeader className="sticky top-0 bg-white">
-                          <TableRow>
-                            <TableHead className="w-12"></TableHead>
-                            <TableHead className="w-16"></TableHead>
-                            <TableHead>Назва</TableHead>
-                            <TableHead className="hidden md:table-cell">Виробник</TableHead>
-                            <TableHead className="text-right">Ціна</TableHead>
-                            <TableHead className="hidden md:table-cell text-right">Кількість</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredProducts.map(product => (
-                            <TableRow 
-                              key={product.id}
-                              className={product.selected ? 'bg-blue-50' : ''}
-                            >
-                              <TableCell className="p-2">
-                                <Checkbox 
-                                  checked={product.selected} 
-                                  id={`product-${product.id}`}
-                                  onCheckedChange={() => handleProductSelect(product.id)}
-                                />
-                              </TableCell>
-                              <TableCell className="p-2">
-                                {product.images.length > 0 ? (
-                                  <div className="w-12 h-12 rounded overflow-hidden border">
-                                    <img 
-                                      src={product.images[0]} 
-                                      alt={product.name} 
-                                      className="w-full h-full object-contain"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = '/placeholder.svg';
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
-                                    <ImageIcon className="text-gray-400 h-5 w-5" />
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm font-medium">{product.name}</div>
-                                <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                                  ID: {product.id}
-                                </div>
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                <div className="text-sm">{product.vendor || '-'}</div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="text-sm font-medium text-blue-700">{formatPrice(product.price)}</div>
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell text-right">
-                                {product.stock_quantity !== undefined ? (
-                                  <Badge variant={product.stock_quantity > 0 ? "outline" : "secondary"}>
-                                    {product.stock_quantity}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-[56vh]">
-                      <FilterIcon className="text-gray-400 h-10 w-10 mb-2" />
-                      <p className="text-gray-500">
-                        Немає товарів, що відповідають критеріям пошуку
-                      </p>
-                      <Button 
-                        variant="link" 
-                        size="sm"
-                        onClick={() => {
-                          setSearchQuery('');
-                          setSelectedCategories([]);
-                        }}
-                      >
-                        Скинути фільтри
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
           
-          <DialogFooter>
-            {isParsingFile || uploadStatus === 'error' ? (
+          {/* Нижня панель з кнопками */}
+          <DialogFooter className="flex justify-between items-center mt-4">
+            {/* Ліва кнопка - Повернутися */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsPreviewMode(false)}
+                    disabled={isSaving}
+                  >
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Повернутися
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Повернутися до вибору товарів
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {/* Центральна навігація */}
+            <div className="flex items-center gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  setIsUploadDialogOpen(false);
-                  setUploadStatus('idle');
-                  setUploadProgress(0);
-                }}
-                disabled={isParsingFile}
+                size="icon"
+                onClick={goToPrevProduct}
+                disabled={currentPreviewIndex === 0 || isSaving}
               >
-                Закрити
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-            ) : isPreviewMode ? (
+              
+              <span className="text-sm text-gray-500 mx-2">
+                {currentPreviewIndex + 1} / {previewProducts.length}
+              </span>
+              
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  setIsPreviewMode(false);
-                  setPreviewProducts([]);
-                }}
-                disabled={isSaving}
+                size="icon"
+                onClick={goToNextProduct}
+                disabled={currentPreviewIndex === previewProducts.length - 1 || isSaving}
               >
-                Повернутись до вибору товарів
+                <ArrowRight className="h-4 w-4" />
               </Button>
-            ) : (
-              <>
-                <div className="mr-auto text-sm text-gray-500">
-                  {selectedProducts.length > 0 ? (
-                    selectedProducts.length <= remainingProductsLimit ? (
-                      <span className="flex items-center text-green-600">
-                        <Check className="h-4 w-4 mr-1" />
-                        Обрано: {selectedProducts.length} товарів
-                      </span>
+            </div>
+            
+            {/* Права кнопка - Зберегти */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="default"
+                    onClick={saveSelectedProducts}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
+                        Зберігаємо...
+                      </>
                     ) : (
-                      <span className="flex items-center text-red-600">
-                        <X className="h-4 w-4 mr-1" />
-                        Перевищено ліміт на {selectedProducts.length - remainingProductsLimit} товарів
-                      </span>
-                    )
-                  ) : (
-                    <span>Виберіть товари для імпорту</span>
-                  )}
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsUploadDialogOpen(false)}
-                >
-                  Скасувати
-                </Button>
-                
-                <Button 
-                  onClick={showProductsPreview}
-                  disabled={selectedProducts.length === 0 || selectedProducts.length > remainingProductsLimit}
-                  id="preview-products-button"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Попередній перегляд і збереження
-                </Button>
-              </>
-            )}
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Додати товари
+                      </>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Додати всі товари до магазину
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </DialogFooter>
         </DialogContent>
       </Dialog>
