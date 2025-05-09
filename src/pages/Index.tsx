@@ -161,9 +161,7 @@ const Index = () => {
             <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
               Приєднуйтесь до тисяч власників інтернет-магазинів, які вже оптимізували свої процеси з XMLMaster.
             </p>
-            <Button size="lg" variant="secondary" className="px-8 bg-white text-blue-600 hover:bg-gray-100" onClick={() => navigate('/user/login')} id="cta-button">
-              Розпочати безкоштовно
-            </Button>
+            <Button size="lg" variant="secondary" onClick={() => navigate('/user/login')} id="cta-button" className="px-8 bg-white text-blue-600 hover:bg-gray-100 font-normal">Розпочати роботу</Button>
           </div>
         </section>
       </main>
