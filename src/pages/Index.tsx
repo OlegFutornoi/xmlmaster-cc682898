@@ -1,4 +1,3 @@
-
 // Головна сторінка - лендінг без завантаження тарифних планів
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,9 +7,7 @@ import { Users, Store, ShoppingBag, Package, Settings, ArrowRight, CheckCircle2 
 // Компонент лендінгу для сервісу XMLMaster
 const Index = () => {
   const navigate = useNavigate();
-  
-  return (
-    <div className="flex flex-col min-h-screen">
+  return <div className="flex flex-col min-h-screen">
       {/* Хедер з навігацією */}
       <header className="bg-white shadow-sm py-4 px-6 border-b">
         <div className="container mx-auto flex justify-between items-center">
@@ -19,26 +16,13 @@ const Index = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/user/login')}
-            >
-              Увійти
-            </Button>
             
-            <Button 
-              onClick={() => navigate('/user/register')}
-            >
+            
+            <Button onClick={() => navigate('/user/register')}>
               Розпочати безкоштовно
             </Button>
             
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => navigate('/admin/login')}
-              className="text-gray-400 hover:text-gray-600"
-              id="admin-login-button"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/login')} className="text-gray-400 hover:text-gray-600" id="admin-login-button">
               <Settings className="h-4 w-4" />
             </Button>
           </div>
@@ -59,35 +43,22 @@ const Index = () => {
                 Збільшіть свій асортимент без зайвих зусиль.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  size="lg" 
-                  className="px-8 bg-blue-600 hover:bg-blue-700"
-                  onClick={() => navigate('/user/login')}
-                  id="get-started-button"
-                >
+                <Button size="lg" className="px-8 bg-blue-600 hover:bg-blue-700" onClick={() => navigate('/user/login')} id="get-started-button">
                   Розпочати роботу
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className="px-8"
-                  onClick={() => {
-                    const demoSection = document.getElementById('demo-section');
-                    demoSection?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  id="watch-demo-button"
-                >
+                <Button variant="outline" size="lg" className="px-8" onClick={() => {
+                const demoSection = document.getElementById('demo-section');
+                demoSection?.scrollIntoView({
+                  behavior: 'smooth'
+                });
+              }} id="watch-demo-button">
                   Дивитися демо
                 </Button>
               </div>
             </div>
             <div className="lg:w-1/2">
-              <img 
-                src="/placeholder.svg" 
-                alt="XMLMaster інтерфейс" 
-                className="w-full h-auto rounded-lg shadow-xl" 
-              />
+              <img src="/placeholder.svg" alt="XMLMaster інтерфейс" className="w-full h-auto rounded-lg shadow-xl" />
             </div>
           </div>
         </section>
@@ -190,13 +161,7 @@ const Index = () => {
             <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
               Приєднуйтесь до тисяч власників інтернет-магазинів, які вже оптимізували свої процеси з XMLMaster.
             </p>
-            <Button 
-              size="lg" 
-              variant="secondary" 
-              className="px-8 bg-white text-blue-600 hover:bg-gray-100"
-              onClick={() => navigate('/user/login')}
-              id="cta-button"
-            >
+            <Button size="lg" variant="secondary" className="px-8 bg-white text-blue-600 hover:bg-gray-100" onClick={() => navigate('/user/login')} id="cta-button">
               Розпочати безкоштовно
             </Button>
           </div>
@@ -249,8 +214,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
