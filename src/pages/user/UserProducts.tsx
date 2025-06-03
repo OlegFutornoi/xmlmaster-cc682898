@@ -409,28 +409,23 @@ const UserProducts = () => {
     }
 
     try {
-      const productsToImport = importData.map(product => {
-        // Видаляємо imageUrl та створюємо правильний об'єкт для вставки
-        const insertProduct = {
-          name: product.name || 'Новий товар',
-          description: product.description || null,
-          price: product.price || 0,
-          old_price: product.old_price || null,
-          sale_price: product.sale_price || null,
-          sku: product.sku || null,
-          vendor_code: product.vendor_code || null,
-          vendor: product.vendor || null,
-          stock_quantity: product.stock_quantity || 0,
-          currency: product.currency || 'UAH',
-          external_id: product.imageUrl || null,
-          store_id: selectedStore,
-          supplier_id: selectedSupplier,
-          user_id: user?.id || '',
-          is_active: true
-        };
-
-        return insertProduct;
-      });
+      const productsToImport: ProductInsert[] = importData.map(product => ({
+        name: product.name || 'Новий товар',
+        description: product.description || null,
+        price: product.price || null,
+        old_price: product.old_price || null,
+        sale_price: product.sale_price || null,
+        sku: product.sku || null,
+        vendor_code: product.vendor_code || null,
+        vendor: product.vendor || null,
+        stock_quantity: product.stock_quantity || null,
+        currency: product.currency || null,
+        external_id: product.imageUrl || null,
+        store_id: selectedStore,
+        supplier_id: selectedSupplier,
+        user_id: user?.id || '',
+        is_active: true
+      }));
 
       const { error } = await supabase
         .from('products')
