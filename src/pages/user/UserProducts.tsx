@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -407,25 +406,32 @@ const UserProducts = () => {
     }
 
     try {
-      const productsToImport = importData.map(product => ({
-        ...product,
-        store_id: selectedStore,
-        supplier_id: selectedSupplier,
-        user_id: user?.id,
-        is_active: true,
-        external_id: product.imageUrl || null,
-        currency: product.currency || 'UAH'
-      }));
+      const productsToImport = importData.map(product => {
+        // Створюємо об'єкт, що відповідає схемі бази даних
+        const dbProduct = {
+          name: product.name || '', // Забезпечуємо обов'язкове поле
+          description: product.description || null,
+          price: product.price || 0,
+          old_price: product.old_price || null,
+          sale_price: product.sale_price || null,
+          sku: product.sku || null,
+          vendor_code: product.vendor_code || null,
+          vendor: product.vendor || null,
+          stock_quantity: product.stock_quantity || 0,
+          currency: product.currency || 'UAH',
+          external_id: product.imageUrl || null,
+          store_id: selectedStore,
+          supplier_id: selectedSupplier,
+          user_id: user?.id,
+          is_active: true
+        };
 
-      // Видаляємо imageUrl перед збереженням
-      const cleanedProducts = productsToImport.map(product => {
-        const { imageUrl, category, ...cleanProduct } = product;
-        return cleanProduct;
+        return dbProduct;
       });
 
       const { error } = await supabase
         .from('products')
-        .insert(cleanedProducts);
+        .insert(productsToImport);
 
       if (error) throw error;
 
