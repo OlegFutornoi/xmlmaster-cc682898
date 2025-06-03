@@ -66,11 +66,9 @@ import { CalendarIcon } from "lucide-react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
-import { revalidatePath } from 'next/cache';
-import { useRouter } from 'next/navigation'
-import Link from 'next/link';
+import { useNavigate } from 'react-router-dom';
 
 interface Product {
     id: string;
@@ -117,7 +115,7 @@ const UserProducts = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter()
+    const navigate = useNavigate();
     const { toast } = useToast()
 
     const handleLoadFromUrl = async () => {
@@ -198,25 +196,64 @@ const UserProducts = () => {
 
     const parseXMLProducts = (xmlDoc: XMLDocument): Product[] => {
         const products: Product[] = [];
-        const items = xmlDoc.querySelectorAll('item');
+        
+        // Try different XML structures
+        let items = xmlDoc.querySelectorAll('item');
+        if (items.length === 0) {
+            items = xmlDoc.querySelectorAll('product');
+        }
+        if (items.length === 0) {
+            items = xmlDoc.querySelectorAll('товар');
+        }
+        if (items.length === 0) {
+            items = xmlDoc.querySelectorAll('offer');
+        }
 
         items.forEach(item => {
-            const name = item.querySelector('name')?.textContent || '';
-            const description = item.querySelector('description')?.textContent || '';
-            const priceText = item.querySelector('price')?.textContent || '0';
-            const imageUrl = item.querySelector('image')?.textContent || '';
+            // Try different field names for name
+            let name = item.querySelector('name')?.textContent || 
+                      item.querySelector('title')?.textContent || 
+                      item.querySelector('назва')?.textContent ||
+                      item.querySelector('название')?.textContent ||
+                      item.getAttribute('name') || '';
 
-            // Перевірка, чи priceText є валідним числом
+            // Try different field names for description
+            let description = item.querySelector('description')?.textContent || 
+                             item.querySelector('desc')?.textContent || 
+                             item.querySelector('опис')?.textContent ||
+                             item.querySelector('описание')?.textContent || '';
+
+            // Try different field names for price
+            let priceText = item.querySelector('price')?.textContent || 
+                           item.querySelector('ціна')?.textContent ||
+                           item.querySelector('цена')?.textContent ||
+                           item.querySelector('cost')?.textContent ||
+                           item.getAttribute('price') || '0';
+
+            // Try different field names for image
+            let imageUrl = item.querySelector('image')?.textContent || 
+                          item.querySelector('img')?.textContent || 
+                          item.querySelector('picture')?.textContent ||
+                          item.querySelector('фото')?.textContent ||
+                          item.getAttribute('image') || '';
+
+            // Clean and validate price
+            priceText = priceText.replace(/[^\d.,]/g, '').replace(',', '.');
             const price = isNaN(Number(priceText)) ? 0 : Number(priceText);
 
-            const id = uuidv4(); // Генеруємо новий UUID для кожного продукту
+            // Skip empty products
+            if (!name.trim()) {
+                return;
+            }
+
+            const id = uuidv4();
 
             products.push({
                 id: id,
-                name,
-                description,
+                name: name.trim(),
+                description: description.trim(),
                 price,
-                imageUrl,
+                imageUrl: imageUrl.trim(),
                 store_id: selectedStore || '',
                 supplier_id: selectedSupplier || '',
                 archived: false,
@@ -252,7 +289,7 @@ const UserProducts = () => {
         const fetchStoresAndSuppliers = async () => {
             try {
                 const { data: storesData, error: storesError } = await supabase
-                    .from('stores')
+                    .from('user_stores')
                     .select('*');
 
                 if (storesError) {
@@ -326,9 +363,13 @@ const UserProducts = () => {
             }
 
             const productsToInsert = selectedProducts.map(product => ({
-                ...product,
+                id: product.id,
+                name: product.name,
+                description: product.description,
+                price: product.price,
                 store_id: selectedStore,
                 supplier_id: selectedSupplier,
+                user_id: user.id,
             }));
 
             const { error: insertError } = await supabase
@@ -353,6 +394,12 @@ const UserProducts = () => {
             setSelectedProducts([]);
             setShowPreview(false);
             setImportedProducts([]);
+
+            // Refresh products list
+            const { data } = await supabase
+                .from('products')
+                .select('*');
+            setProducts(data || []);
 
         } catch (error) {
             console.error('Error saving products:', error);
@@ -407,7 +454,7 @@ const UserProducts = () => {
         try {
             const { error } = await supabase
                 .from('products')
-                .update({ archived: true })
+                .update({ is_active: false })
                 .eq('id', productToArchive.id);
 
             if (error) {
@@ -453,7 +500,7 @@ const UserProducts = () => {
         try {
             const { error } = await supabase
                 .from('products')
-                .update({ archived: false })
+                .update({ is_active: true })
                 .eq('id', productToUnarchive.id);
 
             if (error) {
@@ -533,137 +580,212 @@ const UserProducts = () => {
     };
 
     return (
-        <div>
-            <h1>Керування Товарами</h1>
+        <div className="container mx-auto px-4 py-6">
+            <h1 className="text-2xl font-bold mb-6">Керування Товарами</h1>
 
-            <div>
+            <div className="flex gap-4 mb-6">
                 <Input
+                    id="url-input"
                     type="url"
                     placeholder="Введіть URL XML файлу"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
+                    className="flex-1"
                 />
-                <Button onClick={handleLoadFromUrl} disabled={isLoadingUrl}>
+                <Button 
+                    id="load-url-button"
+                    onClick={handleLoadFromUrl} 
+                    disabled={isLoadingUrl}
+                >
                     {isLoadingUrl ? 'Завантаження...' : 'Завантажити з URL'}
                 </Button>
             </div>
 
             {showPreview && (
-                <div>
-                    <h2>Попередній перегляд товарів</h2>
-                    <Select onValueChange={setSelectedStore}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Оберіть магазин" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {stores.map(store => (
-                                <SelectItem key={store.id} value={store.id}>
-                                    {store.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="mb-8 p-6 border rounded-lg bg-gray-50">
+                    <h2 className="text-xl font-semibold mb-4">Попередній перегляд товарів</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <Select onValueChange={setSelectedStore}>
+                            <SelectTrigger id="store-select">
+                                <SelectValue placeholder="Оберіть магазин" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {stores.map(store => (
+                                    <SelectItem key={store.id} value={store.id}>
+                                        {store.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-                    <Select onValueChange={setSelectedSupplier}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Оберіть постачальника" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {suppliers.map(supplier => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                    {supplier.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                        <Select onValueChange={setSelectedSupplier}>
+                            <SelectTrigger id="supplier-select">
+                                <SelectValue placeholder="Оберіть постачальника" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {suppliers.map(supplier => (
+                                    <SelectItem key={supplier.id} value={supplier.id}>
+                                        {supplier.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>
-                                    <Checkbox
-                                        checked={isSelectAll}
-                                        onCheckedChange={handleSelectAllChange}
-                                    />
-                                </TableHead>
-                                <TableHead>Назва</TableHead>
-                                <TableHead>Опис</TableHead>
-                                <TableHead>Ціна</TableHead>
-                                <TableHead>Зображення</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {importedProducts.map(product => (
-                                <TableRow key={product.id}>
-                                    <TableCell>
+                    <ScrollArea className="h-96 w-full border rounded">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-12">
                                         <Checkbox
-                                            checked={!!selectedProducts.find(p => p.id === product.id)}
-                                            onCheckedChange={() => handleCheckboxChange(product.id)}
+                                            id="select-all-checkbox"
+                                            checked={isSelectAll}
+                                            onCheckedChange={handleSelectAllChange}
                                         />
-                                    </TableCell>
-                                    <TableCell>{product.name}</TableCell>
-                                    <TableCell>{product.description}</TableCell>
-                                    <TableCell>{product.price}</TableCell>
-                                    <TableCell>
-                                        <img src={product.imageUrl} alt={product.name} style={{ width: '50px', height: '50px' }} />
-                                    </TableCell>
+                                    </TableHead>
+                                    <TableHead>Назва</TableHead>
+                                    <TableHead>Опис</TableHead>
+                                    <TableHead>Ціна</TableHead>
+                                    <TableHead>Зображення</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {importedProducts.map(product => (
+                                    <TableRow key={product.id}>
+                                        <TableCell>
+                                            <Checkbox
+                                                id={`product-checkbox-${product.id}`}
+                                                checked={!!selectedProducts.find(p => p.id === product.id)}
+                                                onCheckedChange={() => handleCheckboxChange(product.id)}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium">{product.name}</TableCell>
+                                        <TableCell className="max-w-xs truncate">{product.description}</TableCell>
+                                        <TableCell>{product.price} ₴</TableCell>
+                                        <TableCell>
+                                            {product.imageUrl && (
+                                                <img 
+                                                    src={product.imageUrl} 
+                                                    alt={product.name} 
+                                                    className="w-12 h-12 object-cover rounded"
+                                                />
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
 
-                    <Button onClick={handleSaveProducts} disabled={savingProducts}>
-                        {savingProducts ? 'Збереження...' : 'Зберегти товари'}
-                    </Button>
+                    <div className="flex justify-between items-center mt-4">
+                        <div className="text-sm text-gray-600">
+                            Вибрано: {selectedProducts.length} з {importedProducts.length} товарів
+                        </div>
+                        <Button 
+                            id="save-products-button"
+                            onClick={handleSaveProducts} 
+                            disabled={savingProducts || selectedProducts.length === 0 || !selectedStore || !selectedSupplier}
+                        >
+                            {savingProducts ? 'Збереження...' : `Зберегти товари (${selectedProducts.length})`}
+                        </Button>
+                    </div>
                 </div>
             )}
 
             <div>
-                <h2>Список Товарів</h2>
-                <Input
-                    type="text"
-                    placeholder="Пошук за назвою"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                {loading && <p>Завантаження...</p>}
-                {error && <p>Помилка: {error}</p>}
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Назва</TableHead>
-                            <TableHead>Опис</TableHead>
-                            <TableHead>Ціна</TableHead>
-                            <TableHead>Зображення</TableHead>
-                            <TableHead>Дії</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredProducts.map(product => (
-                            <TableRow key={product.id}>
-                                <TableCell>{product.name}</TableCell>
-                                <TableCell>{product.description}</TableCell>
-                                <TableCell>{product.price}</TableCell>
-                                <TableCell>
-                                    <img src={product.imageUrl} alt={product.name} style={{ width: '50px', height: '50px' }} />
-                                </TableCell>
-                                <TableCell>
-                                    {!product.archived ? (
-                                        <Button onClick={() => handleArchive(product)}>Архівувати</Button>
-                                    ) : (
-                                        <Button onClick={() => handleUnarchive(product)}>Розархівувати</Button>
-                                    )}
-                                    <Button onClick={() => handleDelete(product)}>Видалити</Button>
-                                    <Link href={`/user/products/${product.id}`}>
-                                        <Button>Редагувати</Button>
-                                    </Link>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Список Товарів</h2>
+                    <Input
+                        id="search-input"
+                        type="text"
+                        placeholder="Пошук за назвою"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="max-w-sm"
+                    />
+                </div>
+
+                {loading && <div className="text-center py-4">Завантаження...</div>}
+                {error && <div className="text-center py-4 text-red-500">Помилка: {error}</div>}
+                
+                {!loading && !error && (
+                    <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Назва</TableHead>
+                                    <TableHead>Опис</TableHead>
+                                    <TableHead>Ціна</TableHead>
+                                    <TableHead>Статус</TableHead>
+                                    <TableHead>Дії</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredProducts.map(product => (
+                                    <TableRow key={product.id}>
+                                        <TableCell className="font-medium">{product.name}</TableCell>
+                                        <TableCell className="max-w-xs truncate">{product.description}</TableCell>
+                                        <TableCell>{product.price} ₴</TableCell>
+                                        <TableCell>
+                                            <Badge variant={product.is_active ? "default" : "secondary"}>
+                                                {product.is_active ? 'Активний' : 'Архівований'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-2">
+                                                {product.is_active ? (
+                                                    <Button 
+                                                        id={`archive-button-${product.id}`}
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={() => handleArchive(product)}
+                                                    >
+                                                        Архівувати
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        id={`unarchive-button-${product.id}`}
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={() => handleUnarchive(product)}
+                                                    >
+                                                        Розархівувати
+                                                    </Button>
+                                                )}
+                                                <Button 
+                                                    id={`delete-button-${product.id}`}
+                                                    variant="destructive" 
+                                                    size="sm"
+                                                    onClick={() => handleDelete(product)}
+                                                >
+                                                    Видалити
+                                                </Button>
+                                                <Button 
+                                                    id={`edit-button-${product.id}`}
+                                                    variant="secondary" 
+                                                    size="sm"
+                                                    onClick={() => navigate(`/user/products/${product.id}`)}
+                                                >
+                                                    Редагувати
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        
+                        {filteredProducts.length === 0 && (
+                            <div className="text-center py-8 text-gray-500">
+                                Товари не знайдені
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
+            {/* Archive Dialog */}
             <AlertDialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -681,6 +803,7 @@ const UserProducts = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Unarchive Dialog */}
             <AlertDialog open={isUnarchiveDialogOpen} onOpenChange={setIsUnarchiveDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -698,6 +821,7 @@ const UserProducts = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Delete Dialog */}
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
