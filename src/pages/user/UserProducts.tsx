@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
     Table,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -70,7 +71,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from 'react-router-dom';
 
+// Оновлений інтерфейс Product відповідно до схеми Supabase
 interface Product {
+    id: string;
+    name: string;
+    description: string | null;
+    price: number | null;
+    old_price: number | null;
+    sale_price: number | null;
+    sku: string | null;
+    stock_quantity: number | null;
+    vendor: string | null;
+    vendor_code: string | null;
+    currency: string | null;
+    external_id: string | null;
+    category_id: string | null;
+    store_id: string;
+    supplier_id: string;
+    user_id: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+// Інтерфейс для імпортованих товарів (для попереднього перегляду)
+interface ImportedProduct {
     id: string;
     name: string;
     description: string;
@@ -96,9 +121,9 @@ interface Supplier {
 const UserProducts = () => {
     const [urlInput, setUrlInput] = useState('');
     const [isLoadingUrl, setIsLoadingUrl] = useState(false);
-    const [importedProducts, setImportedProducts] = useState<Product[]>([]);
+    const [importedProducts, setImportedProducts] = useState<ImportedProduct[]>([]);
     const [showPreview, setShowPreview] = useState(false);
-    const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+    const [selectedProducts, setSelectedProducts] = useState<ImportedProduct[]>([]);
     const [selectedStore, setSelectedStore] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [stores, setStores] = useState<Store[]>([]);
@@ -194,8 +219,8 @@ const UserProducts = () => {
         }
     };
 
-    const parseXMLProducts = (xmlDoc: XMLDocument): Product[] => {
-        const products: Product[] = [];
+    const parseXMLProducts = (xmlDoc: XMLDocument): ImportedProduct[] => {
+        const products: ImportedProduct[] = [];
         
         // Try different XML structures
         let items = xmlDoc.querySelectorAll('item');
@@ -396,10 +421,7 @@ const UserProducts = () => {
             setImportedProducts([]);
 
             // Refresh products list
-            const { data } = await supabase
-                .from('products')
-                .select('*');
-            setProducts(data || []);
+            fetchProducts();
 
         } catch (error) {
             console.error('Error saving products:', error);
@@ -413,29 +435,29 @@ const UserProducts = () => {
         }
     };
 
-    useEffect(() => {
-        const fetchProducts = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const { data, error } = await supabase
-                    .from('products')
-                    .select('*');
+    const fetchProducts = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const { data, error } = await supabase
+                .from('products')
+                .select('*');
 
-                if (error) {
-                    console.error('Error fetching products:', error);
-                    setError('Failed to load products.');
-                } else {
-                    setProducts(data || []);
-                }
-            } catch (err) {
-                console.error('Unexpected error:', err);
+            if (error) {
+                console.error('Error fetching products:', error);
                 setError('Failed to load products.');
-            } finally {
-                setLoading(false);
+            } else {
+                setProducts(data || []);
             }
-        };
+        } catch (err) {
+            console.error('Unexpected error:', err);
+            setError('Failed to load products.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchProducts();
     }, []);
 
@@ -468,7 +490,7 @@ const UserProducts = () => {
             }
 
             setProducts(products.map(p =>
-                p.id === productToArchive.id ? { ...p, archived: true } : p
+                p.id === productToArchive.id ? { ...p, is_active: false } : p
             ));
 
             toast({
@@ -514,7 +536,7 @@ const UserProducts = () => {
             }
 
             setProducts(products.map(p =>
-                p.id === productToUnarchive.id ? { ...p, archived: false } : p
+                p.id === productToUnarchive.id ? { ...p, is_active: true } : p
             ));
 
             toast({
