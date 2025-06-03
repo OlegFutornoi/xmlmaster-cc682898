@@ -54,7 +54,6 @@ interface ImportedProduct {
   category?: string;
   currency?: string;
   external_id?: string;
-  imageUrl?: string;
 }
 
 interface Store {
