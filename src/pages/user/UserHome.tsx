@@ -75,7 +75,7 @@ const UserHome = () => {
             <div className="mt-4 md:mt-0 flex items-center gap-2 text-sm">
               <div className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
                 <Zap className="h-3 w-3 inline mr-1" />
-                {activeSubscription.tariff_plans?.name || 'Активний план'}
+                {activeSubscription.tariff_plan?.name || 'Активний план'}
               </div>
             </div>
           )}
@@ -169,7 +169,7 @@ const UserHome = () => {
                 <div className="space-y-4">
                   <div>
                     <h3 className="font-semibold text-gray-900">
-                      {activeSubscription.tariff_plans?.name || 'Активний план'}
+                      {activeSubscription.tariff_plan?.name || 'Активний план'}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
                       Активний до {new Date(activeSubscription.end_date || '').toLocaleDateString('uk-UA')}
