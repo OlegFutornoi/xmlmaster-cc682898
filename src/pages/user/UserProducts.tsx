@@ -409,7 +409,7 @@ const UserProducts = () => {
 
     try {
       const productsToImport: ProductInsert[] = importData.map(product => ({
-        name: product.name || 'Новий товар',
+        name: product.name,
         description: product.description || null,
         price: product.price || null,
         old_price: product.old_price || null,
@@ -419,7 +419,7 @@ const UserProducts = () => {
         vendor: product.vendor || null,
         stock_quantity: product.stock_quantity || null,
         currency: product.currency || null,
-        external_id: product.imageUrl || null,
+        external_id: product.external_id || null,
         store_id: selectedStore,
         supplier_id: selectedSupplier,
         user_id: user?.id || '',
@@ -478,8 +478,7 @@ const UserProducts = () => {
               stock_quantity: parseInt(values[headers.indexOf('stock_quantity')] || '0'),
               category: values[headers.indexOf('category')] || '',
               currency: values[headers.indexOf('currency')] || 'UAH',
-              external_id: values[headers.indexOf('external_id')] || '',
-              imageUrl: values[headers.indexOf('imageUrl')] || ''
+              external_id: values[headers.indexOf('external_id')] || ''
             };
             products.push(product);
           }
