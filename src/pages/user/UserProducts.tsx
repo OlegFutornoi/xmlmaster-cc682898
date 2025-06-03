@@ -409,7 +409,8 @@ const UserProducts = () => {
     }
 
     try {
-      const productsToImport = importData.map(product => {
+      const productsToImport: ProductInsert[] = importData.map(product => {
+        // Створюємо об'єкт, який точно відповідає схемі ProductInsert
         const insertProduct: ProductInsert = {
           name: product.name || 'Новий товар',
           description: product.description || null,
@@ -421,7 +422,7 @@ const UserProducts = () => {
           vendor: product.vendor || null,
           stock_quantity: product.stock_quantity || null,
           currency: product.currency || null,
-          external_id: product.imageUrl || null,
+          external_id: product.imageUrl || null, // Маппимо imageUrl на external_id
           store_id: selectedStore,
           supplier_id: selectedSupplier,
           user_id: user?.id || '',
