@@ -4,10 +4,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminAuth } from "@/context/AdminAuthContext";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Shield, Database, Settings, Users } from "lucide-react";
 
 const AdminLogin = () => {
   const [username, setUsername] = useState("");
@@ -18,7 +18,6 @@ const AdminLogin = () => {
   const { toast } = useToast();
   const { login, isAuthenticated } = useAdminAuth();
 
-  // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/admin/dashboard");
@@ -57,7 +56,6 @@ const AdminLogin = () => {
         navigate("/admin/dashboard");
       } else {
         setError("Невірне ім'я користувача або пароль");
-        // Toast is already shown in the login function
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -73,55 +71,133 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-100 to-white">
-      <div className="w-full max-w-md px-4">
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Вхід в кабінет адміністратора</CardTitle>
-            <CardDescription className="text-center">
-              Будь ласка, введіть ваші облікові дані
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {error && (
-                <div className="bg-destructive/15 p-3 rounded-md flex items-center text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  {error}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="flex min-h-screen">
+        {/* Left Side - Admin Features */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-indigo-900/20 to-slate-900/20"></div>
+          <div className="relative z-10 flex flex-col justify-center items-start p-12 text-white">
+            <div className="max-w-md">
+              <h1 className="text-4xl font-bold mb-6">Адміністративна панель</h1>
+              <p className="text-xl mb-8 opacity-90">
+                Повний контроль та управління системою XML Master
+              </p>
+              
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Управління користувачами</h3>
+                    <p className="text-sm opacity-80">Контроль доступу та ролей</p>
+                  </div>
                 </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="username">Ім'я користувача</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <Database className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Управління тарифами</h3>
+                    <p className="text-sm opacity-80">Налаштування планів та обмежень</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <Settings className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Системні налаштування</h3>
+                    <p className="text-sm opacity-80">Конфігурація та моніторинг</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Пароль</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+            </div>
+          </div>
+          
+          {/* Decorative elements */}
+          <div className="absolute top-20 right-20 w-32 h-32 bg-blue-500/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-32 right-32 w-24 h-24 bg-indigo-500/10 rounded-full blur-lg"></div>
+        </div>
+
+        {/* Right Side - Login Form */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
               </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Вхід..." : "Увійти"}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-        <div className="mt-4 text-center">
-          <Link to="/" className="text-sm text-gray-600 hover:text-gray-800">
-            Повернутися на головну
-          </Link>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Вхід адміністратора</h2>
+              <p className="text-gray-600">Увійдіть до адміністративної панелі</p>
+            </div>
+
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+              <form onSubmit={handleSubmit}>
+                <CardContent className="p-8 space-y-6">
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 p-4 rounded-lg flex items-center text-sm text-red-700">
+                      <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                      {error}
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-gray-700 font-medium">Ім'я користувача</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="Введіть ім'я користувача"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="h-12 border-gray-200 focus:border-slate-400 focus:ring-slate-400"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-gray-700 font-medium">Пароль</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Введіть пароль"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-12 border-gray-200 focus:border-slate-400 focus:ring-slate-400"
+                      required
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02]" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+                        Вхід...
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Увійти
+                      </div>
+                    )}
+                  </Button>
+                </CardContent>
+              </form>
+            </Card>
+            
+            <div className="mt-6 text-center">
+              <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                ← Повернутися на головну
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
