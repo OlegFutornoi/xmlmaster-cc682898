@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Plus, Search, Upload, Download, Trash2, Edit, Eye, Archive, RotateCcw, Filter, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import type { Database } from "@/integrations/supabase/types";
 
 // Компонент UserProducts - Сторінка управління товарами
 interface Product {
@@ -86,6 +87,8 @@ interface Category {
   created_at: string;
   updated_at: string;
 }
+
+type ProductInsert = Database['public']['Tables']['products']['Insert'];
 
 const UserProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -406,10 +409,9 @@ const UserProducts = () => {
     }
 
     try {
-      const productsToImport = importData.map(product => {
-        // Створюємо об'єкт, що відповідає схемі бази даних
-        const dbProduct = {
-          name: product.name || '', // Забезпечуємо обов'язкове поле
+      const productsToImport: ProductInsert[] = importData.map(product => {
+        const dbProduct: ProductInsert = {
+          name: product.name || 'Новий товар', // Забезпечуємо обов'язкове поле
           description: product.description || null,
           price: product.price || 0,
           old_price: product.old_price || null,
@@ -422,7 +424,7 @@ const UserProducts = () => {
           external_id: product.imageUrl || null,
           store_id: selectedStore,
           supplier_id: selectedSupplier,
-          user_id: user?.id,
+          user_id: user?.id || '',
           is_active: true
         };
 
