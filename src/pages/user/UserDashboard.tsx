@@ -6,7 +6,6 @@ import UserHome from './UserHome';
 import UserTariffs from './UserTariffs';
 import UserStores from './UserStores';
 import UserSuppliers from './UserSuppliers';
-import UserProducts from './UserProducts';
 import UserSettings from './UserSettings';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,14 +83,6 @@ const UserDashboard = () => {
             element={
               activeSubscription 
                 ? <UserSuppliers /> 
-                : <Navigate to="/user/dashboard/tariffs" replace />
-            } 
-          />
-          <Route 
-            path="/products" 
-            element={
-              activeSubscription 
-                ? <UserProducts /> 
                 : <Navigate to="/user/dashboard/tariffs" replace />
             } 
           />

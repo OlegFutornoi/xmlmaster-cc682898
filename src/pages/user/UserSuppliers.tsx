@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
-import { usePlanLimitations } from '@/hooks/tariffs/usePlanLimitations';
 
 interface Supplier {
   id: string;
@@ -44,9 +44,6 @@ const UserSuppliers = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [urlError, setUrlError] = useState('');
-  
-  // Використовуємо хук usePlanLimitations з правильним аргументом (може бути null)
-  const { planLimitations, getLimitationByName } = usePlanLimitations(activeSubscription?.tariff_plan?.id || null);
 
   useEffect(() => {
     // Оновлюємо підписку при кожному заході на сторінку
@@ -72,13 +69,13 @@ const UserSuppliers = () => {
     };
   }, [user]);
 
-  // Окремий useEffect для оновлення обмежень після оновлення підписки або планLimitations
+  // Окремий useEffect для оновлення обмежень після оновлення підписки
   useEffect(() => {
-    if (activeSubscription && planLimitations.length > 0) {
-      console.log('Active subscription or limitations updated, refreshing limitations');
+    if (activeSubscription) {
+      console.log('Active subscription updated, refreshing limitations');
       fetchUserLimitations();
     }
-  }, [activeSubscription, planLimitations, suppliers.length]);
+  }, [activeSubscription]);
 
   const fetchUserSuppliers = async () => {
     if (!user) return;
@@ -118,45 +115,33 @@ const UserSuppliers = () => {
     try {
       console.log('Fetching limitations for tariff plan:', activeSubscription.tariff_plan.id);
       
-      // Отримуємо обмеження suppliers_count для активного тарифу користувача
-      const supplierLimitation = getLimitationByName('suppliers_count');
-      
-      if (supplierLimitation) {
-        const suppliersLimitValue = supplierLimitation.value;
-        console.log('Suppliers limit from hook:', suppliersLimitValue);
+      // Отримуємо обмеження для активного тарифу користувача
+      const { data: limitationData, error: limitationError } = await extendedSupabase
+        .from('tariff_plan_limitations')
+        .select(`
+          value,
+          limitation_types:limitation_type_id (name, description)
+        `)
+        .eq('tariff_plan_id', activeSubscription.tariff_plan.id)
+        .eq('limitation_types.name', 'suppliers_count');
+
+      if (limitationError) {
+        console.error('Error fetching limitations:', limitationError);
+        return;
+      }
+
+      if (limitationData && limitationData.length > 0) {
+        const suppliersLimitValue = parseInt(limitationData[0].value);
+        console.log('Suppliers limit from DB:', suppliersLimitValue);
         setSuppliersLimit(suppliersLimitValue);
         
         // Перевіряємо кількість постачальників строго менше ліміту
         setCanCreateSupplier(suppliers.length < suppliersLimitValue);
       } else {
-        // Якщо обмеження не знайдено, отримуємо його безпосередньо з бази даних
-        const { data: limitationData, error: limitationError } = await extendedSupabase
-          .from('tariff_plan_limitations')
-          .select(`
-            value,
-            limitation_types:limitation_type_id (name, description)
-          `)
-          .eq('tariff_plan_id', activeSubscription.tariff_plan.id)
-          .eq('limitation_types.name', 'suppliers_count');
-
-        if (limitationError) {
-          console.error('Error fetching limitations:', limitationError);
-          return;
-        }
-
-        if (limitationData && limitationData.length > 0) {
-          const suppliersLimitValue = parseInt(limitationData[0].value);
-          console.log('Suppliers limit from DB:', suppliersLimitValue);
-          setSuppliersLimit(suppliersLimitValue);
-          
-          // Перевіряємо кількість постачальників строго менше ліміту
-          setCanCreateSupplier(suppliers.length < suppliersLimitValue);
-        } else {
-          // Якщо обмеження не знайдено, встановлюємо значення 0
-          console.log('No suppliers limit found, setting to 0');
-          setSuppliersLimit(0);
-          setCanCreateSupplier(false);
-        }
+        // Якщо обмеження не знайдено, встановлюємо значення 0
+        console.log('No suppliers limit found, setting to 0');
+        setSuppliersLimit(0);
+        setCanCreateSupplier(false);
       }
     } catch (error) {
       console.error('Error fetching limitations:', error);

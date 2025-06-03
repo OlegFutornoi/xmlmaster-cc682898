@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Home, Store, Package, Settings, LogOut, Menu, X, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Store, Package, Settings, LogOut, Menu, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -102,18 +102,6 @@ const UserSidebar = () => {
           >
             <Package className="h-5 w-5" />
             <span className={collapsed ? 'hidden' : 'ml-3'}>Постачальники</span>
-          </NavLink>
-
-          <NavLink 
-            to="/user/dashboard/products" 
-            className={({ isActive }) => `
-              flex items-center py-2 px-4 rounded-md mb-1
-              ${isActive ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}
-            `}
-            onClick={handleMenuItemClick}
-          >
-            <ShoppingBag className="h-5 w-5" />
-            <span className={collapsed ? 'hidden' : 'ml-3'}>Товари</span>
           </NavLink>
 
           <NavLink 

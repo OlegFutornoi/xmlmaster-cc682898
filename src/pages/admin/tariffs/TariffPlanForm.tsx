@@ -33,7 +33,7 @@ const TariffPlanForm = () => {
   }, [id]);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
+    <div className="flex h-screen">
       <AdminSidebar />
       <div className="flex-1 overflow-auto p-4 md:p-8">
         <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">

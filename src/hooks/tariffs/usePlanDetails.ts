@@ -60,13 +60,12 @@ export const usePlanDetails = (planId: string | null) => {
             id: string;
             name: string;
             description: string | null;
-          };
+          } | null;
         };
         
         // Виправлене перетворення даних
         const formattedLimitations: PlanLimitation[] = limitationsData.map(item => {
-          // Використовуємо приведення типу через unknown, щоб уникнути помилок TypeScript
-          const typedItem = item as unknown as LimitationResponse;
+          const typedItem = item as LimitationResponse;
           
           return {
             id: typedItem.id,
@@ -83,9 +82,9 @@ export const usePlanDetails = (planId: string | null) => {
       }
 
       if (itemsData) {
-        // Перевіряємо і фільтруємо елементи перед перетворенням
+        // Виправляємо виведення описів функцій в діалозі
         const formattedItems = itemsData
-          .filter(item => item.is_active && item.tariff_items)
+          .filter(item => item.is_active)
           .map(item => ({
             id: item.tariff_items?.id || '',
             description: item.tariff_items?.description || '',
@@ -105,18 +104,10 @@ export const usePlanDetails = (planId: string | null) => {
     }
   };
 
-  // Допоміжна функція для отримання обмеження за його назвою
-  const getLimitationByName = (name: string): PlanLimitation | undefined => {
-    return planLimitations.find(limitation => 
-      limitation.limitation_type.name === name
-    );
-  };
-
   return {
     planLimitations,
     planItems,
     isLoading,
-    fetchPlanDetails,
-    getLimitationByName
+    fetchPlanDetails
   };
 };

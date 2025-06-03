@@ -93,7 +93,7 @@ export type Database = {
       product_attributes: {
         Row: {
           attribute_name: string
-          attribute_value: string | null
+          attribute_value: string
           created_at: string
           id: string
           product_id: string
@@ -101,7 +101,7 @@ export type Database = {
         }
         Insert: {
           attribute_name: string
-          attribute_value?: string | null
+          attribute_value: string
           created_at?: string
           id?: string
           product_id: string
@@ -109,7 +109,7 @@ export type Database = {
         }
         Update: {
           attribute_name?: string
-          attribute_value?: string | null
+          attribute_value?: string
           created_at?: string
           id?: string
           product_id?: string
@@ -128,42 +128,32 @@ export type Database = {
       product_categories: {
         Row: {
           created_at: string
-          external_id: string | null
           id: string
           name: string
-          store_id: string | null
+          product_count: number
           supplier_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          external_id?: string | null
           id?: string
           name: string
-          store_id?: string | null
+          product_count?: number
           supplier_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          external_id?: string | null
           id?: string
           name?: string
-          store_id?: string | null
+          product_count?: number
           supplier_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "product_categories_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "user_stores"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "product_categories_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -185,7 +175,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string
-          is_main: boolean | null
+          is_main: boolean
           product_id: string
           updated_at: string
         }
@@ -193,7 +183,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url: string
-          is_main?: boolean | null
+          is_main?: boolean
           product_id: string
           updated_at?: string
         }
@@ -201,7 +191,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string
-          is_main?: boolean | null
+          is_main?: boolean
           product_id?: string
           updated_at?: string
         }
@@ -219,65 +209,50 @@ export type Database = {
         Row: {
           category_id: string | null
           created_at: string
-          currency: string | null
+          currency: string
           description: string | null
-          external_id: string | null
           id: string
           is_active: boolean
+          manufacturer: string | null
           name: string
           old_price: number | null
-          price: number | null
+          price: number
           sale_price: number | null
-          sku: string | null
-          stock_quantity: number | null
-          store_id: string
           supplier_id: string
           updated_at: string
           user_id: string
-          vendor: string | null
-          vendor_code: string | null
         }
         Insert: {
           category_id?: string | null
           created_at?: string
-          currency?: string | null
+          currency?: string
           description?: string | null
-          external_id?: string | null
           id?: string
           is_active?: boolean
+          manufacturer?: string | null
           name: string
           old_price?: number | null
-          price?: number | null
+          price?: number
           sale_price?: number | null
-          sku?: string | null
-          stock_quantity?: number | null
-          store_id: string
           supplier_id: string
           updated_at?: string
           user_id: string
-          vendor?: string | null
-          vendor_code?: string | null
         }
         Update: {
           category_id?: string | null
           created_at?: string
-          currency?: string | null
+          currency?: string
           description?: string | null
-          external_id?: string | null
           id?: string
           is_active?: boolean
+          manufacturer?: string | null
           name?: string
           old_price?: number | null
-          price?: number | null
+          price?: number
           sale_price?: number | null
-          sku?: string | null
-          stock_quantity?: number | null
-          store_id?: string
           supplier_id?: string
           updated_at?: string
           user_id?: string
-          vendor?: string | null
-          vendor_code?: string | null
         }
         Relationships: [
           {
@@ -285,13 +260,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "product_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "user_stores"
             referencedColumns: ["id"]
           },
           {

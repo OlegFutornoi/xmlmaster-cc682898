@@ -1,4 +1,3 @@
-
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,6 @@ import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
-import { usePlanLimitations } from '@/hooks/tariffs/usePlanLimitations';
 
 interface UserStore {
   id: string;
@@ -40,24 +38,22 @@ const UserStores = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Використовуємо хук usePlanLimitations з правильним аргументом (може бути null)
-  const { planLimitations, getLimitationByName } = usePlanLimitations(activeSubscription?.tariff_plan?.id || null);
-
   useEffect(() => {
     // Оновлюємо підписку при завантаженні сторінки
     refetchSubscriptions();
     fetchUserStores();
   }, []);
 
-  // Окремий useEffect для оновлення обмежень після отримання даних магазинів та підписки
+  // Окремий useEffect для викликання fetchUserLimitations після завантаження магазинів або при зміні активної підписки
   useEffect(() => {
-    if (activeSubscription && planLimitations.length > 0) {
-      updateStoresLimitation();
+    if (stores.length > 0 || !isLoading || activeSubscription) {
+      fetchUserLimitations();
     }
-  }, [activeSubscription, planLimitations, stores.length]);
+  }, [stores, isLoading, activeSubscription]);
 
   const fetchUserStores = async () => {
     if (!user) return;
+    
     setIsLoading(true);
     try {
       const { data, error } = await extendedSupabase
@@ -65,13 +61,13 @@ const UserStores = () => {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-        
+
       if (error) {
         console.error('Error fetching stores:', error);
         toast({
           title: 'Помилка',
           description: 'Не вдалося завантажити магазини',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       } else {
         setStores(data || []);
@@ -83,31 +79,42 @@ const UserStores = () => {
     }
   };
 
-  const updateStoresLimitation = () => {
-    if (!activeSubscription) {
+  const fetchUserLimitations = async () => {
+    if (!user || !activeSubscription) {
       setStoresLimit(0);
       setCanCreateStore(false);
       return;
     }
     
     try {
-      // Отримуємо конкретне обмеження за назвою
-      const storesLimitation = getLimitationByName('stores_count');
-      if (storesLimitation) {
-        const storesLimitValue = storesLimitation.value;
-        console.log('Stores limit from limitation:', storesLimitValue);
-        setStoresLimit(storesLimitValue);
+      // Отримуємо обмеження для активного тарифу користувача
+      const { data: limitationData, error: limitationError } = await extendedSupabase
+        .from('tariff_plan_limitations')
+        .select(`
+          value,
+          limitation_types:limitation_type_id (name, description)
+        `)
+        .eq('tariff_plan_id', activeSubscription.tariff_plan.id)
+        .eq('limitation_types.name', 'stores_count');
 
+      if (limitationError) {
+        console.error('Error fetching limitations:', limitationError);
+        return;
+      }
+
+      if (limitationData && limitationData.length > 0) {
+        const storesLimitValue = parseInt(limitationData[0].value);
+        setStoresLimit(storesLimitValue);
+        
         // Перевіряємо кількість магазинів строго менше ліміту
         setCanCreateStore(stores.length < storesLimitValue);
       } else {
         // Якщо обмеження не знайдено, встановлюємо значення 0
-        console.log('No stores_count limitation found, setting to 0');
         setStoresLimit(0);
         setCanCreateStore(false);
       }
     } catch (error) {
-      console.error('Error updating stores limitation:', error);
+      console.error('Error fetching limitations:', error);
     }
   };
 
@@ -116,16 +123,16 @@ const UserStores = () => {
       toast({
         title: 'Помилка',
         description: 'Введіть назву магазину',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
-    
+
     if (!user) {
       toast({
         title: 'Помилка',
         description: 'Вам потрібно увійти для створення магазину',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
@@ -135,11 +142,11 @@ const UserStores = () => {
       toast({
         title: 'Помилка',
         description: 'Ви досягли ліміту створення магазинів. Оновіть тарифний план.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const { data, error } = await extendedSupabase
@@ -149,14 +156,14 @@ const UserStores = () => {
           name: newStoreName.trim()
         })
         .select();
-        
+
       if (error) {
         throw error;
       }
-      
+
       toast({
         title: 'Успішно',
-        description: 'Магазин успішно створено'
+        description: 'Магазин успішно створено',
       });
       
       setNewStoreName('');
@@ -167,7 +174,7 @@ const UserStores = () => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося створити магазин',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -184,14 +191,14 @@ const UserStores = () => {
         .delete()
         .eq('id', storeToDelete.id)
         .eq('user_id', user.id);
-        
+      
       if (error) {
         throw error;
       }
       
       toast({
         title: 'Успішно',
-        description: 'Магазин успішно видалено'
+        description: 'Магазин успішно видалено',
       });
       
       setIsDeleteDialogOpen(false);
@@ -202,7 +209,7 @@ const UserStores = () => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося видалити магазин',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);
@@ -235,10 +242,10 @@ const UserStores = () => {
                 <div>
                   <Button 
                     variant="outline" 
-                    size="icon" 
-                    className="rounded-full" 
-                    disabled={!canCreateStore} 
-                    onClick={() => setIsDialogOpen(true)} 
+                    size="icon"
+                    className="rounded-full"
+                    disabled={!canCreateStore}
+                    onClick={() => setIsDialogOpen(true)}
                     id="create-store-button"
                   >
                     <PlusCircle className="h-5 w-5" />
@@ -246,7 +253,10 @@ const UserStores = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                {canCreateStore ? "Створити магазин" : `Досягнуто ліміт магазинів (${storesLimit})`}
+                {canCreateStore 
+                  ? "Створити магазин" 
+                  : `Досягнуто ліміт магазинів (${storesLimit})`
+                }
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -262,7 +272,7 @@ const UserStores = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => openDeleteDialog(store)} 
+                onClick={() => openDeleteDialog(store)}
                 className="absolute top-1 right-1 text-red-500 hover:text-red-700 hover:bg-red-50 z-10 h-6 w-6"
                 id={`delete-store-${store.id}`}
               >
@@ -295,6 +305,7 @@ const UserStores = () => {
       ) : (
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">У вас ще немає ��агазинів</CardTitle>
             <CardDescription className="text-sm">
               Створіть свій перший магазин, щоб почати роботу
             </CardDescription>
@@ -328,9 +339,9 @@ const UserStores = () => {
               <Label htmlFor="store-name">Назва магазину</Label>
               <Input 
                 id="store-name" 
-                value={newStoreName} 
-                onChange={e => setNewStoreName(e.target.value)} 
-                placeholder="Введіть назву магазину" 
+                value={newStoreName}
+                onChange={(e) => setNewStoreName(e.target.value)}
+                placeholder="Введіть назву магазину"
               />
             </div>
           </div>
@@ -338,7 +349,10 @@ const UserStores = () => {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Скасувати
             </Button>
-            <Button onClick={handleCreateStore} disabled={isSubmitting}>
+            <Button 
+              onClick={handleCreateStore}
+              disabled={isSubmitting}
+            >
               {isSubmitting ? 'Створення...' : 'Створити'}
             </Button>
           </DialogFooter>
@@ -357,9 +371,9 @@ const UserStores = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Скасувати</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteStore} 
-              disabled={isDeleting} 
+            <AlertDialogAction
+              onClick={handleDeleteStore}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
               {isDeleting ? 'Видалення...' : 'Видалити'}

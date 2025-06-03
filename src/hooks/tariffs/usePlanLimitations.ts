@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { PlanLimitation, LimitationType } from '@/components/admin/tariffs/types';
 
-export const usePlanLimitations = (selectedPlanId: string | null) => {
+export const usePlanLimitations = (selectedPlanId: string) => {
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,20 +34,19 @@ export const usePlanLimitations = (selectedPlanId: string | null) => {
         }
 
         if (data) {
-          // Типи для більшої чіткості
-          type LimitationResponse = {
-            id: string;
-            value: number;
-            limitation_types: {
-              id: string;
-              name: string;
-              description: string | null;
-            };
-          };
-          
-          // Використовуємо приведення типу через unknown, щоб уникнути помилок TypeScript
           const formattedLimitations: PlanLimitation[] = data.map(item => {
-            const typedItem = item as unknown as LimitationResponse;
+            // Типи для більшої чіткості
+            type LimitationResponse = {
+              id: string;
+              value: number;
+              limitation_types: {
+                id: string;
+                name: string;
+                description: string | null;
+              } | null;
+            };
+            
+            const typedItem = item as LimitationResponse;
             
             return {
               id: typedItem.id,
@@ -100,24 +99,9 @@ export const usePlanLimitations = (selectedPlanId: string | null) => {
     }
   };
 
-  // Допоміжна функція для отримання обмеження за його назвою
-  const getLimitationByName = (name: string): PlanLimitation | undefined => {
-    return planLimitations.find(limitation => 
-      limitation.limitation_type.name === name
-    );
-  };
-
-  // Допоміжна функція для отримання значення обмеження за назвою
-  const getLimitationValueByName = (name: string): number => {
-    const limitation = getLimitationByName(name);
-    return limitation?.value || 0;
-  };
-
   return { 
     planLimitations, 
     isLoading,
-    updateLimitationValue,
-    getLimitationByName,
-    getLimitationValueByName
+    updateLimitationValue
   };
 };
