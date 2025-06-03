@@ -34,8 +34,8 @@ export const usePlanLimitations = (selectedPlanId: string) => {
         }
 
         if (data) {
-          const formattedLimitations: PlanLimitation[] = data.map(item => {
-            // Обробляємо дані без жорсткого типізування для уникнення помилок TypeScript
+          const formattedLimitations: PlanLimitation[] = data.map((item: any) => {
+            // limitation_types - це один об'єкт з join-запиту, не масив
             const limitationType = item.limitation_types;
             
             return {

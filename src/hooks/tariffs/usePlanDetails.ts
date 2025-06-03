@@ -52,8 +52,9 @@ export const usePlanDetails = (planId: string | null) => {
       if (itemsError) throw itemsError;
 
       if (limitationsData) {
-        // Обробляємо дані без жорсткого типізування для уникнення помилок TypeScript
-        const formattedLimitations: PlanLimitation[] = limitationsData.map(item => {
+        // Правильно обробляємо дані з Supabase join-запиту
+        const formattedLimitations: PlanLimitation[] = limitationsData.map((item: any) => {
+          // limitation_types - це один об'єкт з join-запиту, не масив
           const limitationType = item.limitation_types;
           
           return {
