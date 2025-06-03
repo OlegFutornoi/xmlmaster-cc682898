@@ -534,7 +534,7 @@ const UserProducts = () => {
   });
 
   const getCategoryName = (categoryId?: string) => {
-    if (!categoryId) return 'Без категорії';
+    if (!categoryId || categoryId === 'no-category') return 'Без категорії';
     const category = categories.find(c => c.id === categoryId);
     return category?.name || 'Невідома категорія';
   };
@@ -817,14 +817,14 @@ const UserProducts = () => {
                       <div className="space-y-2">
                         <Label htmlFor="new-product-category">Категорія</Label>
                         <Select
-                          value={newProduct.category_id}
-                          onValueChange={(value) => setNewProduct({...newProduct, category_id: value})}
+                          value={newProduct.category_id || 'no-category'}
+                          onValueChange={(value) => setNewProduct({...newProduct, category_id: value === 'no-category' ? undefined : value})}
                         >
                           <SelectTrigger id="new-product-category">
                             <SelectValue placeholder="Оберіть категорію" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Без категорії</SelectItem>
+                            <SelectItem value="no-category">Без категорії</SelectItem>
                             {categories.map((category) => (
                               <SelectItem key={category.id} value={category.id}>
                                 {category.name}
@@ -917,12 +917,12 @@ const UserProducts = () => {
 
                   <div>
                     <Label htmlFor="filter-category">Категорія</Label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <Select value={selectedCategory || 'all-categories'} onValueChange={(value) => setSelectedCategory(value === 'all-categories' ? '' : value)}>
                       <SelectTrigger id="filter-category">
                         <SelectValue placeholder="Всі категорії" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Всі категорії</SelectItem>
+                        <SelectItem value="all-categories">Всі категорії</SelectItem>
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
@@ -1178,14 +1178,14 @@ const UserProducts = () => {
                 <div className="space-y-2">
                   <Label htmlFor="edit-product-category">Категорія</Label>
                   <Select
-                    value={editingProduct.category_id || ''}
-                    onValueChange={(value) => setEditingProduct({...editingProduct, category_id: value || undefined})}
+                    value={editingProduct.category_id || 'no-category'}
+                    onValueChange={(value) => setEditingProduct({...editingProduct, category_id: value === 'no-category' ? undefined : value})}
                   >
                     <SelectTrigger id="edit-product-category">
                       <SelectValue placeholder="Оберіть категорію" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Без категорії</SelectItem>
+                      <SelectItem value="no-category">Без категорії</SelectItem>
                       {categories.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
