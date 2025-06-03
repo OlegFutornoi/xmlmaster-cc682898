@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Save,
   Undo2,
+  Maximize2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -261,22 +262,61 @@ const UserProducts = () => {
     setIsParsingFile(true);
     
     try {
-      // Зробимо запит до URL постачальника
-      const response = await fetch(supplier.url);
-      if (!response.ok) {
-        throw new Error(`Помилка HTTP: ${response.status}`);
+      console.log('Attempting to load file from:', supplier.url);
+      
+      // Спробуємо завантажити через проксі або CORS
+      let xmlText = '';
+      
+      try {
+        // Спочатку спробуємо прямий запит
+        const response = await fetch(supplier.url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'text/xml',
+            'Accept': 'text/xml, application/xml, */*'
+          },
+          mode: 'cors'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP помилка: ${response.status}`);
+        }
+        
+        xmlText = await response.text();
+      } catch (corsError) {
+        console.log('CORS error, trying alternative method:', corsError);
+        
+        // Якщо CORS не працює, спробуємо через allorigins або подібний сервіс
+        try {
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(supplier.url)}`;
+          const proxyResponse = await fetch(proxyUrl);
+          
+          if (!proxyResponse.ok) {
+            throw new Error(`Proxy помилка: ${proxyResponse.status}`);
+          }
+          
+          xmlText = await proxyResponse.text();
+        } catch (proxyError) {
+          console.log('Proxy error:', proxyError);
+          throw new Error('Не вдалося завантажити файл через CORS або проксі. Перевірте URL або завантажте файл вручну.');
+        }
       }
       
-      const xmlText = await response.text();
-      parseXml(xmlText);
+      if (!xmlText) {
+        throw new Error('Отримано порожній файл');
+      }
+      
+      console.log('XML loaded successfully, length:', xmlText.length);
+      await parseXml(xmlText);
+      
     } catch (error) {
       console.error('Error loading file from URL:', error);
       setUploadStatus('error');
       setIsParsingFile(false);
       
       toast({
-        title: 'Помилка',
-        description: 'Не вдалося завантажити файл з URL постачальника',
+        title: 'Помилка завантаження',
+        description: error instanceof Error ? error.message : 'Не вдалося завантажити файл з URL постачальника',
         variant: 'destructive'
       });
     } finally {
@@ -287,6 +327,8 @@ const UserProducts = () => {
   // Універсальна функція для парсингу XML
   const parseXml = async (xmlText: string) => {
     try {
+      console.log('Starting XML parsing...');
+      
       // Емуляція процесу парсингу з прогресом
       for (let i = 0; i <= 100; i += 10) {
         setUploadProgress(i);
@@ -296,44 +338,37 @@ const UserProducts = () => {
       // Парсимо XML
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-      console.log('XML parsed:', xmlDoc);
+      
+      // Перевіряємо на помилки парсингу
+      const parseError = xmlDoc.getElementsByTagName('parsererror');
+      if (parseError.length > 0) {
+        throw new Error('Неправильний формат XML файлу');
+      }
+      
+      console.log('XML parsed successfully:', xmlDoc);
       
       // Масиви для категорій та товарів
       const parsedCategories: Category[] = [];
       const parsedProducts: Product[] = [];
-      const categoryMap: { [key: string]: string } = {}; // Для зберігання відповідності id -> name
+      const categoryMap: { [key: string]: string } = {};
       
-      // Спроба знайти категорії в різних форматах
-      // 1. Формат YML - категорії у <categories><category>
-      const ymlCategories = xmlDoc.querySelectorAll('categories > category');
+      // Спробуємо різні формати XML
+      let categoriesFound = false;
+      let productsFound = false;
+      
+      // 1. Формат YML (Yandex Market Language)
+      console.log('Trying YML format...');
+      const ymlCategories = xmlDoc.querySelectorAll('categories > category, category');
       if (ymlCategories.length > 0) {
         console.log('Found YML categories:', ymlCategories.length);
+        categoriesFound = true;
         
         ymlCategories.forEach((element, index) => {
-          const id = element.getAttribute('id') || `category-${index}`;
-          const name = element.textContent || `Category ${index}`;
+          const id = element.getAttribute('id') || element.getAttribute('categoryId') || `category-${index}`;
+          const name = element.textContent?.trim() || element.getAttribute('name') || `Category ${index}`;
+          const parentId = element.getAttribute('parentId');
           
-          parsedCategories.push({
-            id,
-            name,
-            selected: false,
-            products: []
-          });
-          
-          categoryMap[id] = name;
-        });
-      }
-      
-      // 2. Інший формат - категорії як окремі теги
-      if (ymlCategories.length === 0) {
-        const simpleCategories = xmlDoc.querySelectorAll('category');
-        if (simpleCategories.length > 0) {
-          console.log('Found simple categories:', simpleCategories.length);
-          
-          simpleCategories.forEach((element, index) => {
-            const id = element.getAttribute('id') || `category-${index}`;
-            const name = element.textContent || `Category ${index}`;
-            
+          if (name && name !== '') {
             parsedCategories.push({
               id,
               name,
@@ -342,179 +377,93 @@ const UserProducts = () => {
             });
             
             categoryMap[id] = name;
-          });
-        }
-      }
-      
-      // Вивести в консоль знайдені категорії
-      console.log('Parsed categories:', parsedCategories);
-      console.log('Category map:', categoryMap);
-      
-      // Спроба знайти товари в різних форматах
-      // 1. Формат YML - товари в <offers><offer>
-      const ymlOffers = xmlDoc.querySelectorAll('offers > offer');
-      if (ymlOffers.length > 0) {
-        console.log('Found YML offers:', ymlOffers.length);
-        
-        ymlOffers.forEach((offer, index) => {
-          const id = offer.getAttribute('id') || `product-${index}`;
-          const name = offer.querySelector('name')?.textContent || `Product ${index}`;
-          const priceElement = offer.querySelector('price');
-          const price = priceElement ? parseFloat(priceElement.textContent || '0') : 0;
-          const oldPriceElement = offer.querySelector('oldprice') || offer.querySelector('old_price');
-          const oldPrice = oldPriceElement ? parseFloat(oldPriceElement.textContent || '0') : undefined;
-          const salePriceElement = offer.querySelector('sale_price');
-          const salePrice = salePriceElement ? parseFloat(salePriceElement.textContent || '0') : undefined;
-          const description = offer.querySelector('description')?.textContent || '';
-          const categoryId = offer.querySelector('categoryId')?.textContent || '';
-          const vendor = offer.querySelector('vendor')?.textContent || undefined;
-          const vendorCode = offer.querySelector('vendorCode')?.textContent || undefined;
-          const stockQuantity = offer.querySelector('stock_quantity')?.textContent || undefined;
-          const sku = offer.querySelector('sku')?.textContent || undefined;
-          
-          // Зображення товару - можуть бути як <picture> так і <image>
-          const images: string[] = [];
-          
-          // Перевіряємо теги <picture>
-          const pictureElements = offer.querySelectorAll('picture');
-          if (pictureElements.length > 0) {
-            pictureElements.forEach(pic => {
-              if (pic.textContent) {
-                images.push(pic.textContent);
-              }
-            });
           }
-          
-          // Якщо немає <picture>, перевіряємо теги <image>
-          if (images.length === 0) {
-            const imageElements = offer.querySelectorAll('image');
-            imageElements.forEach(img => {
-              if (img.textContent) {
-                images.push(img.textContent);
-              }
-            });
-          }
-          
-          // Збираємо атрибути товару (параметри)
-          const attributes: ProductAttribute[] = [];
-          const paramElements = offer.querySelectorAll('param');
-          
-          paramElements.forEach(param => {
-            const name = param.getAttribute('name') || '';
-            const value = param.textContent || '';
-            if (name && value) {
-              attributes.push({
-                name,
-                value
-              });
-            }
-          });
-          
-          parsedProducts.push({
-            id,
-            external_id: id,
-            name,
-            price,
-            old_price: oldPrice,
-            sale_price: salePrice,
-            description,
-            selected: false,
-            category_id: categoryId,
-            images,
-            vendor,
-            vendor_code: vendorCode,
-            stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined,
-            sku,
-            attributes
-          });
         });
       }
       
-      // 2. Формат з <item> тег замість <offer>
-      if (parsedProducts.length === 0) {
-        const itemElements = xmlDoc.querySelectorAll('item');
-        if (itemElements.length > 0) {
-          console.log('Found item elements:', itemElements.length);
+      // 2. Формат з простими тегами категорій
+      if (!categoriesFound) {
+        console.log('Trying simple categories format...');
+        const simpleCategories = xmlDoc.querySelectorAll('group, section');
+        if (simpleCategories.length > 0) {
+          console.log('Found simple categories:', simpleCategories.length);
+          categoriesFound = true;
           
-          itemElements.forEach((item, index) => {
-            const id = item.getAttribute('id') || `product-${index}`;
-            const name = item.querySelector('name')?.textContent || `Product ${index}`;
+          simpleCategories.forEach((element, index) => {
+            const id = element.getAttribute('id') || element.getAttribute('code') || `category-${index}`;
+            const name = element.querySelector('name')?.textContent || 
+                         element.getAttribute('name') || 
+                         element.textContent?.trim() || 
+                         `Category ${index}`;
             
-            // Ціна може бути в різних тегах
-            let price = 0;
-            const priceElements = ['price', 'priceusd', 'priceUSD', 'priceUah'];
-            for (const priceTag of priceElements) {
-              const priceElement = item.querySelector(priceTag);
-              if (priceElement && priceElement.textContent) {
-                price = parseFloat(priceElement.textContent);
-                break;
-              }
-            }
-            
-            // Додаткові ціни
-            const oldPriceElement = item.querySelector('oldprice') || item.querySelector('old_price') || item.querySelector('priceOld');
-            const oldPrice = oldPriceElement ? parseFloat(oldPriceElement.textContent || '0') : undefined;
-            
-            const salePriceElement = item.querySelector('sale_price') || item.querySelector('salePrice');
-            const salePrice = salePriceElement ? parseFloat(salePriceElement.textContent || '0') : undefined;
-            
-            const description = item.querySelector('description')?.textContent || '';
-            const categoryId = item.querySelector('categoryId')?.textContent || '';
-            const vendor = item.querySelector('vendor')?.textContent || undefined;
-            const vendorCode = item.querySelector('vendorCode')?.textContent || undefined;
-            const stockQuantity = item.querySelector('stock_quantity')?.textContent || undefined;
-            const sku = item.querySelector('sku')?.textContent || item.querySelector('article')?.textContent || undefined;
-            
-            // Зображення товару
-            const images: string[] = [];
-            
-            // Перевіряємо різні типи тегів для зображень
-            ['image', 'picture', 'img'].forEach(imgTag => {
-              const imgElements = item.querySelectorAll(imgTag);
-              imgElements.forEach(img => {
-                if (img.textContent) {
-                  images.push(img.textContent);
-                }
+            if (name && name !== '') {
+              parsedCategories.push({
+                id,
+                name,
+                selected: false,
+                products: []
               });
-            });
-            
-            // Збираємо атрибути товару (параметри)
-            const attributes: ProductAttribute[] = [];
-            const paramElements = item.querySelectorAll('param');
-            
-            paramElements.forEach(param => {
-              const name = param.getAttribute('name') || '';
-              const value = param.textContent || '';
-              if (name && value) {
-                attributes.push({
-                  name,
-                  value
-                });
-              }
-            });
-            
-            parsedProducts.push({
-              id,
-              external_id: id,
-              name,
-              price,
-              old_price: oldPrice,
-              sale_price: salePrice,
-              description,
-              selected: false,
-              category_id: categoryId,
-              images,
-              vendor,
-              vendor_code: vendorCode,
-              stock_quantity: stockQuantity ? parseInt(stockQuantity) : undefined,
-              sku,
-              attributes
-            });
+              
+              categoryMap[id] = name;
+            }
           });
         }
       }
       
-      // Вивести в консоль знайдені товари
+      console.log('Parsed categories:', parsedCategories);
+      console.log('Category map:', categoryMap);
+      
+      // Парсинг товарів
+      
+      // 1. Формат YML - товари в <offers><offer>
+      console.log('Trying YML offers format...');
+      const ymlOffers = xmlDoc.querySelectorAll('offers > offer, offer');
+      if (ymlOffers.length > 0) {
+        console.log('Found YML offers:', ymlOffers.length);
+        productsFound = true;
+        
+        ymlOffers.forEach((offer, index) => {
+          const product = parseProductElement(offer, index, 'yml');
+          if (product) {
+            parsedProducts.push(product);
+          }
+        });
+      }
+      
+      // 2. Формат з <item> тегами
+      if (!productsFound) {
+        console.log('Trying item elements format...');
+        const itemElements = xmlDoc.querySelectorAll('item, product, good');
+        if (itemElements.length > 0) {
+          console.log('Found item elements:', itemElements.length);
+          productsFound = true;
+          
+          itemElements.forEach((item, index) => {
+            const product = parseProductElement(item, index, 'item');
+            if (product) {
+              parsedProducts.push(product);
+            }
+          });
+        }
+      }
+      
+      // 3. Формат mobioptom (специфічний для цього постачальника)
+      if (!productsFound) {
+        console.log('Trying mobioptom format...');
+        const mobiElements = xmlDoc.querySelectorAll('row, record');
+        if (mobiElements.length > 0) {
+          console.log('Found mobioptom elements:', mobiElements.length);
+          productsFound = true;
+          
+          mobiElements.forEach((element, index) => {
+            const product = parseProductElement(element, index, 'mobioptom');
+            if (product) {
+              parsedProducts.push(product);
+            }
+          });
+        }
+      }
+      
       console.log('Parsed products:', parsedProducts);
       
       // Додаємо товари до відповідних категорій
@@ -546,13 +495,186 @@ const UserProducts = () => {
       setUploadStatus('success');
       setIsParsingFile(false);
       
-      toast.success(`Файл оброблено: знайдено ${parsedCategories.length} категорій та ${parsedProducts.length} товарів`);
+      toast({
+        title: 'Успіх',
+        description: `Файл оброблено: знайдено ${parsedCategories.length} категорій та ${parsedProducts.length} товарів`,
+      });
+      
     } catch (error) {
       console.error('Error parsing XML:', error);
       setUploadStatus('error');
       setIsParsingFile(false);
       
-      toast.error('Не вдалося обробити XML файл');
+      toast({
+        title: 'Помилка парсингу',
+        description: error instanceof Error ? error.message : 'Не вдалося обробити XML файл',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Функція для парсингу окремого елемента товару
+  const parseProductElement = (element: Element, index: number, format: 'yml' | 'item' | 'mobioptom'): Product | null => {
+    try {
+      let id: string;
+      let name: string;
+      let price = 0;
+      let oldPrice: number | undefined;
+      let salePrice: number | undefined;
+      let description = '';
+      let categoryId = '';
+      let vendor: string | undefined;
+      let vendorCode: string | undefined;
+      let stockQuantity: number | undefined;
+      let sku: string | undefined;
+      
+      if (format === 'yml') {
+        id = element.getAttribute('id') || `product-${index}`;
+        name = element.querySelector('name')?.textContent || `Product ${index}`;
+        
+        const priceElement = element.querySelector('price');
+        price = priceElement ? parseFloat(priceElement.textContent || '0') : 0;
+        
+        const oldPriceElement = element.querySelector('oldprice') || element.querySelector('old_price');
+        oldPrice = oldPriceElement ? parseFloat(oldPriceElement.textContent || '0') : undefined;
+        
+        const salePriceElement = element.querySelector('sale_price');
+        salePrice = salePriceElement ? parseFloat(salePriceElement.textContent || '0') : undefined;
+        
+        description = element.querySelector('description')?.textContent || '';
+        categoryId = element.querySelector('categoryId')?.textContent || '';
+        vendor = element.querySelector('vendor')?.textContent || undefined;
+        vendorCode = element.querySelector('vendorCode')?.textContent || undefined;
+        stockQuantity = element.querySelector('stock_quantity')?.textContent ? parseInt(element.querySelector('stock_quantity')!.textContent!) : undefined;
+        sku = element.querySelector('sku')?.textContent || undefined;
+        
+      } else if (format === 'mobioptom') {
+        // Специфічний парсинг для mobioptom
+        id = element.getAttribute('id') || 
+             element.querySelector('id')?.textContent || 
+             element.querySelector('code')?.textContent || 
+             `product-${index}`;
+        
+        name = element.querySelector('name')?.textContent || 
+               element.querySelector('title')?.textContent || 
+               element.getAttribute('name') || 
+               `Product ${index}`;
+        
+        // Ціна може бути в різних полях
+        const priceFields = ['price', 'cost', 'price_uah', 'price_usd'];
+        for (const field of priceFields) {
+          const priceElement = element.querySelector(field);
+          if (priceElement && priceElement.textContent) {
+            price = parseFloat(priceElement.textContent);
+            break;
+          }
+        }
+        
+        description = element.querySelector('description')?.textContent || 
+                     element.querySelector('desc')?.textContent || '';
+        
+        categoryId = element.querySelector('category')?.textContent || 
+                    element.querySelector('category_id')?.textContent || 
+                    element.getAttribute('category') || '';
+        
+        vendor = element.querySelector('brand')?.textContent || 
+                element.querySelector('manufacturer')?.textContent || undefined;
+        
+        vendorCode = element.querySelector('model')?.textContent || 
+                    element.querySelector('article')?.textContent || undefined;
+        
+        const stockElement = element.querySelector('stock') || element.querySelector('quantity');
+        stockQuantity = stockElement?.textContent ? parseInt(stockElement.textContent) : undefined;
+        
+        sku = element.querySelector('sku')?.textContent || 
+             element.querySelector('article')?.textContent || 
+             id;
+        
+      } else {
+        // Загальний формат item
+        id = element.getAttribute('id') || `product-${index}`;
+        name = element.querySelector('name')?.textContent || `Product ${index}`;
+        
+        // Ціна може бути в різних тегах
+        const priceElements = ['price', 'priceusd', 'priceUSD', 'priceUah', 'cost'];
+        for (const priceTag of priceElements) {
+          const priceElement = element.querySelector(priceTag);
+          if (priceElement && priceElement.textContent) {
+            price = parseFloat(priceElement.textContent);
+            break;
+          }
+        }
+        
+        const oldPriceElement = element.querySelector('oldprice') || element.querySelector('old_price') || element.querySelector('priceOld');
+        oldPrice = oldPriceElement ? parseFloat(oldPriceElement.textContent || '0') : undefined;
+        
+        const salePriceElement = element.querySelector('sale_price') || element.querySelector('salePrice');
+        salePrice = salePriceElement ? parseFloat(salePriceElement.textContent || '0') : undefined;
+        
+        description = element.querySelector('description')?.textContent || '';
+        categoryId = element.querySelector('categoryId')?.textContent || '';
+        vendor = element.querySelector('vendor')?.textContent || undefined;
+        vendorCode = element.querySelector('vendorCode')?.textContent || undefined;
+        stockQuantity = element.querySelector('stock_quantity')?.textContent ? parseInt(element.querySelector('stock_quantity')!.textContent!) : undefined;
+        sku = element.querySelector('sku')?.textContent || element.querySelector('article')?.textContent || undefined;
+      }
+      
+      // Зображення товару
+      const images: string[] = [];
+      
+      // Перевіряємо різні типи тегів для зображень
+      ['image', 'picture', 'img', 'photo'].forEach(imgTag => {
+        const imgElements = element.querySelectorAll(imgTag);
+        imgElements.forEach(img => {
+          const imgUrl = img.textContent || img.getAttribute('src') || img.getAttribute('url');
+          if (imgUrl) {
+            images.push(imgUrl);
+          }
+        });
+      });
+      
+      // Збираємо атрибути товару (параметри)
+      const attributes: ProductAttribute[] = [];
+      const paramElements = element.querySelectorAll('param, parameter, attribute');
+      
+      paramElements.forEach(param => {
+        const name = param.getAttribute('name') || param.querySelector('name')?.textContent || '';
+        const value = param.textContent || param.getAttribute('value') || param.querySelector('value')?.textContent || '';
+        if (name && value) {
+          attributes.push({
+            name,
+            value
+          });
+        }
+      });
+      
+      // Перевіряємо, чи є обов'язкові поля
+      if (!name || name.trim() === '') {
+        console.warn(`Skipping product at index ${index}: missing name`);
+        return null;
+      }
+      
+      return {
+        id,
+        external_id: id,
+        name: name.trim(),
+        price,
+        old_price: oldPrice,
+        sale_price: salePrice,
+        description: description.trim(),
+        selected: false,
+        category_id: categoryId,
+        images,
+        vendor,
+        vendor_code: vendorCode,
+        stock_quantity: stockQuantity,
+        sku,
+        attributes
+      };
+      
+    } catch (error) {
+      console.error(`Error parsing product at index ${index}:`, error);
+      return null;
     }
   };
 
@@ -762,8 +884,12 @@ const UserProducts = () => {
     setIsSaving(true);
     
     try {
+      console.log('Starting to save products:', previewProducts.length);
+      
       // Для кожного товару з вибраних
       for (const product of previewProducts) {
+        console.log('Saving product:', product.name);
+        
         // 1. Спочатку перевіряємо, чи існує категорія, якщо ні - створюємо
         let categoryId = product.category_id;
         const categoryName = parsedData?.categories.find(c => c.id === product.category_id)?.name || 'Без категорії';
@@ -779,6 +905,7 @@ const UserProducts = () => {
         if (categoryError) throw categoryError;
         
         if (!existingCategories?.length) {
+          console.log('Creating new category:', categoryName);
           // Створюємо нову категорію
           const { data: newCategory, error } = await extendedSupabase
             .from('product_categories')
@@ -799,6 +926,7 @@ const UserProducts = () => {
         }
         
         // 2. Зберігаємо товар
+        console.log('Inserting product into database...');
         const { data: savedProduct, error: productError } = await extendedSupabase
           .from('products')
           .insert({
@@ -821,9 +949,11 @@ const UserProducts = () => {
           .single();
           
         if (productError) throw productError;
+        console.log('Product saved with ID:', savedProduct.id);
         
         // 3. Зберігаємо зображення товару
         if (product.images?.length) {
+          console.log('Saving product images:', product.images.length);
           const productImages = product.images.map((imageUrl, index) => ({
             product_id: savedProduct.id,
             image_url: imageUrl,
@@ -841,6 +971,7 @@ const UserProducts = () => {
         
         // 4. Зберігаємо атрибути товару
         if (product.attributes?.length) {
+          console.log('Saving product attributes:', product.attributes.length);
           const productAttributes = product.attributes.map(attr => ({
             product_id: savedProduct.id,
             attribute_name: attr.name,
@@ -870,7 +1001,10 @@ const UserProducts = () => {
         console.error('Error updating supplier product count:', supplierError);
       }
       
-      toast.success(`Додано ${previewProducts.length} товарів до магазину`);
+      toast({
+        title: 'Успіх',
+        description: `Додано ${previewProducts.length} товарів до магазину`,
+      });
       
       // Скидаємо дані після збереження
       setParsedData(null);
@@ -881,7 +1015,11 @@ const UserProducts = () => {
       
     } catch (error) {
       console.error('Error saving products:', error);
-      toast.error('Не вдалося зберегти товари');
+      toast({
+        title: 'Помилка збереження',
+        description: error instanceof Error ? error.message : 'Не вдалося зберегти товари',
+        variant: 'destructive'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -983,11 +1121,15 @@ const UserProducts = () => {
                 <Button 
                   variant="secondary" 
                   onClick={loadFileFromUrl}
-                  disabled={!selectedStore || !selectedSupplier || !suppliers.find(s => s.id === selectedSupplier)?.url}
+                  disabled={!selectedStore || !selectedSupplier || !suppliers.find(s => s.id === selectedSupplier)?.url || isLoadingFile}
                   id="load-from-url-button"
                   size="sm"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
+                  {isLoadingFile ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-current animate-spin mr-2"></div>
+                  ) : (
+                    <Eye className="h-4 w-4 mr-2" />
+                  )}
                   З сайту
                 </Button>
               </TooltipTrigger>
@@ -1347,7 +1489,7 @@ const UserProducts = () => {
                             </TableCell>
                             <TableCell className="p-2">
                               {product.images.length > 0 ? (
-                                <div className="w-12 h-12 rounded overflow-hidden border">
+                                <div className="w-12 h-12 rounded overflow-hidden border mb-4 max-h-[300px]">
                                   <img 
                                     src={product.images[0]} 
                                     alt={product.name} 
