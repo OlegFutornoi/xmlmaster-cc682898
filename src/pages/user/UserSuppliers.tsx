@@ -2,7 +2,7 @@
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, PlusCircle, Trash2, Pencil, ExternalLink, FilePlus, AlertCircle } from 'lucide-react';
+import { Package, PlusCircle, Trash2, Pencil, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,6 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
@@ -46,7 +45,6 @@ const UserSuppliers = () => {
   const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
-    // Оновлюємо підписку при кожному заході на сторінку
     const refreshData = async () => {
       if (user) {
         await refetchSubscriptions();
@@ -56,20 +54,18 @@ const UserSuppliers = () => {
     
     refreshData();
     
-    // Встановлюємо інтервал для регулярної перевірки підписки і обмежень
     const intervalId = setInterval(async () => {
       if (user) {
         await refetchSubscriptions();
         fetchUserLimitations();
       }
-    }, 60000); // перевірка кожну хвилину
+    }, 60000);
     
     return () => {
       clearInterval(intervalId);
     };
   }, [user]);
 
-  // Окремий useEffect для оновлення обмежень після оновлення підписки
   useEffect(() => {
     if (activeSubscription) {
       console.log('Active subscription updated, refreshing limitations');
@@ -115,7 +111,6 @@ const UserSuppliers = () => {
     try {
       console.log('Fetching limitations for tariff plan:', activeSubscription.tariff_plan.id);
       
-      // Отримуємо обмеження для активного тарифу користувача
       const { data: limitationData, error: limitationError } = await extendedSupabase
         .from('tariff_plan_limitations')
         .select(`
@@ -134,11 +129,8 @@ const UserSuppliers = () => {
         const suppliersLimitValue = parseInt(limitationData[0].value);
         console.log('Suppliers limit from DB:', suppliersLimitValue);
         setSuppliersLimit(suppliersLimitValue);
-        
-        // Перевіряємо кількість постачальників строго менше ліміту
         setCanCreateSupplier(suppliers.length < suppliersLimitValue);
       } else {
-        // Якщо обмеження не знайдено, встановлюємо значення 0
         console.log('No suppliers limit found, setting to 0');
         setSuppliersLimit(0);
         setCanCreateSupplier(false);
@@ -189,7 +181,6 @@ const UserSuppliers = () => {
       return;
     }
 
-    // Додаткова перевірка перед створенням - чи не перевищено ліміт
     if (suppliersLimit !== null && suppliers.length >= suppliersLimit) {
       toast({
         title: 'Помилка',
@@ -346,189 +337,220 @@ const UserSuppliers = () => {
   };
 
   return (
-    <div className="container mx-auto py-4 px-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-semibold">Постачальники</h1>
-        
-        <div className="flex items-center gap-2">
-          {suppliersLimit !== null && (
-            <Badge variant="outline" className="flex items-center px-2 py-1 text-xs">
-              <Package className="h-3 w-3 mr-1 text-blue-600" />
-              <span className="text-muted-foreground">
-                {suppliers.length} з {suppliersLimit}
-              </span>
-            </Badge>
-          )}
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    className="rounded-full"
-                    disabled={!canCreateSupplier}
-                    onClick={() => {
-                      setIsEditMode(false);
-                      setCurrentSupplier(null);
-                      setSupplierName('');
-                      setSupplierUrl('');
-                      setUrlError('');
-                      setIsDialogOpen(true);
-                    }}
-                    id="create-supplier-button"
-                  >
-                    <PlusCircle className="h-5 w-5" />
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {canCreateSupplier 
-                  ? "Додати постачальника" 
-                  : `Досягнуто ліміт постачальників (${suppliersLimit})`
-                }
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-emerald-100 px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Постачальники</h1>
+              <p className="text-gray-600">Керуйте своїми постачальниками та XML інтеграціями</p>
+            </div>
+            <div className="flex items-center gap-3 mt-4 md:mt-0">
+              {suppliersLimit !== null && (
+                <Badge variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700 px-3 py-1">
+                  <Package className="h-4 w-4 mr-2" />
+                  {suppliers.length} з {suppliersLimit}
+                </Badge>
+              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      disabled={!canCreateSupplier}
+                      onClick={() => {
+                        setIsEditMode(false);
+                        setCurrentSupplier(null);
+                        setSupplierName('');
+                        setSupplierUrl('');
+                        setUrlError('');
+                        setIsDialogOpen(true);
+                      }}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
+                      id="create-supplier-button"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Додати постачальника
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {canCreateSupplier 
+                      ? "Додати постачальника" 
+                      : `Досягнуто ліміт постачальників (${suppliersLimit})`
+                    }
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {isLoading ? (
-        <p>Завантаження постачальників...</p>
-      ) : suppliers.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Назва</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead>Дата створення</TableHead>
-              <TableHead className="text-right">Дії</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+
+      <div className="max-w-7xl mx-auto p-6">
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Завантаження постачальників...</p>
+          </div>
+        ) : suppliers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {suppliers.map(supplier => (
-              <TableRow key={supplier.id}>
-                <TableCell className="font-medium">{supplier.name}</TableCell>
-                <TableCell>
+              <Card key={supplier.id} className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+                        <Package className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg text-gray-900 line-clamp-1">{supplier.name}</CardTitle>
+                        <CardDescription className="text-sm text-gray-600">
+                          {format(new Date(supplier.created_at), "dd.MM.yyyy", { locale: uk })}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(supplier)}
+                              className="h-8 w-8 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50"
+                              id={`edit-supplier-${supplier.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Редагувати</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDeleteDialog(supplier)}
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              id={`delete-supplier-${supplier.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Видалити</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
                   {supplier.url ? (
-                    <a href={supplier.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
+                    <a
+                      href={supplier.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                    >
                       <ExternalLink className="h-4 w-4" />
-                      Відкрити
+                      Відкрити URL
                     </a>
                   ) : (
-                    <span className="text-gray-500">Не вказано</span>
+                    <span className="text-gray-500 text-sm">URL не вказано</span>
                   )}
-                </TableCell>
-                <TableCell>{format(new Date(supplier.created_at), "dd.MM.yyyy", { locale: uk })}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => openEditDialog(supplier)}
-                            id={`edit-supplier-${supplier.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Редагувати</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => openDeleteDialog(supplier)}
-                            id={`delete-supplier-${supplier.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Видалити</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </TableCell>
-              </TableRow>
+                </CardContent>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">У вас ще немає постачальників</CardTitle>
-            <CardDescription className="text-sm">
-              Додайте своїх постачальників, щоб почати роботу
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {canCreateSupplier ? (
-              <Button onClick={() => {
-                  setIsEditMode(false);
-                  setCurrentSupplier(null);
-                  setSupplierName('');
-                  setSupplierUrl('');
-                  setUrlError('');
-                  setIsDialogOpen(true);
-                }} size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Додати постачальника
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-yellow-500" />
-                <p className="text-sm text-gray-600">
-                  Для додавання постачальників необхідно оновити тарифний план
-                </p>
+          </div>
+        ) : (
+          <Card className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg max-w-2xl mx-auto">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Package className="h-8 w-8 text-white" />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              <CardTitle className="text-xl text-gray-900">У вас ще немає постачальників</CardTitle>
+              <CardDescription className="text-gray-600">
+                Додайте своїх постачальників, щоб почати роботу з XML файлами
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              {canCreateSupplier ? (
+                <Button
+                  onClick={() => {
+                    setIsEditMode(false);
+                    setCurrentSupplier(null);
+                    setSupplierName('');
+                    setSupplierUrl('');
+                    setUrlError('');
+                    setIsDialogOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Додати постачальника
+                </Button>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-yellow-500" />
+                  <p className="text-gray-600">
+                    Для додавання постачальників необхідно оновити тарифний план
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      {/* Діалог створення/редагування постачальника */}
+      {/* Dialog створення/редагування постачальника */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white/95 backdrop-blur-sm border-emerald-100">
           <DialogHeader>
-            <DialogTitle>{isEditMode ? 'Редагувати постачальника' : 'Додати нового постачальника'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">
+              {isEditMode ? 'Редагувати постачальника' : 'Додати нового постачальника'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
               {isEditMode ? 'Змініть інформацію про постачальника' : 'Введіть дані нового постачальника'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="supplier-name">Назва постачальника</Label>
-              <Input 
-                id="supplier-name" 
+              <Label htmlFor="supplier-name" className="text-gray-700">Назва постачальника</Label>
+              <Input
+                id="supplier-name"
                 value={supplierName}
                 onChange={(e) => setSupplierName(e.target.value)}
                 placeholder="Введіть назву постачальника"
+                className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="supplier-url">URL (не обов'язково)</Label>
-              <Input 
-                id="supplier-url" 
+              <Label htmlFor="supplier-url" className="text-gray-700">URL (не обов'язково)</Label>
+              <Input
+                id="supplier-url"
                 value={supplierUrl}
                 onChange={(e) => setSupplierUrl(e.target.value)}
                 placeholder="Введіть URL постачальника"
+                className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
               />
               {urlError && <p className="text-red-500 text-sm">{urlError}</p>}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              className="border-emerald-200 hover:bg-emerald-50"
+            >
               Скасувати
             </Button>
-            <Button 
+            <Button
               onClick={isEditMode ? handleEditSupplier : handleCreateSupplier}
               disabled={isSubmitting}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
             >
               {isSubmitting ? 'Збереження...' : 'Зберегти'}
             </Button>
@@ -536,22 +558,22 @@ const UserSuppliers = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Діалог підтвердження видалення */}
+      {/* Dialog підтвердження видалення */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm border-emerald-100">
           <AlertDialogHeader>
-            <AlertDialogTitle>Видалити постачальника?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900">Видалити постачальника?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
               Ви впевнені, що хочете видалити постачальника "{supplierToDelete?.name}"? 
               Ця дія не може бути скасована.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogCancel className="border-emerald-200 hover:bg-emerald-50">Скасувати</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteSupplier}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-500 hover:bg-red-600 text-white"
             >
               {isDeleting ? 'Видалення...' : 'Видалити'}
             </AlertDialogAction>

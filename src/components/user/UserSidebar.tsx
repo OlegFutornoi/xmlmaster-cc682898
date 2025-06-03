@@ -35,9 +35,9 @@ const UserSidebar = () => {
   };
 
   const sidebarClasses = `
-    ${collapsed ? 'w-[60px]' : isMobile ? 'w-full fixed z-50 bg-white shadow-xl' : 'w-64'} 
+    ${collapsed ? 'w-[60px]' : isMobile ? 'w-full fixed z-50 bg-white/95 backdrop-blur-sm shadow-xl border-r border-emerald-100' : 'w-64'} 
     flex flex-col justify-between
-    h-screen border-r border-gray-200 bg-white transition-all duration-300
+    h-screen bg-white/80 backdrop-blur-sm border-r border-emerald-100 transition-all duration-300
   `;
 
   const menuItems = [
@@ -52,10 +52,10 @@ const UserSidebar = () => {
     <div className={sidebarClasses}>
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="flex items-center justify-between p-4 border-b border-emerald-100/50">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">X</span>
               </div>
               <span className="font-semibold text-gray-900">XML Master</span>
@@ -65,7 +65,7 @@ const UserSidebar = () => {
             variant="ghost" 
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto hover:bg-gray-100"
+            className="ml-auto hover:bg-emerald-50 text-gray-600 hover:text-emerald-600"
             id="sidebar-toggle"
           >
             {isMobile ? (
@@ -87,8 +87,8 @@ const UserSidebar = () => {
                 className={({ isActive }) => `
                   flex items-center px-3 py-2.5 rounded-lg transition-all duration-200
                   ${isActive 
-                    ? 'bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm' 
+                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'
                   }
                   ${collapsed ? 'justify-center' : ''}
                 `}
@@ -103,18 +103,18 @@ const UserSidebar = () => {
       </div>
 
       {/* User Profile & Logout */}
-      <div className="p-3 border-t border-gray-100">
+      <div className="p-3 border-t border-emerald-100/50">
         {!collapsed && (
-          <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+          <div className="mb-3 p-3 bg-emerald-50/50 rounded-lg">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-emerald-500 text-white text-sm">
+                <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm">
                   {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.email}</p>
-                <p className="text-xs text-gray-500">Активний користувач</p>
+                <p className="text-xs text-emerald-600">Активний користувач</p>
               </div>
             </div>
           </div>
