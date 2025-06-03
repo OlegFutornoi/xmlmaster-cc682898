@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { PlanLimitation, LimitationType } from '@/components/admin/tariffs/types';
 
+// Виправлений тип для відповіді від Supabase
+interface SupabaseLimitationResponse {
+  id: string;
+  value: number;
+  limitation_types: {
+    id: string;
+    name: string;
+    description: string | null;
+  } | null;
+}
+
 export const usePlanLimitations = (selectedPlanId: string) => {
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,18 +46,8 @@ export const usePlanLimitations = (selectedPlanId: string) => {
 
         if (data) {
           const formattedLimitations: PlanLimitation[] = data.map(item => {
-            // Типи для більшої чіткості
-            type LimitationResponse = {
-              id: string;
-              value: number;
-              limitation_types: {
-                id: string;
-                name: string;
-                description: string | null;
-              } | null;
-            };
-            
-            const typedItem = item as LimitationResponse;
+            // Використовуємо виправлений тип
+            const typedItem = item as SupabaseLimitationResponse;
             
             return {
               id: typedItem.id,

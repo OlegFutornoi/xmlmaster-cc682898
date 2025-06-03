@@ -12,6 +12,17 @@ interface TariffItem {
   is_active: boolean;
 }
 
+// Виправлений тип для відповіді від Supabase
+interface SupabaseLimitationResponse {
+  id: string;
+  value: number;
+  limitation_types: {
+    id: string;
+    name: string;
+    description: string | null;
+  } | null;
+}
+
 export const usePlanDetails = (planId: string | null) => {
   const { toast } = useToast();
   const [planLimitations, setPlanLimitations] = useState<PlanLimitation[]>([]);
@@ -52,20 +63,9 @@ export const usePlanDetails = (planId: string | null) => {
       if (itemsError) throw itemsError;
 
       if (limitationsData) {
-        // Типи для більшої чіткості
-        type LimitationResponse = {
-          id: string;
-          value: number;
-          limitation_types: {
-            id: string;
-            name: string;
-            description: string | null;
-          } | null;
-        };
-        
-        // Виправлене перетворення даних
+        // Виправлене перетворення даних з правильними типами
         const formattedLimitations: PlanLimitation[] = limitationsData.map(item => {
-          const typedItem = item as LimitationResponse;
+          const typedItem = item as SupabaseLimitationResponse;
           
           return {
             id: typedItem.id,
