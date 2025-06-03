@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -410,18 +411,20 @@ const UserProducts = () => {
 
     try {
       const productsToImport: ProductInsert[] = importData.map(product => {
+        const { imageUrl, ...productWithoutImageUrl } = product;
+        
         const dbProduct: ProductInsert = {
-          name: product.name || 'Новий товар', // Забезпечуємо обов'язкове поле
-          description: product.description || null,
-          price: product.price || 0,
-          old_price: product.old_price || null,
-          sale_price: product.sale_price || null,
-          sku: product.sku || null,
-          vendor_code: product.vendor_code || null,
-          vendor: product.vendor || null,
-          stock_quantity: product.stock_quantity || 0,
-          currency: product.currency || 'UAH',
-          external_id: product.imageUrl || null,
+          name: productWithoutImageUrl.name || 'Новий товар',
+          description: productWithoutImageUrl.description || null,
+          price: productWithoutImageUrl.price || 0,
+          old_price: productWithoutImageUrl.old_price || null,
+          sale_price: productWithoutImageUrl.sale_price || null,
+          sku: productWithoutImageUrl.sku || null,
+          vendor_code: productWithoutImageUrl.vendor_code || null,
+          vendor: productWithoutImageUrl.vendor || null,
+          stock_quantity: productWithoutImageUrl.stock_quantity || 0,
+          currency: productWithoutImageUrl.currency || 'UAH',
+          external_id: imageUrl || null,
           store_id: selectedStore,
           supplier_id: selectedSupplier,
           user_id: user?.id || '',
