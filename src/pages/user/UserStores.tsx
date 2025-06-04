@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -212,6 +213,14 @@ const UserStores = () => {
     setIsDialogOpen(true);
   };
 
+  const handleManageStore = (storeId: string) => {
+    console.log('Manage store:', storeId);
+    toast({
+      title: 'Функція в розробці',
+      description: 'Управління магазином буде додано пізніше'
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       {/* Header */}
@@ -308,7 +317,7 @@ const UserStores = () => {
                     size="sm"
                     className="w-full justify-between border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
                     id={`manage-store-${store.id}`}
-                    onClick={() => console.log('Manage store:', store.id)}
+                    onClick={() => handleManageStore(store.id)}
                   >
                     Керувати
                     <ChevronRight className="h-4 w-4" />
