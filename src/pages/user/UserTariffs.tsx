@@ -10,10 +10,11 @@ import { usePlanDetails } from '@/hooks/tariffs/usePlanDetails';
 import { activateUserPlan } from '@/services/subscriptionService';
 import TariffCard from '@/components/user/tariffs/TariffCard';
 import CurrentSubscription from '@/components/user/tariffs/CurrentSubscription';
-import SubscriptionHistory from '@/components/user/tariffs/SubscriptionHistory';
+import SubscriptionHistoryModal from '@/components/user/tariffs/SubscriptionHistoryModal';
 import PlanConfirmDialog from '@/components/user/tariffs/PlanConfirmDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, History } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const UserTariffs = () => {
   const { user } = useAuth();
@@ -32,6 +33,7 @@ const UserTariffs = () => {
   } = useUserSubscriptions();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const {
     planLimitations,
@@ -98,14 +100,37 @@ const UserTariffs = () => {
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-emerald-100 px-6 py-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
-              <CreditCard className="h-5 w-5 text-white" />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Тарифні плани</h1>
+                <p className="text-gray-600">Оберіть найкращий план для ваших потреб</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Тарифні плани</h1>
-              <p className="text-gray-600">Оберіть найкращий план для ваших потреб</p>
-            </div>
+            
+            {subscriptionHistory.length > 0 && (
+              <div className="flex items-center gap-3 mt-4 md:mt-0">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsHistoryModalOpen(true)}
+                        className="border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
+                        id="history-button"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Історія підписок</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -120,7 +145,7 @@ const UserTariffs = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Доступні тарифи</h2>
             <p className="text-gray-600">Оберіть тарифний план що відповідає вашим потребам</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {tariffPlans.map(plan => (
               <TariffCard 
                 key={plan.id} 
@@ -133,8 +158,6 @@ const UserTariffs = () => {
           </div>
         </div>
 
-        <SubscriptionHistory history={subscriptionHistory} />
-
         <PlanConfirmDialog 
           open={isConfirmDialogOpen} 
           onOpenChange={setIsConfirmDialogOpen} 
@@ -144,6 +167,12 @@ const UserTariffs = () => {
           activeSubscription={activeSubscription} 
           isActivating={isActivating} 
           onActivate={handleActivatePlan} 
+        />
+
+        <SubscriptionHistoryModal
+          open={isHistoryModalOpen}
+          onOpenChange={setIsHistoryModalOpen}
+          history={subscriptionHistory}
         />
       </div>
     </div>

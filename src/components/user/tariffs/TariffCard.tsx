@@ -1,90 +1,87 @@
-// Компонент для відображення карточки тарифного плану
-import React from 'react';
-import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
+// Компонент картки тарифного плану
 import { Button } from '@/components/ui/button';
-import { Info, Check, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { uk } from 'date-fns/locale';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TariffPlan } from '@/components/admin/tariffs/types';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CreditCard, Check } from 'lucide-react';
+
+interface TariffPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  is_permanent: boolean;
+  duration_days: number | null;
+  currency: {
+    code: string;
+  };
+}
+
 interface TariffCardProps {
   plan: TariffPlan;
   isActive: boolean;
   onSelect: (planId: string) => void;
   onViewDetails: (planId: string) => void;
 }
-const TariffCard: React.FC<TariffCardProps> = ({
-  plan,
-  isActive,
-  onSelect,
-  onViewDetails
-}) => {
-  const isMobile = useIsMobile();
 
-  // Розрахунок дати закінчення для відображення
-  const getExpiryDate = () => {
-    if (plan.is_permanent) {
-      return null;
-    }
-    if (plan.duration_days) {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + plan.duration_days);
-      return format(futureDate, "d MMMM yyyy", {
-        locale: uk
-      });
-    }
-    return null;
-  };
-  const expiryDate = getExpiryDate();
-  return <Card className={`
-        transition-all duration-200 hover:shadow-md 
-        ${isActive ? 'border-blue-500 ring-1 ring-blue-500' : ''}
-      `} id={`tariff-card-${plan.id}`}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{plan.name}</CardTitle>
-          <Badge variant={plan.is_permanent ? "secondary" : "default"}>
-            {plan.is_permanent ? 'Постійний' : expiryDate ? `До ${expiryDate}` : `${plan.duration_days} днів`}
+const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps) => {
+  return (
+    <Card className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      
+      {isActive && (
+        <div className="absolute top-3 right-3">
+          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+            <Check className="h-3 w-3 mr-1" />
+            Активний
           </Badge>
         </div>
+      )}
+      
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+            <CreditCard className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <CardTitle className="text-lg text-gray-900 line-clamp-1">{plan.name}</CardTitle>
+            <CardDescription className="text-sm text-gray-600">
+              {plan.is_permanent ? 'Постійний доступ' : `${plan.duration_days} днів`}
+            </CardDescription>
+          </div>
+        </div>
         
+        <div className="text-center py-2">
+          <div className="text-2xl font-bold text-gray-900">
+            {plan.price} {plan.currency.code}
+          </div>
+          {plan.description && (
+            <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+          )}
+        </div>
       </CardHeader>
       
-      <CardContent>
-        <div className="text-2xl font-bold mb-4">
-          {plan.price} {plan.currency.code}
-        </div>
-      </CardContent>
-      
-      <CardFooter className={`flex ${isMobile ? 'flex-col space-y-2' : 'justify-between'}`}>
-        <div className={`flex ${isMobile ? 'w-full justify-between' : ''}`}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={() => onViewDetails(plan.id)} id={`tariff-details-${plan.id}`}>
-                  <Info className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Детальна інформація</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          {isMobile && <Button variant="outline" size="icon" onClick={() => onSelect(plan.id)} id={`tariff-select-icon-${plan.id}`} disabled={isActive}>
-              <CheckCircle2 className={`h-4 w-4 ${isActive ? 'text-green-500' : 'text-gray-400'}`} />
-            </Button>}
-        </div>
+      <CardContent className="pt-0 space-y-2">
+        <Button
+          onClick={() => onViewDetails(plan.id)}
+          variant="outline"
+          size="sm"
+          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
+        >
+          Детальніше
+        </Button>
         
-        {!isMobile && <Button className="ml-2" variant={isActive ? "outline" : "default"} onClick={() => onSelect(plan.id)} id={`tariff-select-${plan.id}`} disabled={isActive}>
-            {isActive ? <>
-                <Check className="mr-2 h-4 w-4" />
-                Активний тариф
-              </> : 'Вибрати тариф'}
-          </Button>}
-      </CardFooter>
-    </Card>;
+        {!isActive && (
+          <Button
+            onClick={() => onSelect(plan.id)}
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
+          >
+            Обрати план
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
 };
+
 export default TariffCard;

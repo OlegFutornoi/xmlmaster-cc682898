@@ -2,7 +2,7 @@
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, PlusCircle, Trash2, Pencil, ExternalLink, AlertCircle } from 'lucide-react';
+import { Package, PlusCircle, Trash2, Pencil, ExternalLink, AlertCircle, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -323,6 +323,7 @@ const UserSuppliers = () => {
   };
 
   const openEditDialog = (supplier: Supplier) => {
+    console.log('Opening edit dialog for supplier:', supplier);
     setIsEditMode(true);
     setCurrentSupplier(supplier);
     setSupplierName(supplier.name);
@@ -336,15 +337,29 @@ const UserSuppliers = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const resetDialog = () => {
+    setIsEditMode(false);
+    setCurrentSupplier(null);
+    setSupplierName('');
+    setSupplierUrl('');
+    setUrlError('');
+    setIsDialogOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-emerald-100 px-6 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Постачальники</h1>
-              <p className="text-gray-600">Керуйте своїми постачальниками та XML інтеграціями</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Постачальники</h1>
+                <p className="text-gray-600">Керуйте своїми постачальниками та XML інтеграціями</p>
+              </div>
             </div>
             <div className="flex items-center gap-3 mt-4 md:mt-0">
               {suppliersLimit !== null && (
@@ -358,14 +373,7 @@ const UserSuppliers = () => {
                   <TooltipTrigger asChild>
                     <Button
                       disabled={!canCreateSupplier}
-                      onClick={() => {
-                        setIsEditMode(false);
-                        setCurrentSupplier(null);
-                        setSupplierName('');
-                        setSupplierUrl('');
-                        setUrlError('');
-                        setIsDialogOpen(true);
-                      }}
+                      onClick={resetDialog}
                       className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
                       id="create-supplier-button"
                     >
@@ -393,7 +401,7 @@ const UserSuppliers = () => {
             <p className="text-gray-600">Завантаження постачальників...</p>
           </div>
         ) : suppliers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {suppliers.map(supplier => (
               <Card key={supplier.id} className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -479,14 +487,7 @@ const UserSuppliers = () => {
             <CardContent className="text-center">
               {canCreateSupplier ? (
                 <Button
-                  onClick={() => {
-                    setIsEditMode(false);
-                    setCurrentSupplier(null);
-                    setSupplierName('');
-                    setSupplierUrl('');
-                    setUrlError('');
-                    setIsDialogOpen(true);
-                  }}
+                  onClick={resetDialog}
                   className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -579,7 +580,7 @@ const UserSuppliers = () => {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </Dialog>
     </div>
   );
 };
