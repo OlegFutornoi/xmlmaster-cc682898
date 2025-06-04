@@ -15,6 +15,7 @@ import PlanConfirmDialog from '@/components/user/tariffs/PlanConfirmDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CreditCard, History } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TariffPlan } from '@/components/admin/tariffs/types';
 
 const UserTariffs = () => {
   const { user } = useAuth();

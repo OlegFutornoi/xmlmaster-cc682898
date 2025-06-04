@@ -4,18 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CreditCard, Check } from 'lucide-react';
-
-interface TariffPlan {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  is_permanent: boolean;
-  duration_days: number | null;
-  currency: {
-    code: string;
-  };
-}
+import { TariffPlan } from '@/components/admin/tariffs/types';
 
 interface TariffCardProps {
   plan: TariffPlan;
@@ -67,6 +56,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
           variant="outline"
           size="sm"
           className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
+          id="view-details-button"
         >
           Детальніше
         </Button>
@@ -75,6 +65,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
           <Button
             onClick={() => onSelect(plan.id)}
             className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
+            id="select-plan-button"
           >
             Обрати план
           </Button>

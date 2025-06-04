@@ -21,7 +21,8 @@ export const useTariffPlans = () => {
           currencies:currency_id (
             name, 
             code
-          )
+          ),
+          description
         `)
         .order('price', { ascending: true });
 
@@ -32,6 +33,7 @@ export const useTariffPlans = () => {
           data?.map(item => ({
             id: item.id,
             name: item.name,
+            description: item.description,
             price: item.price,
             duration_days: item.duration_days,
             is_permanent: item.is_permanent,
