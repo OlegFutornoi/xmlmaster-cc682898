@@ -2,7 +2,7 @@
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, PlusCircle, Store, Trash2, ChevronRight, Pencil } from 'lucide-react';
+import { Building2, PlusCircle, Store, Trash2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -309,6 +309,7 @@ const UserStores = () => {
                     size="sm"
                     className="w-full justify-between border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
                     id={`manage-store-${store.id}`}
+                    onClick={() => console.log('Manage store:', store.id)}
                   >
                     Керувати
                     <ChevronRight className="h-4 w-4" />

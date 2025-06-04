@@ -1,7 +1,8 @@
+
 // Компонент для відображення та управління постачальниками користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, PlusCircle, Trash2, Pencil, ExternalLink, AlertCircle, History } from 'lucide-react';
+import { Package, PlusCircle, Trash2, Pencil, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -342,7 +343,7 @@ const UserSuppliers = () => {
     setSupplierName('');
     setSupplierUrl('');
     setUrlError('');
-    setIsDialogOpen(false);
+    setIsDialogOpen(true);
   };
 
   return (
