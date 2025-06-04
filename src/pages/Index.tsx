@@ -273,47 +273,11 @@ const Index = () => {
       {/* Відгуки */}
       <section id="testimonials" className="py-20 px-6 bg-gray-50">
         <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6" id="testimonials-title">
-              Що кажуть наші клієнти
-            </h2>
-            <p className="text-xl text-gray-600">
-              Приєднуйтесь до тисяч задоволених користувачів
-            </p>
-          </div>
+          
           
           <div className="max-w-4xl mx-auto">
             <Card className="border-0 shadow-xl bg-white">
-              <CardContent className="p-12">
-                <div className="text-center">
-                  <img src={testimonials[currentTestimonial].avatar} alt={testimonials[currentTestimonial].name} className="w-20 h-20 rounded-full mx-auto mb-6 ring-4 ring-emerald-100" id={`testimonial-avatar-${currentTestimonial}`} />
-                  
-                  <div className="flex justify-center mb-6">
-                    {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => <Star key={i} className="w-6 h-6 text-yellow-400 fill-current" />)}
-                  </div>
-                  
-                  <blockquote className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-                    "{testimonials[currentTestimonial].quote}"
-                  </blockquote>
-                  
-                  <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto">
-                    {testimonials[currentTestimonial].review}
-                  </p>
-                  
-                  <div>
-                    <h4 className="text-xl font-bold text-gray-900">
-                      {testimonials[currentTestimonial].name}
-                    </h4>
-                    <p className="text-emerald-600 font-medium">
-                      {testimonials[currentTestimonial].position}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex justify-center mt-8 space-x-2">
-                  {testimonials.map((_, index) => <button key={index} onClick={() => setCurrentTestimonial(index)} className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentTestimonial ? 'bg-emerald-500' : 'bg-gray-300'}`} id={`testimonial-indicator-${index}`} />)}
-                </div>
-              </CardContent>
+              
             </Card>
           </div>
         </div>
