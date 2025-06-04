@@ -57,7 +57,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
             disabled
             variant="outline"
             size="sm"
-            className="w-full bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
+            className="w-full bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed"
             id="active-plan-button"
           >
             <Check className="h-4 w-4 mr-2" />
