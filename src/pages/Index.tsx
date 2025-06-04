@@ -145,9 +145,7 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="max-w-6xl mx-auto text-center">
             <div className="mb-8">
-              <span className="px-4 py-2 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
-                ✨ Новий рівень автоматизації XML
-              </span>
+              
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight" id="main-title">
@@ -184,16 +182,7 @@ const Index = () => {
             {/* Центральне демо-зображення */}
             <div className="relative max-w-5xl mx-auto">
               <Card className="border-0 shadow-2xl bg-gradient-to-br from-gray-50 to-white overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="relative rounded-lg overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=600&fit=crop" alt="XML Master Interface" className="w-full h-[400px] object-cover" id="main-demo-image" />
-                    <div className="absolute inset-0 bg-emerald-600/10 flex items-center justify-center">
-                      <Button size="lg" className="bg-white/90 hover:bg-white text-emerald-600 rounded-full p-6 transition-all duration-300 transform hover:scale-110 shadow-lg" id="play-demo-btn">
-                        <Play className="w-8 h-8" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
+                
               </Card>
             </div>
           </div>
@@ -201,7 +190,7 @@ const Index = () => {
       </section>
 
       {/* Блок функцій */}
-      <section id="features" className="py-20 px-6 bg-gray-50">
+      <section id="features" className="px-6 bg-gray-50 py-[44px]">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6" id="features-title">
