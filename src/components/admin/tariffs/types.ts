@@ -10,6 +10,7 @@ export interface User {
 export interface TariffPlan {
   id: string;
   name: string;
+  description?: string | null;
   price: number;
   duration_days: number | null;
   is_permanent: boolean;
