@@ -271,17 +271,7 @@ const Index = () => {
       </section>
 
       {/* Відгуки */}
-      <section id="testimonials" className="py-20 px-6 bg-gray-50">
-        <div className="container mx-auto">
-          
-          
-          <div className="max-w-4xl mx-auto">
-            <Card className="border-0 shadow-xl bg-white">
-              
-            </Card>
-          </div>
-        </div>
-      </section>
+      
 
       {/* Заклик до дії */}
       <section className="py-20 px-6 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600">
@@ -301,9 +291,7 @@ const Index = () => {
               </Button>
             </Link>
             <Link to="/user/login">
-              <Button variant="outline" size="lg" className="border-2 border-white text-white hover:bg-white hover:text-emerald-600 px-12 py-4 text-lg transition-all duration-300" id="cta-login-btn">
-                Увійти в кабінет
-              </Button>
+              
             </Link>
           </div>
         </div>
