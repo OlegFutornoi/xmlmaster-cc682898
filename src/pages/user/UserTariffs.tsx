@@ -9,7 +9,6 @@ import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 import { usePlanDetails } from '@/hooks/tariffs/usePlanDetails';
 import { activateUserPlan } from '@/services/subscriptionService';
 import TariffCard from '@/components/user/tariffs/TariffCard';
-import CurrentSubscription from '@/components/user/tariffs/CurrentSubscription';
 import SubscriptionHistoryModal from '@/components/user/tariffs/SubscriptionHistoryModal';
 import PlanConfirmDialog from '@/components/user/tariffs/PlanConfirmDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -137,10 +136,6 @@ const UserTariffs = () => {
       </div>
 
       <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4 py-6' : 'px-6 py-8'}`} id="user-tariffs-container">
-        <div className="mb-8">
-          <CurrentSubscription subscription={activeSubscription} />
-        </div>
-
         <div className="mb-8">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Доступні тарифи</h2>

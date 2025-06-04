@@ -18,15 +18,6 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
     <Card className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       
-      {isActive && (
-        <div className="absolute top-3 right-3">
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-            <Check className="h-3 w-3 mr-1" />
-            Активний
-          </Badge>
-        </div>
-      )}
-      
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
@@ -61,7 +52,18 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
           Детальніше
         </Button>
         
-        {!isActive && (
+        {isActive ? (
+          <Button
+            disabled
+            variant="outline"
+            size="sm"
+            className="w-full bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
+            id="active-plan-button"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Активний план
+          </Button>
+        ) : (
           <Button
             onClick={() => onSelect(plan.id)}
             className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
