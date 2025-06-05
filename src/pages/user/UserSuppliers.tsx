@@ -363,7 +363,7 @@ const UserSuppliers = () => {
                         <Package className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-gray-900 line-clamp-1 text-base px-0">{supplier.name}</CardTitle>
+                        <CardTitle className="text-gray-900 line-clamp-1 px-0 text-sm">{supplier.name}</CardTitle>
                         <CardDescription className="text-sm text-gray-600">
                           {format(new Date(supplier.created_at), "dd.MM.yyyy", {
                       locale: uk
@@ -371,7 +371,7 @@ const UserSuppliers = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-1 relative z-20">
+                    <div className="flex gap-1 relative z-20 my-0 mx-0">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
