@@ -27,6 +27,7 @@ interface PlanConfirmDialogProps {
   activeSubscription: any;
   isActivating: boolean;
   onActivate: () => void;
+  mode: 'view' | 'activate';
 }
 
 const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
@@ -37,7 +38,8 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
   planLimitations,
   activeSubscription,
   isActivating,
-  onActivate
+  onActivate,
+  mode
 }) => {
   // Якщо немає вибраного плану, не відображати діалогове вікно
   if (!selectedPlan) return null;
@@ -134,7 +136,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
               </div>
             )}
             
-            {isActivePlan && (
+            {isActivePlan && mode === 'activate' && (
               <div className="bg-blue-50 p-3 rounded-md">
                 <p className="text-sm text-blue-800">
                   Цей тарифний план вже активовано.
@@ -154,7 +156,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
             Закрити
           </Button>
           
-          {!isActivePlan && (
+          {mode === 'activate' && !isActivePlan && (
             <Button
               onClick={onActivate}
               disabled={isActivating}
