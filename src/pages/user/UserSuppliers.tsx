@@ -322,7 +322,9 @@ const UserSuppliers = () => {
     }
   };
 
-  const openEditDialog = (supplier: Supplier) => {
+  const openEditDialog = (e: React.MouseEvent, supplier: Supplier) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log('Opening edit dialog for supplier:', supplier);
     setIsEditMode(true);
     setCurrentSupplier(supplier);
@@ -332,7 +334,10 @@ const UserSuppliers = () => {
     setIsDialogOpen(true);
   };
 
-  const openDeleteDialog = (supplier: Supplier) => {
+  const openDeleteDialog = (e: React.MouseEvent, supplier: Supplier) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Delete supplier clicked:', supplier.id);
     setSupplierToDelete(supplier);
     setIsDeleteDialogOpen(true);
   };
@@ -404,9 +409,8 @@ const UserSuppliers = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {suppliers.map(supplier => (
               <Card key={supplier.id} className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1">
                       <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
@@ -419,16 +423,17 @@ const UserSuppliers = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 relative z-20">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => openEditDialog(supplier)}
-                              className="h-8 w-8 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50"
+                              onClick={(e) => openEditDialog(e, supplier)}
+                              className="h-8 w-8 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 relative z-30"
                               id={`edit-supplier-${supplier.id}`}
+                              type="button"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -442,9 +447,10 @@ const UserSuppliers = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => openDeleteDialog(supplier)}
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={(e) => openDeleteDialog(e, supplier)}
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 relative z-30"
                               id={`delete-supplier-${supplier.id}`}
+                              type="button"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -455,13 +461,14 @@ const UserSuppliers = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="pt-0 relative z-10">
                   {supplier.url ? (
                     <a
                       href={supplier.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                      className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium relative z-20"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-4 w-4" />
                       Відкрити URL

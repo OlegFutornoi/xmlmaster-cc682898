@@ -1,4 +1,3 @@
-
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -282,9 +281,8 @@ const UserStores = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {stores.map(store => (
               <Card key={store.id} className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 relative z-10">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1">
                       <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
@@ -297,7 +295,7 @@ const UserStores = () => {
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 relative z-20">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -305,7 +303,7 @@ const UserStores = () => {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => openDeleteDialog(e, store)}
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 relative z-30"
                               id={`delete-store-${store.id}`}
                               type="button"
                             >
@@ -318,7 +316,7 @@ const UserStores = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="pt-0 relative z-10">
                   <Button
                     variant="outline"
                     size="sm"
