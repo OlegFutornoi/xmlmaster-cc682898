@@ -14,6 +14,16 @@ interface TariffCardProps {
 }
 
 const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps) => {
+  const handleViewDetails = () => {
+    console.log('View details clicked for plan:', plan.id);
+    onViewDetails(plan.id);
+  };
+
+  const handleSelectPlan = () => {
+    console.log('Select plan clicked for plan:', plan.id);
+    onSelect(plan.id);
+  };
+
   return (
     <Card className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -43,10 +53,10 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
       
       <CardContent className="pt-0 space-y-2">
         <Button
-          onClick={() => onViewDetails(plan.id)}
+          onClick={handleViewDetails}
           variant="outline"
           size="sm"
-          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
+          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors cursor-pointer"
           id="view-details-button"
         >
           Детальніше
@@ -65,8 +75,8 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
           </Button>
         ) : (
           <Button
-            onClick={() => onSelect(plan.id)}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
+            onClick={handleSelectPlan}
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 cursor-pointer transition-colors"
             id="select-plan-button"
           >
             Обрати план

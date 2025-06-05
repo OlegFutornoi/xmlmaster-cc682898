@@ -10,6 +10,7 @@ export const useTariffPlans = () => {
 
   useEffect(() => {
     const fetchTariffPlans = async () => {
+      console.log('Fetching tariff plans...');
       const { data, error } = await supabase
         .from('tariff_plans')
         .select(`
@@ -28,6 +29,7 @@ export const useTariffPlans = () => {
       if (error) {
         console.error('Error fetching tariff plans:', error);
       } else {
+        console.log('Tariff plans data:', data);
         setTariffPlans(
           data?.map(item => ({
             id: item.id,
@@ -37,8 +39,8 @@ export const useTariffPlans = () => {
             duration_days: item.duration_days,
             is_permanent: item.is_permanent,
             currency: {
-              name: item.currencies.name,
-              code: item.currencies.code
+              name: item.currencies?.name || 'Ukrainian Hryvnia',
+              code: item.currencies?.code || 'UAH'
             }
           })) || []
         );
