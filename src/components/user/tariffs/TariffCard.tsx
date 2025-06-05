@@ -56,7 +56,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
           onClick={handleViewDetails}
           variant="outline"
           size="sm"
-          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors cursor-pointer"
+          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
           id="view-details-button"
         >
           Детальніше
@@ -76,7 +76,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
         ) : (
           <Button
             onClick={handleSelectPlan}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 cursor-pointer transition-colors"
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-colors"
             id="select-plan-button"
           >
             Обрати план
