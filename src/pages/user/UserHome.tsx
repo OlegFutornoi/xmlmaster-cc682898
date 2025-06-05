@@ -1,79 +1,92 @@
+
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 import { Package, Store, FileText, Settings, Upload, BarChart3, Zap, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
 const UserHome = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    activeSubscription
-  } = useUserSubscriptions();
-  const stats = [{
-    title: "Постачальники",
-    value: "3",
-    change: "+1 цього місяця",
-    icon: Package,
-    color: "text-blue-600"
-  }, {
-    title: "Магазини",
-    value: "2",
-    change: "Підключено",
-    icon: Store,
-    color: "text-emerald-600"
-  }, {
-    title: "XML файли",
-    value: "12",
-    change: "+4 нових",
-    icon: FileText,
-    color: "text-purple-600"
-  }];
-  const quickActions = [{
-    title: "Завантажити XML",
-    description: "Завантажте новий XML файл від постачальника для обробки",
-    icon: Upload,
-    href: "/user/dashboard/suppliers",
-    color: "bg-blue-50 text-blue-600 border-blue-100"
-  }, {
-    title: "Керувати магазинами",
-    description: "Додайте нові магазини або налаштуйте існуючі інтеграції",
-    icon: Store,
-    href: "/user/dashboard/stores",
-    color: "bg-emerald-50 text-emerald-600 border-emerald-100"
-  }, {
-    title: "Переглянути тарифи",
-    description: "Оновіть свій тарифний план або переглядайте використання",
-    icon: BarChart3,
-    href: "/user/dashboard/tariffs",
-    color: "bg-purple-50 text-purple-600 border-purple-100"
-  }];
-  return <div className="min-h-screen bg-gray-50">
+  const { user } = useAuth();
+  const { activeSubscription } = useUserSubscriptions();
+
+  const stats = [
+    {
+      title: "Постачальники",
+      value: "3",
+      change: "+1 цього місяця",
+      icon: Package,
+      color: "text-blue-600"
+    },
+    {
+      title: "Магазини",
+      value: "2",
+      change: "Підключено",
+      icon: Store,
+      color: "text-emerald-600"
+    },
+    {
+      title: "XML файли",
+      value: "12",
+      change: "+4 нових",
+      icon: FileText,
+      color: "text-purple-600"
+    }
+  ];
+
+  const quickActions = [
+    {
+      title: "Завантажити XML",
+      description: "Завантажте новий XML файл від постачальника для обробки",
+      icon: Upload,
+      href: "/user/dashboard/suppliers",
+      color: "bg-blue-50 text-blue-600 border-blue-100"
+    },
+    {
+      title: "Керувати магазинами",
+      description: "Додайте нові магазини або налаштуйте існуючі інтеграції",
+      icon: Store,
+      href: "/user/dashboard/stores",
+      color: "bg-emerald-50 text-emerald-600 border-emerald-100"
+    },
+    {
+      title: "Переглянути тарифи",
+      description: "Оновіть свій тарифний план або переглядайте використання",
+      icon: BarChart3,
+      href: "/user/dashboard/tariffs",
+      color: "bg-purple-50 text-purple-600 border-purple-100"
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b px-4 md:px-8 py-[4px]">
+      <div className="bg-white border-b px-4 md:px-8 py-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 md:text-2xl">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
               Ласкаво просимо до XML Master!
             </h1>
-            <p className="text-gray-600 mt-1 text-left font-light">
+            <p className="text-gray-600 mt-1">
               Керуйте своїми XML файлами та інтеграціями з магазинами
             </p>
           </div>
-          {activeSubscription && <div className="mt-4 md:mt-0 flex items-center gap-2 text-sm">
+          {activeSubscription && (
+            <div className="mt-4 md:mt-0 flex items-center gap-2 text-sm">
               <div className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
                 <Zap className="h-3 w-3 inline mr-1" />
                 {activeSubscription.tariff_plan?.name || 'Активний план'}
               </div>
-            </div>}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="p-4 md:p-8 space-y-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {stats.map((stat, index) => <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
+          {stats.map((stat, index) => (
+            <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -86,14 +99,16 @@ const UserHome = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>)}
+            </Card>
+          ))}
         </div>
 
         {/* Quick Actions */}
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Швидкі дії</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {quickActions.map((action, index) => <Link key={index} to={action.href}>
+            {quickActions.map((action, index) => (
+              <Link key={index} to={action.href}>
                 <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200 cursor-pointer group h-full">
                   <CardHeader className="pb-4">
                     <div className={`w-12 h-12 rounded-xl ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
@@ -105,7 +120,8 @@ const UserHome = () => {
                     </CardDescription>
                   </CardHeader>
                 </Card>
-              </Link>)}
+              </Link>
+            ))}
           </div>
         </div>
 
@@ -141,7 +157,8 @@ const UserHome = () => {
           </Card>
 
           {/* Current Plan */}
-          {activeSubscription && <Card className="border-0 shadow-sm bg-white">
+          {activeSubscription && (
+            <Card className="border-0 shadow-sm bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-gray-900">
                   <Zap className="h-5 w-5 text-emerald-600" />
@@ -167,7 +184,8 @@ const UserHome = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>}
+            </Card>
+          )}
         </div>
 
         {/* Help Section */}
@@ -195,6 +213,8 @@ const UserHome = () => {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default UserHome;
