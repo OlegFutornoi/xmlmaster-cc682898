@@ -203,7 +203,10 @@ const UserStores = () => {
     }
   };
 
-  const openDeleteDialog = (store: UserStore) => {
+  const openDeleteDialog = (e: React.MouseEvent, store: UserStore) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Delete store clicked:', store.id);
     setStoreToDelete(store);
     setIsDeleteDialogOpen(true);
   };
@@ -213,7 +216,9 @@ const UserStores = () => {
     setIsDialogOpen(true);
   };
 
-  const handleManageStore = (storeId: string) => {
+  const handleManageStore = (e: React.MouseEvent, storeId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log('Manage store:', storeId);
     toast({
       title: 'Функція в розробці',
@@ -251,6 +256,7 @@ const UserStores = () => {
                       onClick={resetDialog}
                       className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
                       id="create-store-button"
+                      type="button"
                     >
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Створити магазин
@@ -298,9 +304,10 @@ const UserStores = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => openDeleteDialog(store)}
+                              onClick={(e) => openDeleteDialog(e, store)}
                               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                               id={`delete-store-${store.id}`}
+                              type="button"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -317,7 +324,8 @@ const UserStores = () => {
                     size="sm"
                     className="w-full justify-between border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
                     id={`manage-store-${store.id}`}
-                    onClick={() => handleManageStore(store.id)}
+                    onClick={(e) => handleManageStore(e, store.id)}
+                    type="button"
                   >
                     Керувати
                     <ChevronRight className="h-4 w-4" />
@@ -342,6 +350,7 @@ const UserStores = () => {
                 <Button
                   onClick={resetDialog}
                   className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
+                  type="button"
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Створити магазин
@@ -385,6 +394,7 @@ const UserStores = () => {
               onClick={handleCreateStore}
               disabled={isSubmitting}
               className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
+              type="button"
             >
               {isSubmitting ? 'Створення...' : 'Створити'}
             </Button>

@@ -14,12 +14,16 @@ interface TariffCardProps {
 }
 
 const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps) => {
-  const handleViewDetails = () => {
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log('View details clicked for plan:', plan.id);
     onViewDetails(plan.id);
   };
 
-  const handleSelectPlan = () => {
+  const handleSelectPlan = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log('Select plan clicked for plan:', plan.id);
     onSelect(plan.id);
   };
@@ -58,6 +62,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
           size="sm"
           className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
           id="view-details-button"
+          type="button"
         >
           Детальніше
         </Button>
@@ -69,6 +74,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
             size="sm"
             className="w-full bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed"
             id="active-plan-button"
+            type="button"
           >
             <Check className="h-4 w-4 mr-2" />
             Активний план
@@ -78,6 +84,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
             onClick={handleSelectPlan}
             className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-colors"
             id="select-plan-button"
+            type="button"
           >
             Обрати план
           </Button>
