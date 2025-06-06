@@ -90,6 +90,47 @@ export type Database = {
         }
         Relationships: []
       }
+      parsed_xml_data: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          parsed_data: Json
+          raw_xml: string | null
+          status: string
+          template_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          parsed_data: Json
+          raw_xml?: string | null
+          status?: string
+          template_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          parsed_data?: Json
+          raw_xml?: string | null
+          status?: string
+          template_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parsed_xml_data_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_attributes: {
         Row: {
           attribute_name: string
@@ -499,6 +540,80 @@ export type Database = {
             columns: ["currency_id"]
             isOneToOne: false
             referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_xml: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          structure: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          structure: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          structure?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      template_xml_parameters: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          parameter_name: string
+          parameter_type: string
+          parameter_value: string | null
+          template_id: string
+          updated_at: string
+          xml_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          parameter_name: string
+          parameter_type?: string
+          parameter_value?: string | null
+          template_id: string
+          updated_at?: string
+          xml_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          parameter_name?: string
+          parameter_type?: string
+          parameter_value?: string | null
+          template_id?: string
+          updated_at?: string
+          xml_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_xml_parameters_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
             referencedColumns: ["id"]
           },
         ]

@@ -32,6 +32,10 @@ import AdminTariffs from "./pages/admin/tariffs/AdminTariffs";
 import AdminCurrencies from "./pages/admin/tariffs/AdminCurrencies";
 import TariffPlanForm from "./pages/admin/tariffs/TariffPlanForm";
 
+// XML Template pages
+import AdminXMLTemplates from "./pages/admin/xml-templates/AdminXMLTemplates";
+import XMLTemplateEditor from "./pages/admin/xml-templates/XMLTemplateEditor";
+
 const App = () => (
   <AdminAuthProvider>
     <TooltipProvider>
@@ -110,6 +114,24 @@ const App = () => (
           element={
             <AdminRoute>
               <TariffPlanForm />
+            </AdminRoute>
+          } 
+        />
+        
+        {/* XML Template routes */}
+        <Route 
+          path="/admin/xml-templates" 
+          element={
+            <AdminRoute>
+              <AdminXMLTemplates />
+            </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/admin/xml-templates/:id" 
+          element={
+            <AdminRoute>
+              <XMLTemplateEditor />
             </AdminRoute>
           } 
         />
