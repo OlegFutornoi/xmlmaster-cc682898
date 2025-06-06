@@ -1,4 +1,3 @@
-
 // Редактор XML-шаблонів в адміністративній панелі
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -68,9 +67,12 @@ const XMLTemplateEditor = () => {
   const handleSaveTemplate = () => {
     if (!id) return;
     
-    updateTemplate(id, {
-      name: templateForm.name,
-      is_active: templateForm.is_active
+    updateTemplate({
+      id,
+      updates: {
+        name: templateForm.name,
+        is_active: templateForm.is_active
+      }
     });
   };
 
@@ -133,9 +135,9 @@ const XMLTemplateEditor = () => {
   }
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 overflow-auto">
+      <div className="lg:pl-72">
         {/* Header */}
         <div className="bg-white border-b px-4 md:px-8 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -247,8 +249,6 @@ const XMLTemplateEditor = () => {
                   parameters={parameters}
                   onUpdateParameter={updateParameter}
                   onDeleteParameter={deleteParameter}
-                  isUpdating={isUpdatingParameter}
-                  isDeleting={isDeleting}
                 />
               )}
             </CardContent>

@@ -4,30 +4,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { XMLTemplateParameter } from '@/types/xml-template';
 
 interface TemplateParametersTableProps {
   parameters: XMLTemplateParameter[];
-  onUpdateParameter: (id: string, updates: Partial<XMLTemplateParameter>) => void;
+  onUpdateParameter: (variables: { id: string; updates: Partial<XMLTemplateParameter> }) => void;
   onDeleteParameter: (id: string) => void;
-  onAddParameter: () => void;
 }
 
 const TemplateParametersTable = ({ 
   parameters, 
   onUpdateParameter, 
-  onDeleteParameter, 
-  onAddParameter 
+  onDeleteParameter
 }: TemplateParametersTableProps) => {
   const handleActiveToggle = (id: string, isActive: boolean) => {
     console.log('Зміна активності параметру:', id, isActive);
-    onUpdateParameter(id, { is_active: isActive });
+    onUpdateParameter({ id, updates: { is_active: isActive } });
   };
 
   const handleRequiredToggle = (id: string, isRequired: boolean) => {
     console.log('Зміна обов\'язковості параметру:', id, isRequired);
-    onUpdateParameter(id, { is_required: isRequired });
+    onUpdateParameter({ id, updates: { is_required: isRequired } });
   };
 
   const handleDelete = (id: string) => {
@@ -39,20 +37,6 @@ const TemplateParametersTable = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Параметри шаблону</h3>
-        <Button 
-          onClick={onAddParameter}
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700"
-          id="add-parameter-button"
-          type="button"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Додати параметр
-        </Button>
-      </div>
-
       {parameters.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           Параметри не знайдено. Додайте перший параметр.
