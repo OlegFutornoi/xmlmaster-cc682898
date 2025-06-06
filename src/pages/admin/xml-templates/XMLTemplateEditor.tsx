@@ -1,222 +1,403 @@
 
-// Редактор XML-шаблону
+// Редактор XML-шаблонів в адміністративній панелі
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, FileCode } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Save, Plus, FileCode, Upload, Link } from 'lucide-react';
 import { useXMLTemplates } from '@/hooks/xml-templates/useXMLTemplates';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
 import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
-import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { XMLTemplate } from '@/types/xml-template';
+import AdminSidebar from '@/components/admin/AdminSidebar';
 
 const XMLTemplateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [templateName, setTemplateName] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  
-  const { updateTemplate, isUpdating } = useXMLTemplates();
-  const { 
-    parameters, 
-    createParameter, 
-    updateParameter, 
-    deleteParameter,
-    isLoading: isLoadingParameters 
-  } = useXMLTemplateParameters(id);
+  const [isAddParameterDialogOpen, setIsAddParameterDialogOpen] = useState(false);
+  const [isXMLImportDialogOpen, setIsXMLImportDialogOpen] = useState(false);
+  const [importMethod, setImportMethod] = useState<'file' | 'url'>('file');
+  const [xmlUrl, setXmlUrl] = useState('');
+  const [xmlFile, setXmlFile] = useState<File | null>(null);
 
-  // Завантаження даних шаблону
-  const { data: template, isLoading } = useQuery({
-    queryKey: ['xml-template', id],
-    queryFn: async () => {
-      if (!id) throw new Error('Template ID is required');
-      
-      console.log('Завантаження шаблону:', id);
-      
-      const { data, error } = await supabase
-        .from('template_xml')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Помилка завантаження шаблону:', error);
-        throw error;
-      }
-
-      console.log('Шаблон завантажено:', data);
-      return data;
-    },
-    enabled: !!id
+  // Форма для нового параметру
+  const [newParameter, setNewParameter] = useState({
+    parameter_name: '',
+    parameter_value: '',
+    xml_path: '',
+    parameter_type: 'text',
+    is_required: false,
+    is_active: true
   });
 
+  // Форма для редагування шаблону
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    is_active: true
+  });
+
+  const { templates, updateTemplate, isUpdating } = useXMLTemplates();
+  const {
+    parameters,
+    isLoading: isLoadingParameters,
+    createParameter,
+    updateParameter,
+    deleteParameter,
+    isCreating,
+    isUpdating: isUpdatingParameter,
+    isDeleting
+  } = useXMLTemplateParameters(id);
+
+  const currentTemplate = templates.find(t => t.id === id);
+
   useEffect(() => {
-    if (template) {
-      setTemplateName(template.name);
-      setIsActive(template.is_active);
+    if (currentTemplate) {
+      setTemplateForm({
+        name: currentTemplate.name,
+        is_active: currentTemplate.is_active
+      });
     }
-  }, [template]);
+  }, [currentTemplate]);
 
   const handleSaveTemplate = () => {
-    if (!id || !templateName.trim()) return;
+    if (!id) return;
     
-    console.log('Збереження шаблону:', id);
-    updateTemplate({
-      id,
-      updates: {
-        name: templateName.trim(),
-        is_active: isActive
-      }
+    updateTemplate(id, {
+      name: templateForm.name,
+      is_active: templateForm.is_active
     });
   };
 
   const handleAddParameter = () => {
     if (!id) return;
-    
-    console.log('Додавання нового параметру');
-    const newParameter = {
+
+    createParameter({
       template_id: id,
-      parameter_name: 'Новий параметр',
+      ...newParameter
+    });
+
+    // Очистити форму
+    setNewParameter({
+      parameter_name: '',
       parameter_value: '',
-      xml_path: '/root/element',
+      xml_path: '',
       parameter_type: 'text',
-      is_active: true,
-      is_required: false
-    };
-    
-    createParameter(newParameter);
+      is_required: false,
+      is_active: true
+    });
+
+    setIsAddParameterDialogOpen(false);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Завантаження шаблону...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/xml') {
+      setXmlFile(file);
+    }
+  };
 
-  if (!template) {
+  const handleImportXML = async () => {
+    console.log('Імпорт XML:', { method: importMethod, url: xmlUrl, file: xmlFile });
+    // TODO: Реалізувати парсинг XML та створення параметрів
+    setIsXMLImportDialogOpen(false);
+  };
+
+  if (!currentTemplate) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Шаблон не знайдено</p>
-          <Button 
-            onClick={() => navigate('/admin/xml-templates')}
-            className="mt-4"
-            id="back-to-templates"
-            type="button"
-          >
-            Повернутися до шаблонів
-          </Button>
+      <div className="flex h-screen flex-col md:flex-row bg-gray-50">
+        <AdminSidebar />
+        <div className="flex-1 overflow-auto">
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">Шаблон не знайдено</p>
+              <Button
+                onClick={() => navigate('/admin/xml-templates')}
+                className="mt-4"
+                variant="outline"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Повернутися до списку
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Заголовок */}
-        <Card className="bg-white/70 backdrop-blur-sm border-blue-200 shadow-lg">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/admin/xml-templates')}
-                  className="border-blue-200 hover:bg-blue-50"
-                  id="back-button"
-                  type="button"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Назад
-                </Button>
-                <div>
-                  <CardTitle className="flex items-center gap-3 text-2xl text-gray-900">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                      <FileCode className="h-6 w-6 text-white" />
-                    </div>
-                    Редагування шаблону
-                  </CardTitle>
-                  <CardDescription className="text-gray-600 mt-2">
-                    Налаштування параметрів XML-шаблону
-                  </CardDescription>
-                </div>
+    <div className="flex h-screen flex-col md:flex-row bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="bg-white border-b px-4 md:px-8 py-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => navigate('/admin/xml-templates')}
+                variant="outline"
+                size="sm"
+                id="back-button"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Назад
+              </Button>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  Редагування шаблону
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  {currentTemplate.name}
+                </p>
               </div>
+            </div>
+            <div className="flex gap-2 mt-4 md:mt-0">
+              <Button
+                onClick={() => setIsXMLImportDialogOpen(true)}
+                variant="outline"
+                id="import-xml-button"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Імпорт XML
+              </Button>
               <Button
                 onClick={handleSaveTemplate}
-                disabled={isUpdating || !templateName.trim()}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                disabled={isUpdating}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
                 id="save-template-button"
-                type="button"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isUpdating ? 'Збереження...' : 'Зберегти'}
               </Button>
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+        </div>
 
-        {/* Основні налаштування шаблону */}
-        <Card className="bg-white/70 backdrop-blur-sm border-blue-200 shadow-lg">
-          <CardHeader>
-            <CardTitle>Основні налаштування</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+        <div className="p-4 md:p-8 space-y-6">
+          {/* Основна інформація про шаблон */}
+          <Card className="border-0 shadow-sm bg-white">
+            <CardHeader>
+              <CardTitle>Основна інформація</CardTitle>
+              <CardDescription>
+                Налаштуйте назву та статус XML-шаблону
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
                 <Label htmlFor="template-name">Назва шаблону</Label>
                 <Input
                   id="template-name"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
+                  value={templateForm.name}
+                  onChange={(e) => setTemplateForm(prev => ({
+                    ...prev,
+                    name: e.target.value
+                  }))}
                   placeholder="Введіть назву шаблону"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="is-active">Активний</Label>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="template-active"
+                  checked={templateForm.is_active}
+                  onCheckedChange={(checked) => setTemplateForm(prev => ({
+                    ...prev,
+                    is_active: checked
+                  }))}
+                />
+                <Label htmlFor="template-active">Активний шаблон</Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Параметри шаблону */}
+          <Card className="border-0 shadow-sm bg-white">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Параметри шаблону</CardTitle>
+                  <CardDescription>
+                    Управляйте параметрами XML-шаблону
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => setIsAddParameterDialogOpen(true)}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  id="add-parameter-button"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Додати параметр
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingParameters ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Завантаження параметрів...</p>
+                </div>
+              ) : (
+                <TemplateParametersTable
+                  parameters={parameters}
+                  onUpdateParameter={updateParameter}
+                  onDeleteParameter={deleteParameter}
+                  isUpdating={isUpdatingParameter}
+                  isDeleting={isDeleting}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Діалог додавання параметру */}
+        <Dialog open={isAddParameterDialogOpen} onOpenChange={setIsAddParameterDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Додати новий параметр</DialogTitle>
+              <DialogDescription>
+                Створіть новий параметр для XML-шаблону
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="param-name">Назва параметру</Label>
+                <Input
+                  id="param-name"
+                  value={newParameter.parameter_name}
+                  onChange={(e) => setNewParameter(prev => ({
+                    ...prev,
+                    parameter_name: e.target.value
+                  }))}
+                  placeholder="Наприклад: name, price, description"
+                />
+              </div>
+              <div>
+                <Label htmlFor="param-path">XML шлях</Label>
+                <Input
+                  id="param-path"
+                  value={newParameter.xml_path}
+                  onChange={(e) => setNewParameter(prev => ({
+                    ...prev,
+                    xml_path: e.target.value
+                  }))}
+                  placeholder="Наприклад: /yml_catalog/shop/offers/offer/name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="param-value">Значення за замовчуванням</Label>
+                <Input
+                  id="param-value"
+                  value={newParameter.parameter_value}
+                  onChange={(e) => setNewParameter(prev => ({
+                    ...prev,
+                    parameter_value: e.target.value
+                  }))}
+                  placeholder="Опціонально"
+                />
+              </div>
+              <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Switch
-                    id="is-active"
-                    checked={isActive}
-                    onCheckedChange={setIsActive}
+                    id="param-required"
+                    checked={newParameter.is_required}
+                    onCheckedChange={(checked) => setNewParameter(prev => ({
+                      ...prev,
+                      is_required: checked
+                    }))}
                   />
-                  <span className="text-sm text-gray-600">
-                    {isActive ? 'Шаблон активний' : 'Шаблон неактивний'}
-                  </span>
+                  <Label htmlFor="param-required">Обов'язковий</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="param-active"
+                    checked={newParameter.is_active}
+                    onCheckedChange={(checked) => setNewParameter(prev => ({
+                      ...prev,
+                      is_active: checked
+                    }))}
+                  />
+                  <Label htmlFor="param-active">Активний</Label>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Таблиця параметрів */}
-        <Card className="bg-white/70 backdrop-blur-sm border-blue-200 shadow-lg">
-          <CardContent className="pt-6">
-            {isLoadingParameters ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">Завантаження параметрів...</p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddParameterDialogOpen(false)}
+                >
+                  Скасувати
+                </Button>
+                <Button
+                  onClick={handleAddParameter}
+                  disabled={isCreating || !newParameter.parameter_name || !newParameter.xml_path}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isCreating ? 'Створення...' : 'Створити параметр'}
+                </Button>
               </div>
-            ) : (
-              <TemplateParametersTable
-                parameters={parameters}
-                onUpdateParameter={updateParameter}
-                onDeleteParameter={deleteParameter}
-                onAddParameter={handleAddParameter}
-              />
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Діалог імпорту XML */}
+        <Dialog open={isXMLImportDialogOpen} onOpenChange={setIsXMLImportDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Імпорт XML-шаблону</DialogTitle>
+              <DialogDescription>
+                Завантажте XML-файл або вкажіть URL для автоматичного створення параметрів
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs value={importMethod} onValueChange={(value) => setImportMethod(value as 'file' | 'url')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="file">Завантаження файлу</TabsTrigger>
+                <TabsTrigger value="url">URL посилання</TabsTrigger>
+              </TabsList>
+              <TabsContent value="file" className="space-y-4">
+                <div>
+                  <Label htmlFor="xml-file">XML файл</Label>
+                  <Input
+                    id="xml-file"
+                    type="file"
+                    accept=".xml"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent value="url" className="space-y-4">
+                <div>
+                  <Label htmlFor="xml-url">URL посилання</Label>
+                  <Input
+                    id="xml-url"
+                    value={xmlUrl}
+                    onChange={(e) => setXmlUrl(e.target.value)}
+                    placeholder="https://example.com/catalog.xml"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsXMLImportDialogOpen(false)}
+              >
+                Скасувати
+              </Button>
+              <Button
+                onClick={handleImportXML}
+                disabled={importMethod === 'file' ? !xmlFile : !xmlUrl}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Імпортувати XML
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
