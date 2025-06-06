@@ -9,7 +9,7 @@ import { XMLTemplateParameter } from '@/types/xml-template';
 
 interface TemplateParametersTableProps {
   parameters: XMLTemplateParameter[];
-  onUpdateParameter: (variables: { id: string; updates: Partial<XMLTemplateParameter> }) => void;
+  onUpdateParameter: (id: string, updates: Partial<XMLTemplateParameter>) => void;
   onDeleteParameter: (id: string) => void;
 }
 
@@ -20,12 +20,12 @@ const TemplateParametersTable = ({
 }: TemplateParametersTableProps) => {
   const handleActiveToggle = (id: string, isActive: boolean) => {
     console.log('Зміна активності параметру:', id, isActive);
-    onUpdateParameter({ id, updates: { is_active: isActive } });
+    onUpdateParameter(id, { is_active: isActive });
   };
 
   const handleRequiredToggle = (id: string, isRequired: boolean) => {
     console.log('Зміна обов\'язковості параметру:', id, isRequired);
-    onUpdateParameter({ id, updates: { is_required: isRequired } });
+    onUpdateParameter(id, { is_required: isRequired });
   };
 
   const handleDelete = (id: string) => {
