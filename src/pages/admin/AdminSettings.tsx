@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,97 +54,108 @@ const AdminSettings = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <AdminSidebar />
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center">
-                <Settings className="w-8 h-8 text-white" />
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AdminSidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+            <SidebarTrigger className="-ml-1" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-lg flex items-center justify-center">
+                <Settings className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold">Налаштування адміністратора</h1>
+                <p className="text-sm text-muted-foreground">Оновіть облікові дані для адміністративного доступу</p>
               </div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Налаштування адміністратора</h2>
-            <p className="text-gray-600">Оновіть облікові дані для адміністративного доступу</p>
-          </div>
-
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardContent className="p-8 space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Нове ім'я користувача</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Введіть нове ім'я користувача" 
-                            className="h-12 border-gray-200 focus:border-slate-400 focus:ring-slate-400" 
-                            {...field} 
-                            id="username-input"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Поточне ім'я: <strong>{admin?.username}</strong>
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Новий пароль</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="password" 
-                            placeholder="Введіть новий пароль" 
-                            className="h-12 border-gray-200 focus:border-slate-400 focus:ring-slate-400" 
-                            {...field} 
-                            id="password-input"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Пароль повинен містити щонайменше 4 символи
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02]" 
-                    disabled={isSubmitting}
-                    id="submit-button"
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
-                        Збереження...
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <Shield className="w-4 h-4 mr-2" />
-                        Зберегти зміни
-                      </div>
-                    )}
-                  </Button>
-                </CardContent>
-              </form>
-            </Form>
-          </Card>
+          </header>
           
-          {/* Декоративні елементи */}
-          <div className="absolute top-20 right-20 w-32 h-32 bg-blue-500/10 rounded-full blur-xl pointer-events-none"></div>
-          <div className="absolute bottom-32 right-32 w-24 h-24 bg-indigo-500/10 rounded-full blur-lg pointer-events-none"></div>
-        </div>
+          <div className="flex-1 p-6">
+            <div className="max-w-2xl mx-auto space-y-6">
+              <Card>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="w-5 h-5" />
+                        Зміна облікових даних
+                      </CardTitle>
+                      <CardDescription>
+                        Введіть нові дані для адміністративного доступу
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Нове ім'я користувача</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Введіть нове ім'я користувача" 
+                                {...field} 
+                                id="username-input"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Поточне ім'я: <strong>{admin?.username}</strong>
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Новий пароль</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="password" 
+                                placeholder="Введіть новий пароль" 
+                                {...field} 
+                                id="password-input"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Пароль повинен містити щонайменше 4 символи
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        id="submit-button"
+                        className="w-full"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+                            Збереження...
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <Shield className="w-4 h-4 mr-2" />
+                            Зберегти зміни
+                          </div>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Form>
+              </Card>
+            </div>
+          </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 

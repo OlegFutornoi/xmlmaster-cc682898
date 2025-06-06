@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Settings,
@@ -6,11 +7,23 @@ import {
   DollarSign,
   FileCode,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 const AdminSidebar = () => {
-  const location = useLocation();
   const { logout } = useAdminAuth();
 
   const menuItems = [
@@ -47,42 +60,47 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-gray-100 dark:bg-gray-800 h-screen fixed top-0 left-0 overflow-y-auto">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+    <Sidebar>
+      <SidebarHeader className="p-4">
+        <h1 className="text-2xl font-bold text-sidebar-foreground">
           Admin Panel
         </h1>
-      </div>
-      <nav className="py-4">
-        <ul>
-          {menuItems.map((item) => (
-            <li key={item.title} className="mb-1">
-              <NavLink
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex items-center p-3 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition duration-200 ${
-                    isActive
-                      ? "bg-gray-200 dark:bg-gray-700 font-semibold"
-                      : ""
-                  }`
-                }
-              >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.title}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="p-4 mt-auto">
-        <button
+      </SidebarHeader>
+      
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Навігація</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.href}
+                      className="flex items-center gap-3 w-full"
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      
+      <SidebarFooter className="p-4">
+        <Button
           onClick={logout}
-          className="w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200"
+          variant="destructive"
+          className="w-full"
+          id="logout-button"
         >
           Вийти
-        </button>
-      </div>
-    </div>
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
 
