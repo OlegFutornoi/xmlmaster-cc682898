@@ -4,6 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { XMLTemplate } from '@/types/xml-template';
 import { toast } from '@/hooks/use-toast';
 
+interface CreateTemplateData {
+  name: string;
+  structure: Record<string, any>;
+  is_active: boolean;
+}
+
 export const useXMLTemplates = () => {
   const queryClient = useQueryClient();
 
@@ -31,7 +37,7 @@ export const useXMLTemplates = () => {
   });
 
   const createTemplateMutation = useMutation({
-    mutationFn: async (templateData: Partial<XMLTemplate>) => {
+    mutationFn: async (templateData: CreateTemplateData) => {
       console.log('Створення XML-шаблону:', templateData);
       
       const { data, error } = await supabase
@@ -51,7 +57,8 @@ export const useXMLTemplates = () => {
       queryClient.invalidateQueries({ queryKey: ['xml-templates'] });
       toast({
         title: 'Успіх',
-        description: 'XML-шаблон успішно створено'
+        description: 'XML-шаблон успішно створено',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -59,7 +66,8 @@ export const useXMLTemplates = () => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося створити XML-шаблон',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });
@@ -86,7 +94,8 @@ export const useXMLTemplates = () => {
       queryClient.invalidateQueries({ queryKey: ['xml-templates'] });
       toast({
         title: 'Успіх',
-        description: 'XML-шаблон успішно оновлено'
+        description: 'XML-шаблон успішно оновлено',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -94,7 +103,8 @@ export const useXMLTemplates = () => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося оновити XML-шаблон',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });
@@ -117,7 +127,8 @@ export const useXMLTemplates = () => {
       queryClient.invalidateQueries({ queryKey: ['xml-templates'] });
       toast({
         title: 'Успіх',
-        description: 'XML-шаблон успішно видалено'
+        description: 'XML-шаблон успішно видалено',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -125,7 +136,8 @@ export const useXMLTemplates = () => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося видалити XML-шаблон',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });
@@ -134,7 +146,7 @@ export const useXMLTemplates = () => {
     mutationFn: async (template: XMLTemplate) => {
       console.log('Дублювання XML-шаблону:', template.id);
       
-      const duplicatedTemplate = {
+      const duplicatedTemplate: CreateTemplateData = {
         name: `${template.name} (копія)`,
         structure: template.structure,
         is_active: template.is_active
@@ -157,7 +169,8 @@ export const useXMLTemplates = () => {
       queryClient.invalidateQueries({ queryKey: ['xml-templates'] });
       toast({
         title: 'Успіх',
-        description: 'XML-шаблон успішно продубльовано'
+        description: 'XML-шаблон успішно продубльовано',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -165,7 +178,8 @@ export const useXMLTemplates = () => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося продублювати XML-шаблон',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });

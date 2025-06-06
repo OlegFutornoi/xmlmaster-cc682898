@@ -4,6 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { XMLTemplateParameter } from '@/types/xml-template';
 import { toast } from '@/hooks/use-toast';
 
+interface CreateParameterData {
+  template_id: string;
+  parameter_name: string;
+  parameter_value?: string;
+  xml_path: string;
+  parameter_type: string;
+  is_active: boolean;
+  is_required: boolean;
+}
+
 export const useXMLTemplateParameters = (templateId?: string) => {
   const queryClient = useQueryClient();
 
@@ -32,7 +42,7 @@ export const useXMLTemplateParameters = (templateId?: string) => {
   });
 
   const createParameterMutation = useMutation({
-    mutationFn: async (parameterData: Partial<XMLTemplateParameter>) => {
+    mutationFn: async (parameterData: CreateParameterData) => {
       console.log('Створення параметру:', parameterData);
       
       const { data, error } = await supabase
@@ -52,7 +62,8 @@ export const useXMLTemplateParameters = (templateId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['xml-template-parameters', templateId] });
       toast({
         title: 'Успіх',
-        description: 'Параметр успішно створено'
+        description: 'Параметр успішно створено',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -60,7 +71,8 @@ export const useXMLTemplateParameters = (templateId?: string) => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося створити параметр',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });
@@ -87,7 +99,8 @@ export const useXMLTemplateParameters = (templateId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['xml-template-parameters', templateId] });
       toast({
         title: 'Успіх',
-        description: 'Параметр успішно оновлено'
+        description: 'Параметр успішно оновлено',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -95,7 +108,8 @@ export const useXMLTemplateParameters = (templateId?: string) => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося оновити параметр',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });
@@ -118,7 +132,8 @@ export const useXMLTemplateParameters = (templateId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['xml-template-parameters', templateId] });
       toast({
         title: 'Успіх',
-        description: 'Параметр успішно видалено'
+        description: 'Параметр успішно видалено',
+        duration: 1000
       });
     },
     onError: (error) => {
@@ -126,7 +141,8 @@ export const useXMLTemplateParameters = (templateId?: string) => {
       toast({
         title: 'Помилка',
         description: 'Не вдалося видалити параметр',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 1000
       });
     }
   });
@@ -136,7 +152,9 @@ export const useXMLTemplateParameters = (templateId?: string) => {
     isLoading,
     error,
     createParameter: createParameterMutation.mutate,
-    updateParameter: updateParameterMutation.mutate,
+    updateParameter: (id: string, updates: Partial<XMLTemplateParameter>) => {
+      updateParameterMutation.mutate({ id, updates });
+    },
     deleteParameter: deleteParameterMutation.mutate,
     isCreating: createParameterMutation.isPending,
     isUpdating: updateParameterMutation.isPending,
