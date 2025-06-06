@@ -55,12 +55,12 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0 space-y-2">
+      <CardContent className="pt-0 space-y-2 relative z-10">
         <Button
           onClick={handleViewDetails}
           variant="outline"
           size="sm"
-          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors"
+          className="w-full border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-colors relative z-20"
           id="view-details-button"
           type="button"
         >
@@ -72,7 +72,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
             disabled
             variant="outline"
             size="sm"
-            className="w-full bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed"
+            className="w-full bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed relative z-20"
             id="active-plan-button"
             type="button"
           >
@@ -82,7 +82,7 @@ const TariffCard = ({ plan, isActive, onSelect, onViewDetails }: TariffCardProps
         ) : (
           <Button
             onClick={handleSelectPlan}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-colors"
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-colors relative z-20"
             id="select-plan-button"
             type="button"
           >
