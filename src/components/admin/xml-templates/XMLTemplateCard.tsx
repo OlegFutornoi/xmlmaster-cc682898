@@ -48,28 +48,7 @@ const XMLTemplateCard = ({
 
         <CardContent className="space-y-4">
           {/* Статистика */}
-          <div className="grid grid-cols-2 gap-4 py-3 px-3 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-sm text-gray-600 mb-1">
-                <Hash className="h-3 w-3" />
-                Параметрів
-              </div>
-              <div className="text-lg font-semibold text-gray-900">
-                {template.parameters?.length || 0}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-sm text-gray-600 mb-1">
-                <Calendar className="h-3 w-3" />
-                Створено
-              </div>
-              <div className="text-sm font-medium text-gray-900">
-                {format(new Date(template.created_at), "dd.MM.yy", {
-                locale: uk
-              })}
-              </div>
-            </div>
-          </div>
+          
 
           {/* Дії */}
           <div className="flex gap-2">
