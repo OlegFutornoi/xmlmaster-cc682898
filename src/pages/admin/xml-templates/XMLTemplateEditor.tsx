@@ -1,4 +1,3 @@
-
 // Редактор XML-шаблонів в адміністративній панелі
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -17,9 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { XMLTemplate } from '@/types/xml-template';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-
 const XMLTemplateEditor = () => {
-  const { id } = useParams<{ id: string }>();
+  const {
+    id
+  } = useParams<{
+    id: string;
+  }>();
   const navigate = useNavigate();
   const [isAddParameterDialogOpen, setIsAddParameterDialogOpen] = useState(false);
   const [isXMLImportDialogOpen, setIsXMLImportDialogOpen] = useState(false);
@@ -42,8 +44,11 @@ const XMLTemplateEditor = () => {
     name: '',
     is_active: true
   });
-
-  const { templates, updateTemplate, isUpdating } = useXMLTemplates();
+  const {
+    templates,
+    updateTemplate,
+    isUpdating
+  } = useXMLTemplates();
   const {
     parameters,
     isLoading: isLoadingParameters,
@@ -54,9 +59,7 @@ const XMLTemplateEditor = () => {
     isUpdating: isUpdatingParameter,
     isDeleting
   } = useXMLTemplateParameters(id);
-
   const currentTemplate = templates.find(t => t.id === id);
-
   useEffect(() => {
     if (currentTemplate) {
       setTemplateForm({
@@ -65,10 +68,8 @@ const XMLTemplateEditor = () => {
       });
     }
   }, [currentTemplate]);
-
   const handleSaveTemplate = () => {
     if (!id) return;
-    
     updateTemplate({
       id,
       updates: {
@@ -77,10 +78,8 @@ const XMLTemplateEditor = () => {
       }
     });
   };
-
   const handleAddParameter = () => {
     if (!id) return;
-
     createParameter({
       template_id: id,
       ...newParameter
@@ -95,26 +94,25 @@ const XMLTemplateEditor = () => {
       is_required: false,
       is_active: true
     });
-
     setIsAddParameterDialogOpen(false);
   };
-
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/xml') {
       setXmlFile(file);
     }
   };
-
   const handleImportXML = async () => {
-    console.log('Імпорт XML:', { method: importMethod, url: xmlUrl, file: xmlFile });
+    console.log('Імпорт XML:', {
+      method: importMethod,
+      url: xmlUrl,
+      file: xmlFile
+    });
     // TODO: Реалізувати парсинг XML та створення параметрів
     setIsXMLImportDialogOpen(false);
   };
-
   if (!currentTemplate) {
-    return (
-      <SidebarProvider>
+    return <SidebarProvider>
         <div className="min-h-screen flex w-full">
           <AdminSidebar />
           <SidebarInset>
@@ -122,11 +120,7 @@ const XMLTemplateEditor = () => {
               <div className="text-center">
                 <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">Шаблон не знайдено</p>
-                <Button
-                  onClick={() => navigate('/admin/xml-templates')}
-                  className="mt-4"
-                  variant="outline"
-                >
+                <Button onClick={() => navigate('/admin/xml-templates')} className="mt-4" variant="outline">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Повернутися до списку
                 </Button>
@@ -134,12 +128,9 @@ const XMLTemplateEditor = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>;
   }
-
-  return (
-    <SidebarProvider>
+  return <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <SidebarInset>
@@ -148,39 +139,23 @@ const XMLTemplateEditor = () => {
             <SidebarTrigger className="-ml-1" />
             <div className="flex flex-col md:flex-row md:items-center md:justify-between flex-1">
               <div className="flex items-center gap-4">
-                <Button
-                  onClick={() => navigate('/admin/xml-templates')}
-                  variant="outline"
-                  size="sm"
-                  id="back-button"
-                >
+                <Button onClick={() => navigate('/admin/xml-templates')} variant="outline" size="sm" id="back-button">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Назад
                 </Button>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  <h1 className="text-2xl font-bold text-gray-900 md:text-xl">
                     Редагування шаблону
                   </h1>
-                  <p className="text-gray-600 mt-1">
-                    {currentTemplate.name}
-                  </p>
+                  
                 </div>
               </div>
               <div className="flex gap-2 mt-4 md:mt-0">
-                <Button
-                  onClick={() => setIsXMLImportDialogOpen(true)}
-                  variant="outline"
-                  id="import-xml-button"
-                >
+                <Button onClick={() => setIsXMLImportDialogOpen(true)} variant="outline" id="import-xml-button">
                   <Upload className="h-4 w-4 mr-2" />
                   Імпорт XML
                 </Button>
-                <Button
-                  onClick={handleSaveTemplate}
-                  disabled={isUpdating}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  id="save-template-button"
-                >
+                <Button onClick={handleSaveTemplate} disabled={isUpdating} className="bg-blue-600 hover:bg-blue-700 text-white" id="save-template-button">
                   <Save className="h-4 w-4 mr-2" />
                   {isUpdating ? 'Збереження...' : 'Зберегти'}
                 </Button>
@@ -200,25 +175,16 @@ const XMLTemplateEditor = () => {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="template-name">Назва шаблону</Label>
-                  <Input
-                    id="template-name"
-                    value={templateForm.name}
-                    onChange={(e) => setTemplateForm(prev => ({
-                      ...prev,
-                      name: e.target.value
-                    }))}
-                    placeholder="Введіть назву шаблону"
-                  />
+                  <Input id="template-name" value={templateForm.name} onChange={e => setTemplateForm(prev => ({
+                  ...prev,
+                  name: e.target.value
+                }))} placeholder="Введіть назву шаблону" />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    id="template-active"
-                    checked={templateForm.is_active}
-                    onCheckedChange={(checked) => setTemplateForm(prev => ({
-                      ...prev,
-                      is_active: checked
-                    }))}
-                  />
+                  <Switch id="template-active" checked={templateForm.is_active} onCheckedChange={checked => setTemplateForm(prev => ({
+                  ...prev,
+                  is_active: checked
+                }))} />
                   <Label htmlFor="template-active">Активний шаблон</Label>
                 </div>
               </CardContent>
@@ -234,29 +200,16 @@ const XMLTemplateEditor = () => {
                       Управляйте параметрами XML-шаблону
                     </CardDescription>
                   </div>
-                  <Button
-                    onClick={() => setIsAddParameterDialogOpen(true)}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    id="add-parameter-button"
-                  >
+                  <Button onClick={() => setIsAddParameterDialogOpen(true)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" id="add-parameter-button">
                     <Plus className="h-4 w-4 mr-2" />
                     Додати параметр
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {isLoadingParameters ? (
-                  <div className="text-center py-8">
+                {isLoadingParameters ? <div className="text-center py-8">
                     <p className="text-gray-600">Завантаження параметрів...</p>
-                  </div>
-                ) : (
-                  <TemplateParametersTable
-                    parameters={parameters}
-                    onUpdateParameter={updateParameter}
-                    onDeleteParameter={deleteParameter}
-                  />
-                )}
+                  </div> : <TemplateParametersTable parameters={parameters} onUpdateParameter={updateParameter} onDeleteParameter={deleteParameter} />}
               </CardContent>
             </Card>
           </div>
@@ -273,76 +226,46 @@ const XMLTemplateEditor = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="param-name">Назва параметру</Label>
-                  <Input
-                    id="param-name"
-                    value={newParameter.parameter_name}
-                    onChange={(e) => setNewParameter(prev => ({
-                      ...prev,
-                      parameter_name: e.target.value
-                    }))}
-                    placeholder="Наприклад: name, price, description"
-                  />
+                  <Input id="param-name" value={newParameter.parameter_name} onChange={e => setNewParameter(prev => ({
+                  ...prev,
+                  parameter_name: e.target.value
+                }))} placeholder="Наприклад: name, price, description" />
                 </div>
                 <div>
                   <Label htmlFor="param-path">XML шлях</Label>
-                  <Input
-                    id="param-path"
-                    value={newParameter.xml_path}
-                    onChange={(e) => setNewParameter(prev => ({
-                      ...prev,
-                      xml_path: e.target.value
-                    }))}
-                    placeholder="Наприклад: /yml_catalog/shop/offers/offer/name"
-                  />
+                  <Input id="param-path" value={newParameter.xml_path} onChange={e => setNewParameter(prev => ({
+                  ...prev,
+                  xml_path: e.target.value
+                }))} placeholder="Наприклад: /yml_catalog/shop/offers/offer/name" />
                 </div>
                 <div>
                   <Label htmlFor="param-value">Значення за замовчуванням</Label>
-                  <Input
-                    id="param-value"
-                    value={newParameter.parameter_value}
-                    onChange={(e) => setNewParameter(prev => ({
-                      ...prev,
-                      parameter_value: e.target.value
-                    }))}
-                    placeholder="Опціонально"
-                  />
+                  <Input id="param-value" value={newParameter.parameter_value} onChange={e => setNewParameter(prev => ({
+                  ...prev,
+                  parameter_value: e.target.value
+                }))} placeholder="Опціонально" />
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
-                    <Switch
-                      id="param-required"
-                      checked={newParameter.is_required}
-                      onCheckedChange={(checked) => setNewParameter(prev => ({
-                        ...prev,
-                        is_required: checked
-                      }))}
-                    />
+                    <Switch id="param-required" checked={newParameter.is_required} onCheckedChange={checked => setNewParameter(prev => ({
+                    ...prev,
+                    is_required: checked
+                  }))} />
                     <Label htmlFor="param-required">Обов'язковий</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Switch
-                      id="param-active"
-                      checked={newParameter.is_active}
-                      onCheckedChange={(checked) => setNewParameter(prev => ({
-                        ...prev,
-                        is_active: checked
-                      }))}
-                    />
+                    <Switch id="param-active" checked={newParameter.is_active} onCheckedChange={checked => setNewParameter(prev => ({
+                    ...prev,
+                    is_active: checked
+                  }))} />
                     <Label htmlFor="param-active">Активний</Label>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddParameterDialogOpen(false)}
-                  >
+                  <Button variant="outline" onClick={() => setIsAddParameterDialogOpen(false)}>
                     Скасувати
                   </Button>
-                  <Button
-                    onClick={handleAddParameter}
-                    disabled={isCreating || !newParameter.parameter_name || !newParameter.xml_path}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
+                  <Button onClick={handleAddParameter} disabled={isCreating || !newParameter.parameter_name || !newParameter.xml_path} className="bg-blue-600 hover:bg-blue-700 text-white">
                     {isCreating ? 'Створення...' : 'Створити параметр'}
                   </Button>
                 </div>
@@ -359,7 +282,7 @@ const XMLTemplateEditor = () => {
                   Завантажте XML-файл або вкажіть URL для автоматичного створення параметрів
                 </DialogDescription>
               </DialogHeader>
-              <Tabs value={importMethod} onValueChange={(value) => setImportMethod(value as 'file' | 'url')}>
+              <Tabs value={importMethod} onValueChange={value => setImportMethod(value as 'file' | 'url')}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="file">Завантаження файлу</TabsTrigger>
                   <TabsTrigger value="url">URL посилання</TabsTrigger>
@@ -367,38 +290,21 @@ const XMLTemplateEditor = () => {
                 <TabsContent value="file" className="space-y-4">
                   <div>
                     <Label htmlFor="xml-file">XML файл</Label>
-                    <Input
-                      id="xml-file"
-                      type="file"
-                      accept=".xml"
-                      onChange={handleFileUpload}
-                    />
+                    <Input id="xml-file" type="file" accept=".xml" onChange={handleFileUpload} />
                   </div>
                 </TabsContent>
                 <TabsContent value="url" className="space-y-4">
                   <div>
                     <Label htmlFor="xml-url">URL посилання</Label>
-                    <Input
-                      id="xml-url"
-                      value={xmlUrl}
-                      onChange={(e) => setXmlUrl(e.target.value)}
-                      placeholder="https://example.com/catalog.xml"
-                    />
+                    <Input id="xml-url" value={xmlUrl} onChange={e => setXmlUrl(e.target.value)} placeholder="https://example.com/catalog.xml" />
                   </div>
                 </TabsContent>
               </Tabs>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsXMLImportDialogOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setIsXMLImportDialogOpen(false)}>
                   Скасувати
                 </Button>
-                <Button
-                  onClick={handleImportXML}
-                  disabled={importMethod === 'file' ? !xmlFile : !xmlUrl}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
+                <Button onClick={handleImportXML} disabled={importMethod === 'file' ? !xmlFile : !xmlUrl} className="bg-blue-600 hover:bg-blue-700 text-white">
                   Імпортувати XML
                 </Button>
               </div>
@@ -406,8 +312,6 @@ const XMLTemplateEditor = () => {
           </Dialog>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default XMLTemplateEditor;
