@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface TemplateParametersTableProps {
   parameters: XMLTemplateParameter[];
-  onUpdateParameter: (updates: any) => void;
+  onUpdateParameter: (id: string, updates: Partial<XMLTemplateParameter>) => void;
   onDeleteParameter: (id: string) => void;
 }
 
@@ -31,10 +31,7 @@ const TemplateParametersTable = ({
 
   const handleSave = () => {
     if (editingId && editForm) {
-      onUpdateParameter({
-        id: editingId,
-        updates: editForm
-      });
+      onUpdateParameter(editingId, editForm);
       setEditingId(null);
       setEditForm({});
     }
