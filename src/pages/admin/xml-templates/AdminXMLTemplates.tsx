@@ -65,9 +65,7 @@ const AdminXMLTemplates = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between flex-1">
               <div>
                 
-                <p className="text-gray-600 mt-1">
-                  Управління XML-шаблонами для маркетплейсів
-                </p>
+                <p className="text-gray-600 mt-1 text-xl font-extrabold">XML шаблонами</p>
               </div>
               <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white" id="create-template-button" type="button">
                 <Plus className="h-4 w-4 mr-2" />
