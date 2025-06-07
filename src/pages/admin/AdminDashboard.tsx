@@ -1,75 +1,63 @@
-
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Settings, BarChart3, Shield, Zap, TrendingUp } from 'lucide-react';
-
 const AdminDashboard = () => {
-  const { admin } = useAdminAuth();
-
-  const stats = [
-    {
-      title: "Активні користувачі",
-      value: "1,234",
-      change: "+12%",
-      icon: Users,
-      color: "text-blue-600"
-    },
-    {
-      title: "Тарифні плани",
-      value: "8",
-      change: "+2",
-      icon: BarChart3,
-      color: "text-emerald-600"
-    },
-    {
-      title: "Доходи",
-      value: "$12,450",
-      change: "+18%",
-      icon: TrendingUp,
-      color: "text-purple-600"
-    }
-  ];
-
-  const quickActions = [
-    {
-      title: "Управління користувачами",
-      description: "Додавайте нових користувачів та керуйте їх правами доступу",
-      icon: Users,
-      href: "/admin/users",
-      color: "bg-blue-50 text-blue-600 border-blue-100"
-    },
-    {
-      title: "Тарифні плани",
-      description: "Налаштовуйте та керуйте тарифними планами системи",
-      icon: BarChart3,
-      href: "/admin/tariffs",
-      color: "bg-emerald-50 text-emerald-600 border-emerald-100"
-    },
-    {
-      title: "Системні налаштування",
-      description: "Змінюйте логін та пароль адміністратора системи",
-      icon: Settings,
-      href: "/admin/settings",
-      color: "bg-purple-50 text-purple-600 border-purple-100"
-    }
-  ];
-
-  return (
-    <SidebarProvider>
+  const {
+    admin
+  } = useAdminAuth();
+  const stats = [{
+    title: "Активні користувачі",
+    value: "1,234",
+    change: "+12%",
+    icon: Users,
+    color: "text-blue-600"
+  }, {
+    title: "Тарифні плани",
+    value: "8",
+    change: "+2",
+    icon: BarChart3,
+    color: "text-emerald-600"
+  }, {
+    title: "Доходи",
+    value: "$12,450",
+    change: "+18%",
+    icon: TrendingUp,
+    color: "text-purple-600"
+  }];
+  const quickActions = [{
+    title: "Управління користувачами",
+    description: "Додавайте нових користувачів та керуйте їх правами доступу",
+    icon: Users,
+    href: "/admin/users",
+    color: "bg-blue-50 text-blue-600 border-blue-100"
+  }, {
+    title: "Тарифні плани",
+    description: "Налаштовуйте та керуйте тарифними планами системи",
+    icon: BarChart3,
+    href: "/admin/tariffs",
+    color: "bg-emerald-50 text-emerald-600 border-emerald-100"
+  }, {
+    title: "Системні налаштування",
+    description: "Змінюйте логін та пароль адміністратора системи",
+    icon: Settings,
+    href: "/admin/settings",
+    color: "bg-purple-50 text-purple-600 border-purple-100"
+  }];
+  return <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-lg flex items-center justify-center px-0 mx-px">
                 <Shield className="w-4 h-4 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold">Ласкаво просимо, {admin?.username}!</h1>
-                <p className="text-sm text-muted-foreground">Керуйте системою XML Master з цієї панелі</p>
+                
               </div>
             </div>
           </header>
@@ -78,8 +66,7 @@ const AdminDashboard = () => {
             <div className="space-y-8">
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                {stats.map((stat, index) => (
-                  <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
+                {stats.map((stat, index) => <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -94,16 +81,14 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
 
               {/* Quick Actions */}
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Швидкі дії</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {quickActions.map((action, index) => (
-                    <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200 cursor-pointer group">
+                  {quickActions.map((action, index) => <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200 cursor-pointer group">
                       <CardHeader className="pb-4">
                         <div className={`w-12 h-12 rounded-xl ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                           <action.icon className="h-6 w-6" />
@@ -113,8 +98,7 @@ const AdminDashboard = () => {
                           {action.description}
                         </CardDescription>
                       </CardHeader>
-                    </Card>
-                  ))}
+                    </Card>)}
                 </div>
               </div>
 
@@ -164,8 +148,6 @@ const AdminDashboard = () => {
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default AdminDashboard;
