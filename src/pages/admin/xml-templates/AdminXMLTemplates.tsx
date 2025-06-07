@@ -1,4 +1,3 @@
-
 // Сторінка управління XML-шаблонами в адміністративній панелі
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,12 +11,10 @@ import { XMLTemplate } from '@/types/xml-template';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-
 const AdminXMLTemplates = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
   const {
     templates,
     isLoading,
@@ -28,31 +25,23 @@ const AdminXMLTemplates = () => {
     isDeleting,
     isDuplicating
   } = useXMLTemplates();
-
-  const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+  const filteredTemplates = templates.filter(template => template.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const handleEditTemplate = (template: XMLTemplate) => {
     console.log('Перехід до редагування шаблону:', template.id);
     navigate(`/admin/xml-templates/${template.id}`);
   };
-
   const handleDuplicateTemplate = (template: XMLTemplate) => {
     console.log('Дублювання шаблону:', template.id);
     duplicateTemplate(template);
   };
-
   const handleDeleteTemplate = (template: XMLTemplate) => {
     console.log('Видалення шаблону:', template.id);
     if (confirm(`Ви впевнені, що хочете видалити шаблон "${template.name}"?`)) {
       deleteTemplate(template.id);
     }
   };
-
   if (isLoading) {
-    return (
-      <SidebarProvider>
+    return <SidebarProvider>
         <div className="min-h-screen flex w-full">
           <AdminSidebar />
           <SidebarInset>
@@ -64,12 +53,9 @@ const AdminXMLTemplates = () => {
             </div>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    );
+      </SidebarProvider>;
   }
-
-  return (
-    <SidebarProvider>
+  return <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <SidebarInset>
@@ -78,19 +64,12 @@ const AdminXMLTemplates = () => {
             <SidebarTrigger className="-ml-1" />
             <div className="flex flex-col md:flex-row md:items-center md:justify-between flex-1">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                  XML-шаблони
-                </h1>
+                
                 <p className="text-gray-600 mt-1">
                   Управління XML-шаблонами для маркетплейсів
                 </p>
               </div>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white"
-                id="create-template-button"
-                type="button"
-              >
+              <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white" id="create-template-button" type="button">
                 <Plus className="h-4 w-4 mr-2" />
                 Створити шаблон
               </Button>
@@ -103,20 +82,13 @@ const AdminXMLTemplates = () => {
               <CardContent className="pt-6">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Пошук шаблонів за назвою..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                    id="search-templates"
-                  />
+                  <Input placeholder="Пошук шаблонів за назвою..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" id="search-templates" />
                 </div>
               </CardContent>
             </Card>
 
             {/* Список шаблонів */}
-            {filteredTemplates.length === 0 ? (
-              <Card className="border-0 shadow-sm bg-white">
+            {filteredTemplates.length === 0 ? <Card className="border-0 shadow-sm bg-white">
                 <CardContent className="pt-6">
                   <div className="text-center py-12">
                     <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -124,38 +96,17 @@ const AdminXMLTemplates = () => {
                       {searchQuery ? 'Шаблони не знайдено' : 'Немає XML-шаблонів'}
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      {searchQuery 
-                        ? 'Спробуйте змінити критерії пошуку' 
-                        : 'Створіть перший XML-шаблон для початку роботи'
-                      }
+                      {searchQuery ? 'Спробуйте змінити критерії пошуку' : 'Створіть перший XML-шаблон для початку роботи'}
                     </p>
-                    {!searchQuery && (
-                      <Button
-                        onClick={() => setIsCreateDialogOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        id="create-first-template-button"
-                        type="button"
-                      >
+                    {!searchQuery && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" id="create-first-template-button" type="button">
                         <Plus className="h-4 w-4 mr-2" />
                         Створити перший шаблон
-                      </Button>
-                    )}
+                      </Button>}
                   </div>
                 </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTemplates.map((template) => (
-                  <XMLTemplateCard
-                    key={template.id}
-                    template={template}
-                    onEdit={handleEditTemplate}
-                    onDuplicate={handleDuplicateTemplate}
-                    onDelete={handleDeleteTemplate}
-                  />
-                ))}
-              </div>
-            )}
+              </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTemplates.map(template => <XMLTemplateCard key={template.id} template={template} onEdit={handleEditTemplate} onDuplicate={handleDuplicateTemplate} onDelete={handleDeleteTemplate} />)}
+              </div>}
 
             {/* Статистика */}
             <Card className="border-0 shadow-sm bg-white">
@@ -183,16 +134,9 @@ const AdminXMLTemplates = () => {
           </div>
 
           {/* Діалог створення шаблону */}
-          <CreateTemplateDialog
-            open={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
-            onCreateTemplate={createTemplate}
-            isCreating={isCreating}
-          />
+          <CreateTemplateDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} onCreateTemplate={createTemplate} isCreating={isCreating} />
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default AdminXMLTemplates;
