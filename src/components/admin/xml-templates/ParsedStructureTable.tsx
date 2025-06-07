@@ -204,7 +204,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
               <TableRow>
                 <TableHead className="min-w-[150px]">Назва параметру</TableHead>
                 <TableHead className="min-w-[120px] hidden md:table-cell">Значення</TableHead>
-                <TableHead className="min-w-[120px]">XML шлях</TableHead>
+                <TableHead className="min-w-[200px]">XML шлях</TableHead>
                 <TableHead className="min-w-[100px] hidden sm:table-cell">Тип</TableHead>
                 <TableHead className="min-w-[100px] hidden lg:table-cell">Категорія</TableHead>
                 <TableHead className="w-[80px]">Дії</TableHead>
