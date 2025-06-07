@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -45,6 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 
 const AdminCurrencies = () => {
   const [currencies, setCurrencies] = useState([]);
@@ -205,273 +205,285 @@ const AdminCurrencies = () => {
   };
 
   return (
-    <div className="flex h-screen">
-      <AdminSidebar />
-      <div className="flex-1 overflow-auto p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Валюти</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/admin/tariffs')}>
-              Тарифні плани
-            </Button>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Додати валюту
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AdminSidebar />
+        <SidebarInset>
+          {/* Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+            <SidebarTrigger className="-ml-1" />
+            <div className="flex justify-between items-center w-full">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                Валюти
+              </h1>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => navigate('/admin/tariffs')} id="back-to-tariffs-button">
+                  Тарифні плани
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Додати нову валюту</DialogTitle>
-                  <DialogDescription>
-                    Заповніть інформацію про нову валюту.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="code" className="text-right">
-                      Код
-                    </Label>
-                    <Input
-                      id="code"
-                      placeholder="USD"
-                      className="col-span-3"
-                      value={newCurrency.code}
-                      onChange={(e) => setNewCurrency({...newCurrency, code: e.target.value})}
-                      maxLength={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Назва
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Долар США"
-                      className="col-span-3"
-                      value={newCurrency.name}
-                      onChange={(e) => setNewCurrency({...newCurrency, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="rate" className="text-right">
-                      Курс
-                    </Label>
-                    <Input
-                      id="rate"
-                      type="number"
-                      placeholder="38.00"
-                      step="0.01"
-                      min="0"
-                      className="col-span-3"
-                      value={newCurrency.exchange_rate}
-                      onChange={(e) => setNewCurrency({...newCurrency, exchange_rate: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="active" className="text-right">
-                      Активна
-                    </Label>
-                    <Switch
-                      id="active"
-                      checked={newCurrency.is_active}
-                      onCheckedChange={(checked) => setNewCurrency({...newCurrency, is_active: checked})}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">Скасувати</Button>
-                  </DialogClose>
-                  <Button onClick={handleCreateCurrency}>Створити</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button id="add-currency-button">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Додати валюту
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Додати нову валюту</DialogTitle>
+                      <DialogDescription>
+                        Заповніть інформацію про нову валюту.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="code" className="text-right">
+                          Код
+                        </Label>
+                        <Input
+                          id="code"
+                          placeholder="USD"
+                          className="col-span-3"
+                          value={newCurrency.code}
+                          onChange={(e) => setNewCurrency({...newCurrency, code: e.target.value})}
+                          maxLength={3}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">
+                          Назва
+                        </Label>
+                        <Input
+                          id="name"
+                          placeholder="Долар США"
+                          className="col-span-3"
+                          value={newCurrency.name}
+                          onChange={(e) => setNewCurrency({...newCurrency, name: e.target.value})}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="rate" className="text-right">
+                          Курс
+                        </Label>
+                        <Input
+                          id="rate"
+                          type="number"
+                          placeholder="38.00"
+                          step="0.01"
+                          min="0"
+                          className="col-span-3"
+                          value={newCurrency.exchange_rate}
+                          onChange={(e) => setNewCurrency({...newCurrency, exchange_rate: e.target.value})}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="active" className="text-right">
+                          Активна
+                        </Label>
+                        <Switch
+                          id="active"
+                          checked={newCurrency.is_active}
+                          onCheckedChange={(checked) => setNewCurrency({...newCurrency, is_active: checked})}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Скасувати</Button>
+                      </DialogClose>
+                      <Button onClick={handleCreateCurrency}>Створити</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </header>
 
-        {isLoading ? (
-          <div className="flex justify-center p-4">
-            <p>Завантаження...</p>
-          </div>
-        ) : currencies.length > 0 ? (
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Код</TableHead>
-                    <TableHead>Назва</TableHead>
-                    <TableHead>Курс</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead className="w-[150px]">Дії</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currencies.map((currency) => (
-                    <TableRow key={currency.id}>
-                      <TableCell>{currency.code}</TableCell>
-                      <TableCell>{currency.name}</TableCell>
-                      <TableCell>{currency.exchange_rate}</TableCell>
-                      <TableCell>
-                        {currency.is_active ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                            <Check className="mr-1 h-3 w-3" />
-                            Активна
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                            <X className="mr-1 h-3 w-3" />
-                            Неактивна
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                onClick={() => setEditCurrency(currency)}
-                                disabled={currency.is_base}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            {editCurrency && (
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Редагувати валюту</DialogTitle>
-                                  <DialogDescription>
-                                    Змініть інформацію про валюту.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="edit-code" className="text-right">
-                                      Код
-                                    </Label>
-                                    <Input
-                                      id="edit-code"
-                                      placeholder="USD"
-                                      className="col-span-3"
-                                      value={editCurrency.code}
-                                      onChange={(e) => setEditCurrency({...editCurrency, code: e.target.value})}
-                                      maxLength={3}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="edit-name" className="text-right">
-                                      Назва
-                                    </Label>
-                                    <Input
-                                      id="edit-name"
-                                      placeholder="Долар США"
-                                      className="col-span-3"
-                                      value={editCurrency.name}
-                                      onChange={(e) => setEditCurrency({...editCurrency, name: e.target.value})}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="edit-rate" className="text-right">
-                                      Курс
-                                    </Label>
-                                    <Input
-                                      id="edit-rate"
-                                      type="number"
-                                      placeholder="38.00"
-                                      step="0.01"
-                                      min="0"
-                                      className="col-span-3"
-                                      value={editCurrency.exchange_rate}
-                                      onChange={(e) => setEditCurrency({...editCurrency, exchange_rate: e.target.value})}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="edit-active" className="text-right">
-                                      Активна
-                                    </Label>
-                                    <Switch
-                                      id="edit-active"
-                                      checked={editCurrency.is_active}
-                                      onCheckedChange={(checked) => setEditCurrency({...editCurrency, is_active: checked})}
-                                    />
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <DialogClose asChild>
-                                    <Button variant="outline">Скасувати</Button>
-                                  </DialogClose>
-                                  <Button onClick={handleUpdateCurrency}>Зберегти</Button>
-                                </DialogFooter>
-                              </DialogContent>
+          <div className="flex-1 p-4 md:p-8">
+            {isLoading ? (
+              <div className="flex justify-center p-4">
+                <p>Завантаження...</p>
+              </div>
+            ) : currencies.length > 0 ? (
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Код</TableHead>
+                        <TableHead>Назва</TableHead>
+                        <TableHead>Курс</TableHead>
+                        <TableHead>Статус</TableHead>
+                        <TableHead className="w-[150px]">Дії</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currencies.map((currency) => (
+                        <TableRow key={currency.id}>
+                          <TableCell>{currency.code}</TableCell>
+                          <TableCell>{currency.name}</TableCell>
+                          <TableCell>{currency.exchange_rate}</TableCell>
+                          <TableCell>
+                            {currency.is_active ? (
+                              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                <Check className="mr-1 h-3 w-3" />
+                                Активна
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                <X className="mr-1 h-3 w-3" />
+                                Неактивна
+                              </span>
                             )}
-                          </Dialog>
-                          
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="text-red-500" 
-                                disabled={currency.is_base}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Ви впевнені, що хочете видалити цю валюту?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Ця дія не може бути скасована. Всі тарифні плани, пов'язані з цією валютою, будуть видалені.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Скасувати</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  className="bg-red-500 hover:bg-red-600" 
-                                  onClick={() => handleDeleteCurrency(currency.id)}
-                                >
-                                  Видалити
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10">
-              <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-center text-muted-foreground mb-4">
-                Немає валют. Додайте нову валюту.
-              </p>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Додати валюту
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  {/* Content same as above, omitted for brevity */}
-                </DialogContent>
-              </Dialog>
-            </CardContent>
-          </Card>
-        )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    onClick={() => setEditCurrency(currency)}
+                                    disabled={currency.is_base}
+                                    id={`edit-currency-${currency.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                {editCurrency && (
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Редагувати валюту</DialogTitle>
+                                      <DialogDescription>
+                                        Змініть інформацію про валюту.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-code" className="text-right">
+                                          Код
+                                        </Label>
+                                        <Input
+                                          id="edit-code"
+                                          placeholder="USD"
+                                          className="col-span-3"
+                                          value={editCurrency.code}
+                                          onChange={(e) => setEditCurrency({...editCurrency, code: e.target.value})}
+                                          maxLength={3}
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-name" className="text-right">
+                                          Назва
+                                        </Label>
+                                        <Input
+                                          id="edit-name"
+                                          placeholder="Долар США"
+                                          className="col-span-3"
+                                          value={editCurrency.name}
+                                          onChange={(e) => setEditCurrency({...editCurrency, name: e.target.value})}
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-rate" className="text-right">
+                                          Курс
+                                        </Label>
+                                        <Input
+                                          id="edit-rate"
+                                          type="number"
+                                          placeholder="38.00"
+                                          step="0.01"
+                                          min="0"
+                                          className="col-span-3"
+                                          value={editCurrency.exchange_rate}
+                                          onChange={(e) => setEditCurrency({...editCurrency, exchange_rate: e.target.value})}
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-active" className="text-right">
+                                          Активна
+                                        </Label>
+                                        <Switch
+                                          id="edit-active"
+                                          checked={editCurrency.is_active}
+                                          onCheckedChange={(checked) => setEditCurrency({...editCurrency, is_active: checked})}
+                                        />
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <DialogClose asChild>
+                                        <Button variant="outline">Скасувати</Button>
+                                      </DialogClose>
+                                      <Button onClick={handleUpdateCurrency}>Зберегти</Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                )}
+                              </Dialog>
+                              
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="text-red-500" 
+                                    disabled={currency.is_base}
+                                    id={`delete-currency-${currency.id}`}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Ви впевнені, що хочете видалити цю валюту?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Ця дія не може бути скасована. Всі тарифні плани, пов'язані з цією валютою, будуть видалені.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      className="bg-red-500 hover:bg-red-600" 
+                                      onClick={() => handleDeleteCurrency(currency.id)}
+                                    >
+                                      Видалити
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-10">
+                  <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-center text-muted-foreground mb-4">
+                    Немає валют. Додайте нову валюту.
+                  </p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Додати валюту
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      {/* ... keep existing code (dialog content for adding currency) the same ... */}
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
