@@ -92,31 +92,43 @@ export type Database = {
       }
       parsed_xml_data: {
         Row: {
+          categories: Json | null
           created_at: string
+          currencies: Json | null
           file_name: string
           id: string
+          offers: Json | null
           parsed_data: Json
           raw_xml: string | null
+          shop_info: Json | null
           status: string
           template_id: string | null
           user_id: string
         }
         Insert: {
+          categories?: Json | null
           created_at?: string
+          currencies?: Json | null
           file_name: string
           id?: string
+          offers?: Json | null
           parsed_data: Json
           raw_xml?: string | null
+          shop_info?: Json | null
           status?: string
           template_id?: string | null
           user_id: string
         }
         Update: {
+          categories?: Json | null
           created_at?: string
+          currencies?: Json | null
           file_name?: string
           id?: string
+          offers?: Json | null
           parsed_data?: Json
           raw_xml?: string | null
+          shop_info?: Json | null
           status?: string
           template_id?: string | null
           user_id?: string
@@ -544,12 +556,126 @@ export type Database = {
           },
         ]
       }
+      template_categories: {
+        Row: {
+          category_name: string
+          created_at: string
+          external_id: string | null
+          id: string
+          rz_id: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          category_name: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          rz_id?: string | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          category_name?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          rz_id?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_categories_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_currencies: {
+        Row: {
+          created_at: string
+          currency_code: string
+          id: string
+          rate: number
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_code: string
+          id?: string
+          rate?: number
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_code?: string
+          id?: string
+          rate?: number
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_currencies_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_field_name: string
+          is_multiple: boolean
+          max_count: number | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_field_name?: string
+          is_multiple?: boolean
+          max_count?: number | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_field_name?: string
+          is_multiple?: boolean
+          max_count?: number | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_images_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_xml: {
         Row: {
           created_at: string
           id: string
           is_active: boolean
           name: string
+          shop_company: string | null
+          shop_name: string | null
+          shop_url: string | null
           structure: Json
           updated_at: string
         }
@@ -558,6 +684,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          shop_company?: string | null
+          shop_name?: string | null
+          shop_url?: string | null
           structure: Json
           updated_at?: string
         }
@@ -566,6 +695,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          shop_company?: string | null
+          shop_name?: string | null
+          shop_url?: string | null
           structure?: Json
           updated_at?: string
         }
@@ -577,6 +709,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_required: boolean
+          parameter_category: string
           parameter_name: string
           parameter_type: string
           parameter_value: string | null
@@ -589,6 +722,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
+          parameter_category?: string
           parameter_name: string
           parameter_type?: string
           parameter_value?: string | null
@@ -601,6 +735,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
+          parameter_category?: string
           parameter_name?: string
           parameter_type?: string
           parameter_value?: string | null
