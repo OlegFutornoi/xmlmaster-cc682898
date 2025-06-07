@@ -1,13 +1,14 @@
 
-// Компонент таблиці розпарсеної структури XML
+// Компонент таблиці розпарсеної структури XML з покращеним відображенням та адаптивністю
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Copy } from 'lucide-react';
 import { ParsedXMLStructure } from '@/types/xml-template';
+import { toast } from '@/hooks/use-toast';
 
 interface ParsedStructureTableProps {
   structure: ParsedXMLStructure;
@@ -97,6 +98,20 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
       : 'bg-pink-100 text-pink-700';
   };
 
+  const getShortPath = (fullPath: string) => {
+    const parts = fullPath.split('/');
+    return parts[parts.length - 1] || fullPath;
+  };
+
+  const copyFullPath = (fullPath: string) => {
+    navigator.clipboard.writeText(fullPath);
+    toast({
+      title: 'Скопійовано',
+      description: 'Повний XML-шлях скопійовано в буфер обміну',
+      duration: 2000
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Інформація про магазин */}
@@ -159,7 +174,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
 
       {/* Таблиця параметрів */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h3 className="text-lg font-semibold">Структура параметрів</h3>
           <div className="flex gap-2">
             <Button
@@ -183,30 +198,45 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
           </div>
         </div>
 
-        <div className="border rounded-md">
+        <div className="border rounded-md overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Назва параметру</TableHead>
-                <TableHead>Значення</TableHead>
-                <TableHead>XML шлях</TableHead>
-                <TableHead>Тип</TableHead>
-                <TableHead>Категорія</TableHead>
-                <TableHead>Дії</TableHead>
+                <TableHead className="min-w-[150px]">Назва параметру</TableHead>
+                <TableHead className="min-w-[120px] hidden md:table-cell">Значення</TableHead>
+                <TableHead className="min-w-[120px]">XML шлях</TableHead>
+                <TableHead className="min-w-[100px] hidden sm:table-cell">Тип</TableHead>
+                <TableHead className="min-w-[100px] hidden lg:table-cell">Категорія</TableHead>
+                <TableHead className="w-[80px]">Дії</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {parameters.map((param, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{param.name}</TableCell>
-                  <TableCell>{param.value || '-'}</TableCell>
-                  <TableCell className="font-mono text-sm">{param.path}</TableCell>
+                  <TableCell className="hidden md:table-cell">{param.value || '-'}</TableCell>
                   <TableCell>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-sm truncate" title={param.path}>
+                        {getShortPath(param.path)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyFullPath(param.path)}
+                        className="p-1 h-6 w-6 flex-shrink-0"
+                        id={`copy-path-${index}`}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge className={getTypeColor(param.type)}>
                       {param.type === 'parameter' ? 'Параметр' : 'Характеристика'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <Badge className={getCategoryColor(param.category)}>
                       {param.category}
                     </Badge>
@@ -216,7 +246,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveParameter(index)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
                       id={`remove-parameter-${index}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -233,32 +263,35 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                       onChange={(e) => setNewParameter(prev => ({...prev, name: e.target.value}))}
                       placeholder="Назва параметру"
                       id="new-param-name"
+                      className="min-w-0"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Input
                       value={newParameter.value}
                       onChange={(e) => setNewParameter(prev => ({...prev, value: e.target.value}))}
                       placeholder="Значення"
                       id="new-param-value"
+                      className="min-w-0"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       value={newParameter.path}
                       onChange={(e) => setNewParameter(prev => ({...prev, path: e.target.value}))}
-                      placeholder="/yml_catalog/shop/offers/offer/name"
+                      placeholder="/price/items/item/name"
                       id="new-param-path"
+                      className="min-w-0"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Select 
                       value={newParameter.type} 
                       onValueChange={(value: 'parameter' | 'characteristic') => 
                         setNewParameter(prev => ({...prev, type: value}))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="min-w-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -267,14 +300,14 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <Select 
                       value={newParameter.category} 
                       onValueChange={(value: 'shop' | 'currency' | 'category' | 'offer') => 
                         setNewParameter(prev => ({...prev, category: value}))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="min-w-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -292,6 +325,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                         onClick={handleAddParameter}
                         disabled={!newParameter.name || !newParameter.path}
                         id="confirm-add-parameter"
+                        className="h-8 w-8 p-0"
                       >
                         ✓
                       </Button>
@@ -300,6 +334,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                         variant="outline"
                         onClick={() => setIsAddingParameter(false)}
                         id="cancel-add-parameter"
+                        className="h-8 w-8 p-0"
                       >
                         ✕
                       </Button>
