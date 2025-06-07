@@ -1,9 +1,7 @@
-
 import { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAdminAuth } from '@/context/AdminAuthContext';
@@ -13,48 +11,46 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Shield, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
 const formSchema = z.object({
   username: z.string().min(3, 'Ім\'я користувача повинно містити щонайменше 3 символи'),
-  password: z.string().min(4, 'Пароль повинен містити щонайменше 4 символи'),
+  password: z.string().min(4, 'Пароль повинен містити щонайменше 4 символи')
 });
-
 const AdminSettings = () => {
-  const { admin, changeCredentials } = useAdminAuth();
+  const {
+    admin,
+    changeCredentials
+  } = useAdminAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: '',
-      password: '',
-    },
+      password: ''
+    }
   });
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
-    
     try {
       await changeCredentials(values.username, values.password);
       form.reset();
       toast({
         title: "Успішно",
-        description: "Облікові дані змінено",
+        description: "Облікові дані змінено"
       });
     } catch (error) {
       toast({
         title: "Помилка",
         description: "Не вдалося змінити облікові дані",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  return (
-    <SidebarProvider>
+  return <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <SidebarInset>
@@ -66,7 +62,7 @@ const AdminSettings = () => {
               </div>
               <div>
                 <h1 className="text-xl font-semibold">Налаштування адміністратора</h1>
-                <p className="text-sm text-muted-foreground">Оновіть облікові дані для адміністративного доступу</p>
+                
               </div>
             </div>
           </header>
@@ -86,66 +82,40 @@ const AdminSettings = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
+                      <FormField control={form.control} name="username" render={({
+                      field
+                    }) => <FormItem>
                             <FormLabel>Нове ім'я користувача</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Введіть нове ім'я користувача" 
-                                {...field} 
-                                id="username-input"
-                              />
+                              <Input placeholder="Введіть нове ім'я користувача" {...field} id="username-input" />
                             </FormControl>
                             <FormDescription>
                               Поточне ім'я: <strong>{admin?.username}</strong>
                             </FormDescription>
                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
+                          </FormItem>} />
+                      <FormField control={form.control} name="password" render={({
+                      field
+                    }) => <FormItem>
                             <FormLabel>Новий пароль</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="Введіть новий пароль" 
-                                {...field} 
-                                id="password-input"
-                              />
+                              <Input type="password" placeholder="Введіть новий пароль" {...field} id="password-input" />
                             </FormControl>
                             <FormDescription>
                               Пароль повинен містити щонайменше 4 символи
                             </FormDescription>
                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                          </FormItem>} />
                     </CardContent>
                     <CardFooter>
-                      <Button 
-                        type="submit" 
-                        disabled={isSubmitting}
-                        id="submit-button"
-                        className="w-full"
-                      >
-                        {isSubmitting ? (
-                          <div className="flex items-center">
+                      <Button type="submit" disabled={isSubmitting} id="submit-button" className="w-full">
+                        {isSubmitting ? <div className="flex items-center">
                             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
                             Збереження...
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center">
+                          </div> : <div className="flex items-center justify-center">
                             <Shield className="w-4 h-4 mr-2" />
                             Зберегти зміни
-                          </div>
-                        )}
+                          </div>}
                       </Button>
                     </CardFooter>
                   </form>
@@ -155,8 +125,6 @@ const AdminSettings = () => {
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default AdminSettings;
