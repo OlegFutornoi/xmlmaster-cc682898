@@ -24,6 +24,11 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
     setShowDeleteModal(false);
   };
 
+  const truncateName = (name: string, maxLength: number = 15) => {
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength) + '...';
+  };
+
   return (
     <TooltipProvider>
       <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 h-full">
@@ -34,9 +39,16 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
                 <FileCode className="h-5 w-5 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-base lg:text-lg text-gray-900 truncate group-hover:text-blue-600 transition-colors line-clamp-1">
-                  {template.name}
-                </CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <CardTitle className="text-base lg:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer">
+                      {truncateName(template.name)}
+                    </CardTitle>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{template.name}</p>
+                  </TooltipContent>
+                </Tooltip>
                 {template.shop_name && (
                   <CardDescription className="text-xs lg:text-sm text-gray-600 mt-1 truncate">
                     {template.shop_name}
@@ -57,18 +69,16 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
         </CardHeader>
 
         <CardContent className="pt-0">
-          {/* Дії */}
-          <div className="flex gap-1 lg:gap-2">
+          <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => onEdit(template)}
                   size="sm"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-8 lg:h-9 px-2 lg:px-3"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-9"
                   id={`edit-template-${template.id}`}
                 >
-                  <Edit className="h-3 w-3 lg:h-4 lg:w-4" />
-                  <span className="hidden lg:inline ml-2">Редагувати</span>
+                  <Edit className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -82,10 +92,10 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
                   onClick={() => onDuplicate(template)}
                   size="sm"
                   variant="outline"
-                  className="border-gray-300 hover:bg-gray-50 flex-shrink-0 h-8 lg:h-9 w-8 lg:w-9 p-0"
+                  className="border-gray-300 hover:bg-gray-50 h-9 w-9 p-0"
                   id={`duplicate-template-${template.id}`}
                 >
-                  <Copy className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <Copy className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -99,10 +109,10 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
                   onClick={() => setShowDeleteModal(true)}
                   size="sm"
                   variant="outline"
-                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 flex-shrink-0 h-8 lg:h-9 w-8 lg:w-9 p-0"
+                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 h-9 w-9 p-0"
                   id={`delete-template-${template.id}`}
                 >
-                  <Trash2 className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

@@ -1,10 +1,10 @@
 
-// Компонент таблиці параметрів шаблону для редагування без стовпчика "Тип"
+// Компонент таблиці параметрів шаблону з новими стовпцями Тип і Категорія
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Save, Copy, Edit } from 'lucide-react';
 import { XMLTemplateParameter } from '@/types/xml-template';
@@ -56,6 +56,23 @@ const TemplateParametersTable = ({
     });
   };
 
+  const getTypeDisplayName = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'text': 'Текст',
+      'number': 'Число',
+      'date': 'Дата'
+    };
+    return typeMap[type] || type;
+  };
+
+  const getCategoryDisplayName = (category: string) => {
+    const categoryMap: { [key: string]: string } = {
+      'parameter': 'Параметр',
+      'characteristic': 'Характеристика'
+    };
+    return categoryMap[category] || category;
+  };
+
   if (parameters.length === 0) {
     return (
       <div className="text-center py-8">
@@ -72,8 +89,8 @@ const TemplateParametersTable = ({
             <TableHead className="min-w-[150px]">Назва параметру</TableHead>
             <TableHead className="min-w-[120px] hidden md:table-cell">Значення</TableHead>
             <TableHead className="min-w-[200px]">XML шлях</TableHead>
-            <TableHead className="min-w-[80px] hidden sm:table-cell">Активний</TableHead>
-            <TableHead className="min-w-[100px] hidden lg:table-cell">Обов'язковий</TableHead>
+            <TableHead className="min-w-[80px] hidden sm:table-cell">Тип</TableHead>
+            <TableHead className="min-w-[100px] hidden lg:table-cell">Категорія</TableHead>
             <TableHead className="w-[120px]">Дії</TableHead>
           </TableRow>
         </TableHeader>
@@ -128,25 +145,42 @@ const TemplateParametersTable = ({
               </TableCell>
               <TableCell className="hidden sm:table-cell">
                 {editingId === parameter.id ? (
-                  <Switch
-                    checked={editForm.is_active ?? false}
-                    onCheckedChange={(checked) => setEditForm(prev => ({...prev, is_active: checked}))}
-                  />
+                  <Select 
+                    value={editForm.parameter_type || 'text'}
+                    onValueChange={(value) => setEditForm(prev => ({...prev, parameter_type: value}))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Текст</SelectItem>
+                      <SelectItem value="number">Число</SelectItem>
+                      <SelectItem value="date">Дата</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : (
-                  <Badge variant={parameter.is_active ? "default" : "secondary"}>
-                    {parameter.is_active ? 'Так' : 'Ні'}
+                  <Badge variant="outline">
+                    {getTypeDisplayName(parameter.parameter_type)}
                   </Badge>
                 )}
               </TableCell>
               <TableCell className="hidden lg:table-cell">
                 {editingId === parameter.id ? (
-                  <Switch
-                    checked={editForm.is_required ?? false}
-                    onCheckedChange={(checked) => setEditForm(prev => ({...prev, is_required: checked}))}
-                  />
+                  <Select 
+                    value={editForm.parameter_category || 'parameter'}
+                    onValueChange={(value) => setEditForm(prev => ({...prev, parameter_category: value}))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="parameter">Параметр</SelectItem>
+                      <SelectItem value="characteristic">Характеристика</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : (
-                  <Badge variant={parameter.is_required ? "default" : "secondary"}>
-                    {parameter.is_required ? 'Так' : 'Ні'}
+                  <Badge variant="outline">
+                    {getCategoryDisplayName(parameter.parameter_category)}
                   </Badge>
                 )}
               </TableCell>

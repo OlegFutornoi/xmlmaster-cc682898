@@ -109,9 +109,7 @@ const XMLTemplateEditor = () => {
   };
 
   const handleDeleteParameter = (parameterId: string) => {
-    if (confirm('Ви впевнені, що хочете видалити цей параметр?')) {
-      deleteParameter(parameterId);
-    }
+    deleteParameter(parameterId);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
