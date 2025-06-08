@@ -31,40 +31,39 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
 
   return (
     <TooltipProvider>
-      <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FileCode className="h-5 w-5 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <CardTitle className="text-base lg:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer">
-                      {truncateName(template.name)}
-                    </CardTitle>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{template.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-                {template.shop_name && (
-                  <CardDescription className="text-xs lg:text-sm text-gray-600 mt-1 truncate">
-                    {template.shop_name}
-                  </CardDescription>
-                )}
-              </div>
+      <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 h-full min-h-[160px]">
+        <CardHeader className="pb-3 relative">
+          <Badge 
+            variant={template.is_active ? "default" : "secondary"}
+            className={`absolute top-4 right-4 text-xs ${template.is_active 
+              ? "bg-green-100 text-green-700 border-green-200" 
+              : "bg-gray-100 text-gray-600 border-gray-200"
+            }`}
+          >
+            {template.is_active ? 'Активний' : 'Неактивний'}
+          </Badge>
+          
+          <div className="flex items-start gap-3 pr-20">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileCode className="h-5 w-5 text-white" />
             </div>
-            <Badge 
-              variant={template.is_active ? "default" : "secondary"}
-              className={`flex-shrink-0 text-xs ${template.is_active 
-                ? "bg-green-100 text-green-700 border-green-200" 
-                : "bg-gray-100 text-gray-600 border-gray-200"
-              }`}
-            >
-              {template.is_active ? 'Активний' : 'Неактивний'}
-            </Badge>
+            <div className="min-w-0 flex-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <CardTitle className="text-base lg:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer">
+                    {truncateName(template.name)}
+                  </CardTitle>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{template.name}</p>
+                </TooltipContent>
+              </Tooltip>
+              {template.shop_name && (
+                <CardDescription className="text-xs lg:text-sm text-gray-600 mt-1 truncate">
+                  {template.shop_name}
+                </CardDescription>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -75,7 +74,8 @@ const XMLTemplateCard = ({ template, onEdit, onDuplicate, onDelete }: XMLTemplat
                 <Button
                   onClick={() => onEdit(template)}
                   size="sm"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-9"
+                  variant="outline"
+                  className="flex-1 border-gray-300 hover:bg-gray-50 h-9"
                   id={`edit-template-${template.id}`}
                 >
                   <Edit className="h-4 w-4" />

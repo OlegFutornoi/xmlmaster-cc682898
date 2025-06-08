@@ -7,13 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Plus, FileCode, Upload, Building } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Building, FileCode } from 'lucide-react';
 import { useXMLTemplates } from '@/hooks/xml-templates/useXMLTemplates';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { toast } from '@/hooks/use-toast';
@@ -22,22 +21,10 @@ import TemplateParametersTable from '@/components/admin/xml-templates/TemplatePa
 const XMLTemplateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isAddParameterDialogOpen, setIsAddParameterDialogOpen] = useState(false);
   const [isXMLImportDialogOpen, setIsXMLImportDialogOpen] = useState(false);
   const [importMethod, setImportMethod] = useState<'file' | 'url'>('file');
   const [xmlUrl, setXmlUrl] = useState('');
   const [xmlFile, setXmlFile] = useState<File | null>(null);
-
-  // Форма для нового параметру
-  const [newParameter, setNewParameter] = useState({
-    parameter_name: '',
-    parameter_value: '',
-    xml_path: '',
-    parameter_type: 'text',
-    parameter_category: 'parameter',
-    is_required: false,
-    is_active: true
-  });
 
   // Форма для редагування шаблону
   const [templateForm, setTemplateForm] = useState({
@@ -88,24 +75,8 @@ const XMLTemplateEditor = () => {
     });
   };
 
-  const handleAddParameter = () => {
-    if (!id) return;
-    createParameter({
-      template_id: id,
-      ...newParameter
-    });
-
-    // Очистити форму
-    setNewParameter({
-      parameter_name: '',
-      parameter_value: '',
-      xml_path: '',
-      parameter_type: 'text',
-      parameter_category: 'parameter',
-      is_required: false,
-      is_active: true
-    });
-    setIsAddParameterDialogOpen(false);
+  const handleCreateParameter = (parameter: any) => {
+    createParameter(parameter);
   };
 
   const handleDeleteParameter = (parameterId: string) => {
@@ -262,29 +233,7 @@ const XMLTemplateEditor = () => {
 
             {/* Структура параметрів */}
             <Card className="border-0 shadow-sm bg-white">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileCode className="h-5 w-5" />
-                      Структура параметрів
-                    </CardTitle>
-                    <CardDescription>
-                      Керуйте параметрами та структурою XML-шаблону
-                    </CardDescription>
-                  </div>
-                  <Button 
-                    onClick={() => setIsAddParameterDialogOpen(true)} 
-                    size="sm" 
-                    className="bg-blue-600 hover:bg-blue-700 text-white" 
-                    id="add-parameter-button"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Додати параметр
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {isLoadingParameters ? (
                   <div className="text-center py-8">
                     <p className="text-gray-600">Завантаження параметрів...</p>
@@ -294,115 +243,13 @@ const XMLTemplateEditor = () => {
                     parameters={parameters}
                     onUpdateParameter={updateParameter}
                     onDeleteParameter={handleDeleteParameter}
+                    onCreateParameter={handleCreateParameter}
+                    templateId={id || ''}
                   />
                 )}
               </CardContent>
             </Card>
           </div>
-
-          {/* Діалог додавання параметру */}
-          <Dialog open={isAddParameterDialogOpen} onOpenChange={setIsAddParameterDialogOpen}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Додати параметр</DialogTitle>
-                <DialogDescription>
-                  Створіть новий параметр для XML-шаблону
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="param-name">Назва параметру</Label>
-                  <Input 
-                    id="param-name"
-                    value={newParameter.parameter_name}
-                    onChange={(e) => setNewParameter(prev => ({ ...prev, parameter_name: e.target.value }))}
-                    placeholder="price, name, description"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="param-path">XML шлях</Label>
-                  <Input 
-                    id="param-path"
-                    value={newParameter.xml_path}
-                    onChange={(e) => setNewParameter(prev => ({ ...prev, xml_path: e.target.value }))}
-                    placeholder="/yml_catalog/shop/offers/offer/price"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="param-value">Значення за замовчуванням</Label>
-                  <Input 
-                    id="param-value"
-                    value={newParameter.parameter_value}
-                    onChange={(e) => setNewParameter(prev => ({ ...prev, parameter_value: e.target.value }))}
-                    placeholder="Опціонально"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="param-type">Тип параметру</Label>
-                    <Select 
-                      value={newParameter.parameter_type}
-                      onValueChange={(value) => setNewParameter(prev => ({ ...prev, parameter_type: value }))}
-                    >
-                      <SelectTrigger id="param-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text">Текст</SelectItem>
-                        <SelectItem value="number">Число</SelectItem>
-                        <SelectItem value="date">Дата</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="param-category">Категорія</Label>
-                    <Select 
-                      value={newParameter.parameter_category}
-                      onValueChange={(value) => setNewParameter(prev => ({ ...prev, parameter_category: value }))}
-                    >
-                      <SelectTrigger id="param-category">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="parameter">Параметр</SelectItem>
-                        <SelectItem value="characteristic">Характеристика</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="param-required"
-                      checked={newParameter.is_required}
-                      onCheckedChange={(checked) => setNewParameter(prev => ({ ...prev, is_required: checked }))}
-                    />
-                    <Label htmlFor="param-required">Обов'язковий</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="param-active"
-                      checked={newParameter.is_active}
-                      onCheckedChange={(checked) => setNewParameter(prev => ({ ...prev, is_active: checked }))}
-                    />
-                    <Label htmlFor="param-active">Активний</Label>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddParameterDialogOpen(false)}>
-                    Скасувати
-                  </Button>
-                  <Button 
-                    onClick={handleAddParameter} 
-                    disabled={isCreating || !newParameter.parameter_name || !newParameter.xml_path} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {isCreating ? 'Створення...' : 'Створити параметр'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
 
           {/* Діалог імпорту XML */}
           <Dialog open={isXMLImportDialogOpen} onOpenChange={setIsXMLImportDialogOpen}>
