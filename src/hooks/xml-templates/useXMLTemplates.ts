@@ -232,35 +232,109 @@ export const useXMLTemplates = () => {
 
   const duplicateTemplateMutation = useMutation({
     mutationFn: async (template: XMLTemplate) => {
-      console.log('Дублювання XML-шаблону:', template.id);
+      console.log('Дублювання XML-шаблону з усіма даними:', template.id);
       
-      const duplicatedTemplate: CreateTemplateData = {
-        name: `${template.name} (копія)`,
-        structure: template.structure,
-        is_active: template.is_active,
-        shop_name: template.shop_name,
-        shop_company: template.shop_company,
-        shop_url: template.shop_url
-      };
-
-      const { data, error } = await supabase
+      // Створюємо новий шаблон
+      const { data: newTemplate, error: templateError } = await supabase
         .from('template_xml')
-        .insert(duplicatedTemplate)
+        .insert({
+          name: `${template.name} (копія)`,
+          structure: template.structure,
+          is_active: template.is_active,
+          shop_name: template.shop_name,
+          shop_company: template.shop_company,
+          shop_url: template.shop_url
+        })
         .select()
         .single();
 
-      if (error) {
-        console.error('Помилка дублювання шаблону:', error);
-        throw error;
+      if (templateError) {
+        console.error('Помилка дублювання шаблону:', templateError);
+        throw templateError;
       }
 
-      return data;
+      // Копіюємо параметри
+      if (template.parameters && template.parameters.length > 0) {
+        const parametersToInsert = template.parameters.map(param => ({
+          template_id: newTemplate.id,
+          parameter_name: param.parameter_name,
+          parameter_value: param.parameter_value,
+          xml_path: param.xml_path,
+          parameter_type: param.parameter_type,
+          parameter_category: param.parameter_category,
+          is_active: param.is_active,
+          is_required: param.is_required
+        }));
+
+        const { error: paramsError } = await supabase
+          .from('template_xml_parameters')
+          .insert(parametersToInsert);
+
+        if (paramsError) {
+          console.error('Помилка копіювання параметрів:', paramsError);
+        }
+      }
+
+      // Копіюємо валюти
+      if (template.currencies && template.currencies.length > 0) {
+        const currenciesToInsert = template.currencies.map(currency => ({
+          template_id: newTemplate.id,
+          currency_code: currency.currency_code,
+          rate: currency.rate
+        }));
+
+        const { error: currenciesError } = await supabase
+          .from('template_currencies')
+          .insert(currenciesToInsert);
+
+        if (currenciesError) {
+          console.error('Помилка копіювання валют:', currenciesError);
+        }
+      }
+
+      // Копіюємо категорії
+      if (template.categories && template.categories.length > 0) {
+        const categoriesToInsert = template.categories.map(category => ({
+          template_id: newTemplate.id,
+          category_name: category.category_name,
+          external_id: category.external_id,
+          rz_id: category.rz_id
+        }));
+
+        const { error: categoriesError } = await supabase
+          .from('template_categories')
+          .insert(categoriesToInsert);
+
+        if (categoriesError) {
+          console.error('Помилка копіювання категорій:', categoriesError);
+        }
+      }
+
+      // Копіюємо налаштування зображень
+      if (template.images && template.images.length > 0) {
+        const imagesToInsert = template.images.map(image => ({
+          template_id: newTemplate.id,
+          image_field_name: image.image_field_name,
+          is_multiple: image.is_multiple,
+          max_count: image.max_count
+        }));
+
+        const { error: imagesError } = await supabase
+          .from('template_images')
+          .insert(imagesToInsert);
+
+        if (imagesError) {
+          console.error('Помилка копіювання налаштувань зображень:', imagesError);
+        }
+      }
+
+      return newTemplate;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['xml-templates'] });
       toast({
         title: 'Успіх',
-        description: 'XML-шаблон успішно продубльовано',
+        description: 'XML-шаблон успішно продубльовано з усіма даними',
         duration: 1000
       });
     },
