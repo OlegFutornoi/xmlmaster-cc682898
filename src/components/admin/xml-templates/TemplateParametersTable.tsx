@@ -42,6 +42,10 @@ const TemplateParametersTable = ({
     setEditForm({});
   };
 
+  const handleDelete = (parameterId: string) => {
+    onDeleteParameter(parameterId);
+  };
+
   const getShortPath = (fullPath: string) => {
     const parts = fullPath.split('/');
     return parts[parts.length - 1] || fullPath;
@@ -168,7 +172,7 @@ const TemplateParametersTable = ({
                 {editingId === parameter.id ? (
                   <Select 
                     value={editForm.parameter_category || 'parameter'}
-                    onValueChange={(value) => setEditForm(prev => ({...prev, parameter_category: value}))}
+                    onValueChange={(value: 'parameter' | 'characteristic') => setEditForm(prev => ({...prev, parameter_category: value}))}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -220,7 +224,7 @@ const TemplateParametersTable = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onDeleteParameter(parameter.id)}
+                        onClick={() => handleDelete(parameter.id)}
                         className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
                         id={`delete-parameter-${parameter.id}`}
                       >
