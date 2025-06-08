@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { XMLTemplate } from '@/types/xml-template';
@@ -231,9 +232,27 @@ export const useXMLTemplates = () => {
   });
 
   const duplicateTemplateMutation = useMutation({
-    mutationFn: async (template: XMLTemplate) => {
-      console.log('Дублювання XML-шаблону з усіма даними:', template.id);
+    mutationFn: async (templateId: string) => {
+      console.log('Дублювання XML-шаблону:', templateId);
       
+      // Спочатку отримуємо повні дані шаблону
+      const { data: template, error: fetchError } = await supabase
+        .from('template_xml')
+        .select(`
+          *,
+          template_xml_parameters (*),
+          template_currencies (*),
+          template_categories (*),
+          template_images (*)
+        `)
+        .eq('id', templateId)
+        .single();
+
+      if (fetchError || !template) {
+        console.error('Помилка отримання шаблону для копіювання:', fetchError);
+        throw fetchError || new Error('Шаблон не знайдено');
+      }
+
       // Створюємо новий шаблон
       const { data: newTemplate, error: templateError } = await supabase
         .from('template_xml')
@@ -254,8 +273,8 @@ export const useXMLTemplates = () => {
       }
 
       // Копіюємо параметри
-      if (template.parameters && template.parameters.length > 0) {
-        const parametersToInsert = template.parameters.map(param => ({
+      if (template.template_xml_parameters && template.template_xml_parameters.length > 0) {
+        const parametersToInsert = template.template_xml_parameters.map((param: any) => ({
           template_id: newTemplate.id,
           parameter_name: param.parameter_name,
           parameter_value: param.parameter_value,
@@ -276,8 +295,8 @@ export const useXMLTemplates = () => {
       }
 
       // Копіюємо валюти
-      if (template.currencies && template.currencies.length > 0) {
-        const currenciesToInsert = template.currencies.map(currency => ({
+      if (template.template_currencies && template.template_currencies.length > 0) {
+        const currenciesToInsert = template.template_currencies.map((currency: any) => ({
           template_id: newTemplate.id,
           currency_code: currency.currency_code,
           rate: currency.rate
@@ -293,8 +312,8 @@ export const useXMLTemplates = () => {
       }
 
       // Копіюємо категорії
-      if (template.categories && template.categories.length > 0) {
-        const categoriesToInsert = template.categories.map(category => ({
+      if (template.template_categories && template.template_categories.length > 0) {
+        const categoriesToInsert = template.template_categories.map((category: any) => ({
           template_id: newTemplate.id,
           category_name: category.category_name,
           external_id: category.external_id,
@@ -311,8 +330,8 @@ export const useXMLTemplates = () => {
       }
 
       // Копіюємо налаштування зображень
-      if (template.images && template.images.length > 0) {
-        const imagesToInsert = template.images.map(image => ({
+      if (template.template_images && template.template_images.length > 0) {
+        const imagesToInsert = template.template_images.map((image: any) => ({
           template_id: newTemplate.id,
           image_field_name: image.image_field_name,
           is_multiple: image.is_multiple,
@@ -356,7 +375,7 @@ export const useXMLTemplates = () => {
     createTemplate: createTemplateMutation.mutate,
     updateTemplate: updateTemplateMutation.mutate,
     deleteTemplate: deleteTemplateMutation.mutate,
-    duplicateTemplate: duplicateTemplateMutation.mutate,
+    duplicateTemplate: (template: XMLTemplate) => duplicateTemplateMutation.mutate(template.id),
     isCreating: createTemplateMutation.isPending,
     isUpdating: updateTemplateMutation.isPending,
     isDeleting: deleteTemplateMutation.isPending,

@@ -31,11 +31,11 @@ const XMLTemplateCard = ({
 
   return (
     <TooltipProvider>
-      <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 h-full min-h-[200px]">
-        <CardHeader className="pb-3 relative">
+      <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 h-full min-h-[240px] flex flex-col">
+        <CardHeader className="pb-3 relative flex-1">
           <Badge 
             variant={template.is_active ? "default" : "secondary"} 
-            className={`absolute top-3 right-3 text-xs z-10 ${
+            className={`absolute top-4 right-4 text-xs z-10 ${
               template.is_active 
                 ? "bg-green-100 text-green-700 border-green-200" 
                 : "bg-gray-100 text-gray-600 border-gray-200"
@@ -44,14 +44,14 @@ const XMLTemplateCard = ({
             {template.is_active ? 'Активний' : 'Неактивний'}
           </Badge>
           
-          <div className="flex items-start gap-3 pr-24 my-[15px]">
+          <div className="flex items-start gap-3 pr-20">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <FileCode className="h-6 w-6 text-white" />
             </div>
-            <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="min-w-0 flex-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <CardTitle className="text-base lg:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer mx-0 my-0 leading-tight break-words">
+                  <CardTitle className="text-base lg:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer leading-tight break-words hyphens-auto">
                     {template.name}
                   </CardTitle>
                 </TooltipTrigger>
@@ -68,8 +68,8 @@ const XMLTemplateCard = ({
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0">
-          <div className="flex gap-2">
+        <CardContent className="pt-0 pb-4">
+          <div className="flex gap-2 justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
