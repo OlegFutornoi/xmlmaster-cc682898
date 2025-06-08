@@ -1,3 +1,4 @@
+
 // Редактор XML-шаблонів в адміністративній панелі з розширеною функціональністю
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -6,14 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, Plus, FileCode, Upload, Building, Globe, Banknote, Tag } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Save, Plus, FileCode, Upload, Building, Trash2, Copy } from 'lucide-react';
 import { useXMLTemplates } from '@/hooks/xml-templates/useXMLTemplates';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
-import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { toast } from '@/hooks/use-toast';
 
 const XMLTemplateEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -104,6 +108,46 @@ const XMLTemplateEditor = () => {
     setIsAddParameterDialogOpen(false);
   };
 
+  const handleDeleteParameter = (parameterId: string) => {
+    if (confirm('Ви впевнені, що хочете видалити цей параметр?')) {
+      deleteParameter(parameterId);
+    }
+  };
+
+  const copyParameterPath = (fullPath: string) => {
+    navigator.clipboard.writeText(fullPath);
+    toast({
+      title: 'Скопійовано',
+      description: 'XML-шлях скопійовано в буфер обміну',
+      duration: 2000
+    });
+  };
+
+  const getCategoryBadgeColor = (category: string) => {
+    switch (category) {
+      case 'shop':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'currency':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'parameter':
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getTypeBadgeColor = (type: string) => {
+    switch (type) {
+      case 'text':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'number':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'date':
+        return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/xml') {
@@ -120,16 +164,6 @@ const XMLTemplateEditor = () => {
     // TODO: Реалізувати парсинг XML та створення параметрів
     setIsXMLImportDialogOpen(false);
   };
-
-  // Розділяємо параметри за категоріями
-  const parametersByCategory = parameters.reduce((acc, param) => {
-    const category = param.parameter_category || 'parameter';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(param);
-    return acc;
-  }, {} as Record<string, typeof parameters>);
 
   if (!currentTemplate) {
     return (
@@ -262,14 +296,14 @@ const XMLTemplateEditor = () => {
               </CardContent>
             </Card>
 
-            {/* Параметри шаблону */}
+            {/* Структура параметрів */}
             <Card className="border-0 shadow-sm bg-white">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <FileCode className="h-5 w-5" />
-                      Структура шаблону
+                      Структура параметрів
                     </CardTitle>
                     <CardDescription>
                       Керуйте параметрами та структурою XML-шаблону
@@ -291,12 +325,78 @@ const XMLTemplateEditor = () => {
                   <div className="text-center py-8">
                     <p className="text-gray-600">Завантаження параметрів...</p>
                   </div>
+                ) : parameters.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Параметри не знайдено</p>
+                  </div>
                 ) : (
-                  <TemplateParametersTable 
-                    parameters={parameters}
-                    onUpdateParameter={updateParameter}
-                    onDeleteParameter={deleteParameter}
-                  />
+                  <div className="border rounded-md overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[150px]">Назва параметру</TableHead>
+                          <TableHead className="min-w-[120px] hidden md:table-cell">Значення</TableHead>
+                          <TableHead className="min-w-[200px]">XML шлях</TableHead>
+                          <TableHead className="min-w-[80px] hidden sm:table-cell">Тип</TableHead>
+                          <TableHead className="min-w-[100px] hidden lg:table-cell">Категорія</TableHead>
+                          <TableHead className="w-[80px]">Дії</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {parameters.map((parameter) => (
+                          <TableRow key={parameter.id}>
+                            <TableCell>
+                              <span className="font-medium">{parameter.parameter_name}</span>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <span>{parameter.parameter_value || '-'}</span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono text-sm truncate" title={parameter.xml_path}>
+                                  {parameter.xml_path}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyParameterPath(parameter.xml_path)}
+                                  className="p-1 h-6 w-6 flex-shrink-0"
+                                  id={`copy-path-${parameter.id}`}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <Badge className={getTypeBadgeColor(parameter.parameter_type)}>
+                                {parameter.parameter_type === 'text' ? 'Параметр' : 
+                                 parameter.parameter_type === 'number' ? 'Число' : 
+                                 parameter.parameter_type === 'date' ? 'Дата' : parameter.parameter_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <Badge className={getCategoryBadgeColor(parameter.parameter_category)}>
+                                {parameter.parameter_category === 'shop' ? 'shop' : 
+                                 parameter.parameter_category === 'currency' ? 'currency' : 
+                                 parameter.parameter_category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteParameter(parameter.id)}
+                                className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                id={`delete-parameter-${parameter.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -338,6 +438,40 @@ const XMLTemplateEditor = () => {
                     onChange={(e) => setNewParameter(prev => ({ ...prev, parameter_value: e.target.value }))}
                     placeholder="Опціонально"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="param-type">Тип параметру</Label>
+                    <Select 
+                      value={newParameter.parameter_type}
+                      onValueChange={(value) => setNewParameter(prev => ({ ...prev, parameter_type: value }))}
+                    >
+                      <SelectTrigger id="param-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Текст</SelectItem>
+                        <SelectItem value="number">Число</SelectItem>
+                        <SelectItem value="date">Дата</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="param-category">Категорія</Label>
+                    <Select 
+                      value={newParameter.parameter_category}
+                      onValueChange={(value) => setNewParameter(prev => ({ ...prev, parameter_category: value }))}
+                    >
+                      <SelectTrigger id="param-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="parameter">Параметр</SelectItem>
+                        <SelectItem value="shop">Магазин</SelectItem>
+                        <SelectItem value="currency">Валюта</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
