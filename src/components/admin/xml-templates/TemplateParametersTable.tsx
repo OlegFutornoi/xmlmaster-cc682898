@@ -18,6 +18,14 @@ interface TemplateParametersTableProps {
   templateId: string;
 }
 
+type NewParameterType = {
+  parameter_name: string;
+  parameter_value: string;
+  xml_path: string;
+  parameter_type: 'text' | 'number' | 'date';
+  parameter_category: 'parameter' | 'characteristic' | 'category' | 'offer';
+};
+
 const TemplateParametersTable = ({ 
   parameters, 
   onUpdateParameter, 
@@ -28,12 +36,12 @@ const TemplateParametersTable = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<XMLTemplateParameter>>({});
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newParameter, setNewParameter] = useState({
+  const [newParameter, setNewParameter] = useState<NewParameterType>({
     parameter_name: '',
     parameter_value: '',
     xml_path: '',
-    parameter_type: 'text' as const,
-    parameter_category: 'parameter' as const
+    parameter_type: 'text',
+    parameter_category: 'parameter'
   });
 
   const handleEdit = (parameter: XMLTemplateParameter) => {
@@ -307,7 +315,7 @@ const TemplateParametersTable = ({
                 <TableCell className="hidden lg:table-cell">
                   {editingId === parameter.id ? (
                     <Select 
-                      value={editForm.parameter_category || 'parameter'}
+                      value={editForm.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' || 'parameter'}
                       onValueChange={(value: 'parameter' | 'characteristic' | 'category' | 'offer') => setEditForm(prev => ({...prev, parameter_category: value}))}
                     >
                       <SelectTrigger className="w-full">

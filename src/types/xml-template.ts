@@ -25,7 +25,7 @@ export interface XMLTemplateParameter {
   is_active: boolean;
   is_required: boolean;
   parameter_type: string;
-  parameter_category: 'parameter' | 'characteristic';
+  parameter_category: 'parameter' | 'characteristic' | 'category' | 'offer';
   created_at: string;
   updated_at: string;
 }
