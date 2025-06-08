@@ -1,4 +1,3 @@
-
 // Редактор XML-шаблонів в адміністративній панелі з розширеною функціональністю
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -10,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, Plus, FileCode, Upload, Building, Globe, Banknote, Tag } from 'lucide-react';
 import { useXMLTemplates } from '@/hooks/xml-templates/useXMLTemplates';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
-import ParsedStructureTable from '@/components/admin/xml-templates/ParsedStructureTable';
+import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -293,7 +292,7 @@ const XMLTemplateEditor = () => {
                     <p className="text-gray-600">Завантаження параметрів...</p>
                   </div>
                 ) : (
-                  <ParsedStructureTable 
+                  <TemplateParametersTable 
                     parameters={parameters}
                     onUpdateParameter={updateParameter}
                     onDeleteParameter={deleteParameter}
