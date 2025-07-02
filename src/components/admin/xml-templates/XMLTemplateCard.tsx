@@ -25,30 +25,39 @@ const XMLTemplateCard = ({
     setShowDeleteModal(false);
   };
   return <TooltipProvider>
-      <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 h-full min-h-[240px] flex flex-col">
-        <CardHeader className="pb-3 relative flex-1">
-          <Badge variant={template.is_active ? "default" : "secondary"} className={`absolute top-4 right-4 text-xs z-10 ${template.is_active ? "bg-green-100 text-green-700 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200"}`}>
+      <Card className="group bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 w-full max-w-sm mx-auto">
+        <CardHeader className="pb-4 relative">
+          <Badge 
+            variant={template.is_active ? "default" : "secondary"} 
+            className={`absolute top-3 right-3 text-xs z-10 ${
+              template.is_active 
+                ? "bg-green-100 text-green-700 border-green-200" 
+                : "bg-gray-100 text-gray-600 border-gray-200"
+            }`}
+          >
             {template.is_active ? 'Активний' : 'Неактивний'}
           </Badge>
           
-          <div className="flex items-start gap-3 pr-20 my-[24px]">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FileCode className="h-6 w-6 text-white" />
+          <div className="flex items-start gap-3 pr-16">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileCode className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0 flex-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <CardTitle className="text-base lg:text-lg text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer leading-tight break-words hyphens-auto">
+                  <CardTitle className="text-sm md:text-base text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer leading-tight truncate">
                     {template.name}
                   </CardTitle>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>{template.name}</p>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="break-words">{template.name}</p>
                 </TooltipContent>
               </Tooltip>
-              {template.shop_name && <CardDescription className="text-xs lg:text-sm text-gray-600 mt-2 break-words">
+              {template.shop_name && (
+                <CardDescription className="text-xs text-gray-600 mt-1 truncate">
                   {template.shop_name}
-                </CardDescription>}
+                </CardDescription>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -57,8 +66,14 @@ const XMLTemplateCard = ({
           <div className="flex gap-2 justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => onEdit(template)} size="sm" variant="outline" className="border-gray-300 hover:bg-gray-50 h-9 w-9 p-0" id={`edit-template-${template.id}`}>
-                  <Edit className="h-4 w-4" />
+                <Button 
+                  onClick={() => onEdit(template)} 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-gray-300 hover:bg-gray-50 h-8 w-8 p-0" 
+                  id={`edit-template-${template.id}`}
+                >
+                  <Edit className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -68,8 +83,14 @@ const XMLTemplateCard = ({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => onDuplicate(template)} size="sm" variant="outline" className="border-gray-300 hover:bg-gray-50 h-9 w-9 p-0" id={`duplicate-template-${template.id}`}>
-                  <Copy className="h-4 w-4" />
+                <Button 
+                  onClick={() => onDuplicate(template)} 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-gray-300 hover:bg-gray-50 h-8 w-8 p-0" 
+                  id={`duplicate-template-${template.id}`}
+                >
+                  <Copy className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -79,8 +100,14 @@ const XMLTemplateCard = ({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setShowDeleteModal(true)} size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 h-9 w-9 p-0" id={`delete-template-${template.id}`}>
-                  <Trash2 className="h-4 w-4" />
+                <Button 
+                  onClick={() => setShowDeleteModal(true)} 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 h-8 w-8 p-0" 
+                  id={`delete-template-${template.id}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

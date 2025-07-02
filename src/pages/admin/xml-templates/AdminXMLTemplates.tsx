@@ -36,9 +36,7 @@ const AdminXMLTemplates = () => {
   };
   const handleDeleteTemplate = (template: XMLTemplate) => {
     console.log('Видалення шаблону:', template.id);
-    if (confirm(`Ви впевнені, що хочете видалити шаблон "${template.name}"?`)) {
-      deleteTemplate(template.id);
-    }
+    deleteTemplate(template.id);
   };
   if (isLoading) {
     return <SidebarProvider>
@@ -102,7 +100,7 @@ const AdminXMLTemplates = () => {
                       </Button>}
                   </div>
                 </CardContent>
-              </Card> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+              </Card> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6">
                 {filteredTemplates.map(template => <XMLTemplateCard key={template.id} template={template} onEdit={handleEditTemplate} onDuplicate={handleDuplicateTemplate} onDelete={handleDeleteTemplate} />)}
               </div>}
 
