@@ -6,6 +6,7 @@ import { useTariffForm } from '@/hooks/tariffs/useTariffForm';
 import TariffFormSidebar from '@/components/admin/tariff-plan/TariffFormSidebar';
 import TariffTabsContent from '@/components/admin/tariff-plan/TariffTabsContent';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const TariffPlanForm = () => {
@@ -33,45 +34,53 @@ const TariffPlanForm = () => {
   }, [id]);
 
   return (
-    <div className="flex h-screen">
-      <AdminSidebar />
-      <div className="flex-1 overflow-auto p-4 md:p-8">
-        <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">
-          {id ? 'Редагування тарифного плану' : 'Новий тарифний план'}
-        </h1>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AdminSidebar />
+        <SidebarInset>
+          {/* Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+            <SidebarTrigger className="-ml-1" />
+            <h1 className="text-xl lg:text-2xl font-extrabold text-gray-900">
+              {id ? 'Редагування тарифного плану' : 'Новий тарифний план'}
+            </h1>
+          </header>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-96 w-full" />
+          <div className="flex-1 p-4 md:p-8">
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-96 w-full" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+                <div className="md:col-span-3 lg:col-span-3">
+                  <TariffFormSidebar 
+                    form={form}
+                    id={id}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    isSubmitting={isSubmitting}
+                    onSubmit={handleSubmit}
+                  />
+                </div>
+                <div className="md:col-span-9 lg:col-span-9">
+                  <TariffTabsContent
+                    form={form}
+                    id={id}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    currencies={currencies}
+                    isSubmitting={isSubmitting}
+                    onSubmit={handleSubmit}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-            <div className="md:col-span-3 lg:col-span-3">
-              <TariffFormSidebar 
-                form={form}
-                id={id}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                isSubmitting={isSubmitting}
-                onSubmit={handleSubmit}
-              />
-            </div>
-            <div className="md:col-span-9 lg:col-span-9">
-              <TariffTabsContent
-                form={form}
-                id={id}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                currencies={currencies}
-                isSubmitting={isSubmitting}
-                onSubmit={handleSubmit}
-              />
-            </div>
-          </div>
-        )}
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 

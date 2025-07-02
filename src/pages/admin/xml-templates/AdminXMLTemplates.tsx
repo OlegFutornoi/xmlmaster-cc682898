@@ -62,14 +62,16 @@ const AdminXMLTemplates = () => {
           {/* Header */}
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between flex-1 gap-4">
-              <div className="min-w-0">
-                <h1 className="text-xl lg:text-2xl font-extrabold text-gray-900 truncate">
-                  XML шаблонами
-                </h1>
-                
-              </div>
-              <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0" id="create-template-button" type="button">
+            <div className="flex items-center justify-between flex-1 gap-4">
+              <h1 className="text-xl lg:text-2xl font-extrabold text-gray-900">
+                XML шаблони
+              </h1>
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)} 
+                className="bg-blue-600 hover:bg-blue-700 text-white shrink-0" 
+                id="create-template-button" 
+                size="sm"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Створити шаблон</span>
                 <span className="sm:hidden">Створити</span>
