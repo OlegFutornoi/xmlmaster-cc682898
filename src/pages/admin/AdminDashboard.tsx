@@ -54,7 +54,7 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-3">
               
               <div>
-                <h1 className="text-xl font-semibold">Ласкаво просимо, {admin?.username}!</h1>
+                <h1 className="font-semibold text-lg px-[20px]">Ласкаво просимо, {admin?.username}!</h1>
                 
               </div>
             </div>
