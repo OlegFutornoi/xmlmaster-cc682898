@@ -57,9 +57,7 @@ const AdminSettings = () => {
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-lg flex items-center justify-center">
-                <Settings className="w-4 h-4 text-white" />
-              </div>
+              
               <div>
                 <h1 className="text-xl font-semibold">Налаштування адміністратора</h1>
                 
