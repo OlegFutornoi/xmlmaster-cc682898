@@ -221,7 +221,7 @@ const AdminTariffs = () => {
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
             <div className="flex justify-between items-center w-full">
-              <h1 className="text-2xl font-bold text-gray-900 md:text-xl">
+              <h1 className="text-xl font-semibold">
                 Тарифи
               </h1>
               <Button onClick={() => navigate('/admin/tariffs/new')} id="add-tariff-button">
