@@ -150,7 +150,7 @@ const AdminUsers = () => {
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
             <div>
-              <h1 className="text-xl font-extrabold font-bold md:font-medium">
+              <h1 className="text-xl font-semibold">
                 Управління користувачами
               </h1>
               
