@@ -8,11 +8,13 @@ import TariffTabsContent from '@/components/admin/tariff-plan/TariffTabsContent'
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TariffPlanForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('details');
+  const isMobile = useIsMobile();
   
   const { 
     form, 
@@ -46,15 +48,15 @@ const TariffPlanForm = () => {
             </h1>
           </header>
 
-          <div className="flex-1 p-4 md:p-8">
+          <div className={`flex-1 ${isMobile ? 'p-3' : 'p-4 md:p-8'}`}>
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-96 w-full" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-                <div className="md:col-span-3 lg:col-span-3">
+              <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6'}`}>
+                <div className={`${isMobile ? '' : 'md:col-span-3 lg:col-span-3'}`}>
                   <TariffFormSidebar 
                     form={form}
                     id={id}
@@ -64,7 +66,7 @@ const TariffPlanForm = () => {
                     onSubmit={handleSubmit}
                   />
                 </div>
-                <div className="md:col-span-9 lg:col-span-9">
+                <div className={`${isMobile ? '' : 'md:col-span-9 lg:col-span-9'}`}>
                   <TariffTabsContent
                     form={form}
                     id={id}

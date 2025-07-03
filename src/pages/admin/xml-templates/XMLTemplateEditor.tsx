@@ -16,6 +16,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { toast } from '@/hooks/use-toast';
 import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
+import { useIsMobile } from '@/hooks/use-mobile';
 const XMLTemplateEditor = () => {
   const {
     id
@@ -23,6 +24,7 @@ const XMLTemplateEditor = () => {
     id: string;
   }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [isXMLImportDialogOpen, setIsXMLImportDialogOpen] = useState(false);
   const [importMethod, setImportMethod] = useState<'file' | 'url'>('file');
   const [xmlUrl, setXmlUrl] = useState('');
@@ -123,21 +125,20 @@ const XMLTemplateEditor = () => {
           {/* Header */}
           <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
             <SidebarTrigger className="-ml-1" />
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between flex-1">
-              <div className="flex items-center gap-4">
-                <Button onClick={() => navigate('/admin/xml-templates')} variant="outline" size="sm" id="back-button">
+            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-col md:flex-row md:items-center md:justify-between'} flex-1`}>
+              <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-4'}`}>
+                <Button onClick={() => navigate('/admin/xml-templates')} variant="outline" size={isMobile ? "sm" : "sm"} id="back-button">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Назад
+                  {isMobile ? '' : 'Назад'}
                 </Button>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 md:text-xl">
-                    Редагування шаблону
+                  <h1 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-gray-900 md:text-xl`}>
+                    {isMobile ? 'Редагування' : 'Редагування шаблону'}
                   </h1>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4 md:mt-0">
-                
-                <Button onClick={handleSaveTemplate} disabled={isUpdating} className="bg-blue-600 hover:bg-blue-700 text-white" id="save-template-button">
+              <div className={`flex gap-2 ${isMobile ? 'mt-2' : 'mt-4 md:mt-0'}`}>
+                <Button onClick={handleSaveTemplate} disabled={isUpdating} className="bg-blue-600 hover:bg-blue-700 text-white" id="save-template-button" size={isMobile ? "sm" : "default"}>
                   <Save className="h-4 w-4 mr-2" />
                   {isUpdating ? 'Збереження...' : 'Зберегти'}
                 </Button>
@@ -145,20 +146,20 @@ const XMLTemplateEditor = () => {
             </div>
           </header>
 
-          <div className="flex-1 p-4 md:p-8 space-y-6">
+          <div className={`flex-1 ${isMobile ? 'p-3' : 'p-4 md:p-8'} space-y-${isMobile ? '4' : '6'}`}>
             {/* Основна інформація про шаблон */}
             <Card className="border-0 shadow-sm bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
+              <CardHeader className={isMobile ? 'p-4' : ''}>
+                <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
+                  <Building className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
                   Основна інформація
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className={isMobile ? 'text-sm' : ''}>
                   Налаштуйте назву, інформацію про магазин та статус XML-шаблону
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className={`space-y-4 ${isMobile ? 'p-4' : ''}`}>
+                <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'md:grid-cols-2 gap-4'}`}>
                   <div>
                     <Label htmlFor="template-name">Назва шаблону</Label>
                     <Input id="template-name" value={templateForm.name} onChange={e => setTemplateForm(prev => ({

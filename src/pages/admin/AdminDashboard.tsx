@@ -3,10 +3,12 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Settings, BarChart3, Shield, Zap, TrendingUp } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 const AdminDashboard = () => {
   const {
     admin
   } = useAdminAuth();
+  const isMobile = useIsMobile();
   const stats = [{
     title: "Активні користувачі",
     value: "1,234",
@@ -60,22 +62,22 @@ const AdminDashboard = () => {
             </div>
           </header>
           
-          <div className="flex-1 p-6">
-            <div className="space-y-8">
+          <div className={`flex-1 ${isMobile ? 'p-3' : 'p-6'}`}>
+            <div className={`space-y-${isMobile ? '6' : '8'}`}>
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                {stats.map((stat, index) => <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                 {stats.map((stat, index) => <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
+                    <CardContent className={`${isMobile ? 'p-4' : 'p-6'}`}>
+                      <div className={`flex items-center ${isMobile ? 'flex-col gap-2 text-center' : 'justify-between'}`}>
+                        <div className={`${isMobile ? 'order-2' : ''}`}>
                           <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                          <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                          <p className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-gray-900 mt-1`}>{stat.value}</p>
                           <p className="text-sm text-emerald-600 mt-1">
                             {stat.change} від минулого місяця
                           </p>
                         </div>
-                        <div className={`p-3 rounded-xl bg-gray-50 ${stat.color}`}>
-                          <stat.icon className="h-6 w-6" />
+                        <div className={`${isMobile ? 'p-2 order-1' : 'p-3'} rounded-xl bg-gray-50 ${stat.color}`}>
+                          <stat.icon className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
                         </div>
                       </div>
                     </CardContent>
@@ -84,15 +86,15 @@ const AdminDashboard = () => {
 
               {/* Quick Actions */}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Швидкі дії</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-900 mb-4`}>Швидкі дії</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                   {quickActions.map((action, index) => <Card key={index} className="border-0 shadow-sm bg-white hover:shadow-md transition-all duration-200 cursor-pointer group">
-                      <CardHeader className="pb-4">
-                        <div className={`w-12 h-12 rounded-xl ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                          <action.icon className="h-6 w-6" />
+                      <CardHeader className={`${isMobile ? 'pb-3 p-4' : 'pb-4'}`}>
+                        <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                          <action.icon className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
                         </div>
-                        <CardTitle className="text-lg text-gray-900">{action.title}</CardTitle>
-                        <CardDescription className="text-gray-600 text-sm leading-relaxed">
+                        <CardTitle className={`${isMobile ? 'text-base' : 'text-lg'} text-gray-900`}>{action.title}</CardTitle>
+                        <CardDescription className={`text-gray-600 ${isMobile ? 'text-xs' : 'text-sm'} leading-relaxed`}>
                           {action.description}
                         </CardDescription>
                       </CardHeader>

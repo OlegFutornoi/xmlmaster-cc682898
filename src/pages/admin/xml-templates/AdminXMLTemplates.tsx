@@ -11,8 +11,10 @@ import { XMLTemplate } from '@/types/xml-template';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 const AdminXMLTemplates = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const {
@@ -72,10 +74,10 @@ const AdminXMLTemplates = () => {
             </div>
           </header>
 
-          <div className="flex-1 p-4 lg:p-8 space-y-6">
+          <div className={`flex-1 ${isMobile ? 'p-3' : 'p-4 lg:p-8'} space-y-${isMobile ? '4' : '6'}`}>
             {/* Пошук */}
             <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="pt-6">
+              <CardContent className={`${isMobile ? 'pt-4' : 'pt-6'}`}>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input placeholder="Пошук шаблонів за назвою..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" id="search-templates" />
