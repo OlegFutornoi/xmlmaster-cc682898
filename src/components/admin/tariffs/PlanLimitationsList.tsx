@@ -79,7 +79,7 @@ export const PlanLimitationsList = ({
         {limitations.map(limitation => <div key={limitation.id} className="flex items-center justify-between p-2 border rounded-md" id={`limitation-${limitation.id}`}>
             <div className="flex-1">
               
-              <p className="text-sm text-muted-foreground">{limitation.limitation_type.description}</p>
+              <p className="text-muted-foreground text-sm font-medium">{limitation.limitation_type.description}</p>
             </div>
             
             {updateLimitationValue && editingLimitation === limitation.id ? <div className="flex items-center space-x-2">
