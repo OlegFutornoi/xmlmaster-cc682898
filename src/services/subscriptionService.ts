@@ -47,9 +47,10 @@ export const activateUserPlan = async (
     
     if (!planData.is_permanent && planData.duration_days) {
       const end = new Date(startDate);
-      // Встановлюємо кінець дня для дати закінчення
+      // Додаємо кількість днів до дати початку
       end.setDate(end.getDate() + planData.duration_days);
-      end.setHours(23, 59, 59, 999); // Встановлюємо час на кінець дня (23:59:59.999)
+      // Встановлюємо час на кінець дня для дати закінчення
+      end.setHours(23, 59, 59, 999);
       endDate = end.toISOString();
       console.log(`Subscription will end at: ${endDate}`);
     } else {
@@ -118,7 +119,11 @@ export const tryActivateDefaultPlan = async (userId: string) => {
         const endDate = new Date(existingSubscription.end_date);
         const now = new Date();
         
-        if (endDate < now) {
+        // Порівнюємо тільки дати, без урахування часу
+        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        if (nowDateOnly > endDateOnly) {
           console.log('Subscription has expired, deactivating it');
           // Деактивуємо прострочену підписку
           await supabase

@@ -48,6 +48,13 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({
 
   // Визначаємо термін дії підписки
   const getSubscriptionTermDisplay = () => {
+    if (!subscription.is_active) {
+      return <Badge variant="outline" className="flex items-center gap-1 text-xs">
+          <Clock className="h-3 w-3" />
+          Активируйте тариф
+        </Badge>;
+    }
+
     if (subscription.tariff_plan.is_permanent) {
       return <Badge variant="outline" className="flex items-center gap-1 text-xs">
           <Infinity className="h-3 w-3" />

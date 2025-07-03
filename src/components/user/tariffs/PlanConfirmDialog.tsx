@@ -80,7 +80,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
     ? getExpiryDate(activeSubscription)
     : selectedPlan.is_permanent
       ? "Постійний доступ"
-      : calculateExpiryDate(selectedPlan.duration_days || 0);
+      : (mode === 'activate' ? calculateExpiryDate(selectedPlan.duration_days || 0) : "Активируйте тариф");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,7 +109,10 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
               <Clock className="text-amber-500 mr-1 h-4 w-4" />
             )}
             <span>
-              {expiryDate ? `Дійсний до: ${expiryDate}` : `Тривалість: ${selectedPlan.duration_days} днів`}
+              {expiryDate === "Активируйте тариф" 
+                ? expiryDate 
+                : (expiryDate ? `Дійсний до: ${expiryDate}` : `Тривалість: ${selectedPlan.duration_days} днів`)
+              }
             </span>
           </div>
         </div>

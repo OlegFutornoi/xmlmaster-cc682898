@@ -64,7 +64,11 @@ export const useUserSubscriptions = () => {
         const endDate = new Date(activeData.end_date);
         const now = new Date();
         
-        if (endDate < now) {
+        // Порівнюємо тільки дати, без урахування часу
+        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        if (nowDateOnly > endDateOnly) {
           console.log('Subscription expired, deactivating:', activeData.id);
           // Підписка закінчилась - деактивуємо її
           const { error: updateError } = await supabase
