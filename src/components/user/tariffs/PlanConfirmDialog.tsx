@@ -14,7 +14,7 @@ import { Clock, CheckCircle2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PlanLimitationsList from '@/components/admin/tariffs/PlanLimitationsList';
 import { TariffPlan, PlanLimitation } from '@/components/admin/tariffs/types';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, addDays } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -71,16 +71,27 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
   const calculateExpiryDate = (durationDays: number) => {
     if (!durationDays) return null;
     
-    const future = new Date();
-    future.setDate(future.getDate() + durationDays);
-    return format(future, "d MMMM yyyy", { locale: uk });
+    const today = new Date();
+    const expiryDate = addDays(today, durationDays);
+    return format(expiryDate, "d MMMM yyyy", { locale: uk });
   };
 
-  const expiryDate = isActivePlan
-    ? getExpiryDate(activeSubscription)
-    : selectedPlan.is_permanent
-      ? "Постійний доступ"
-      : (mode === 'activate' ? calculateExpiryDate(selectedPlan.duration_days || 0) : "Активируйте тариф");
+  // Визначаємо дату закінчення для відображення
+  const getDisplayExpiryDate = () => {
+    if (isActivePlan && activeSubscription) {
+      // Для активного тарифу показуємо реальну дату закінчення з підписки
+      return getExpiryDate(activeSubscription);
+    } else if (mode === 'activate' && !selectedPlan.is_permanent) {
+      // Для режиму активації показуємо розраховану дату
+      return calculateExpiryDate(selectedPlan.duration_days || 0);
+    } else if (selectedPlan.is_permanent) {
+      return "Постійний доступ";
+    } else {
+      return "Активируйте тариф";
+    }
+  };
+
+  const expiryDate = getDisplayExpiryDate();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

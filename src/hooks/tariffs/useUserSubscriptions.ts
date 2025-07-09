@@ -16,6 +16,7 @@ interface Subscription {
     price: number;
     duration_days: number | null;
     is_permanent: boolean;
+    updated_at: string;
     currency: {
       code: string;
     }
@@ -36,7 +37,7 @@ export const useUserSubscriptions = () => {
     try {
       console.log('Fetching subscriptions for user:', user.id);
       
-      // Отримуємо активну підписку
+      // Отримуємо активну підписку з додатковою інформацією про дату оновлення тарифу
       const { data: activeData, error: activeError } = await supabase
         .from('user_tariff_subscriptions')
         .select(`
@@ -50,6 +51,7 @@ export const useUserSubscriptions = () => {
             price,
             duration_days,
             is_permanent,
+            updated_at,
             currencies:currency_id (code)
           )
         `)
@@ -59,10 +61,12 @@ export const useUserSubscriptions = () => {
 
       if (activeError) throw activeError;
 
-      // Перевіряємо чи не закінчився термін підписки
+      // Перевіряємо чи не закінчився термін підписки або чи не оновився тарифний план
       if (activeData && !activeData.tariff_plans.is_permanent && activeData.end_date) {
         const endDate = new Date(activeData.end_date);
         const now = new Date();
+        const planUpdatedAt = new Date(activeData.tariff_plans.updated_at);
+        const subscriptionStartDate = new Date(activeData.start_date);
         
         // Порівнюємо тільки дати, без урахування часу
         const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
@@ -82,6 +86,28 @@ export const useUserSubscriptions = () => {
           // Не встановлюємо активну підписку, так як вона закінчилась
           setActiveSubscription(null);
         } else {
+          // Перевіряємо, чи тарифний план не оновився після створення підписки
+          if (planUpdatedAt > subscriptionStartDate) {
+            console.log('Tariff plan was updated after subscription, recalculating end date');
+            // Перераховуємо дату закінчення на основі оновленої інформації про тариф
+            const newEndDate = new Date(subscriptionStartDate);
+            newEndDate.setDate(newEndDate.getDate() + (activeData.tariff_plans.duration_days || 0));
+            newEndDate.setHours(23, 59, 59, 999);
+            
+            // Оновлюємо дату закінчення в базі даних
+            const { error: updateEndDateError } = await supabase
+              .from('user_tariff_subscriptions')
+              .update({ end_date: newEndDate.toISOString() })
+              .eq('id', activeData.id);
+            
+            if (updateEndDateError) {
+              console.error('Error updating subscription end date:', updateEndDateError);
+            } else {
+              // Оновлюємо локальні дані
+              activeData.end_date = newEndDate.toISOString();
+            }
+          }
+          
           console.log('Active subscription found:', activeData.id);
           // Перетворюємо дані для активної підписки
           const formattedActive = formatSubscriptionData(activeData);
@@ -112,6 +138,7 @@ export const useUserSubscriptions = () => {
             price,
             duration_days,
             is_permanent,
+            updated_at,
             currencies:currency_id (code)
           )
         `)
@@ -150,6 +177,7 @@ export const useUserSubscriptions = () => {
         price: data.tariff_plans.price,
         duration_days: data.tariff_plans.duration_days,
         is_permanent: data.tariff_plans.is_permanent,
+        updated_at: data.tariff_plans.updated_at,
         currency: {
           code: data.tariff_plans.currencies ? data.tariff_plans.currencies.code : 'UAH'
         }

@@ -1,7 +1,7 @@
 
 // Компонент для управління обмеженнями тарифного плану
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Edit2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -47,6 +47,9 @@ const TariffLimitations: React.FC<TariffLimitationsProps> = ({ tariffPlanId }) =
   const [selectedLimitationTypeId, setSelectedLimitationTypeId] = useState<string>('');
   const [limitationValue, setLimitationValue] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [editingLimitation, setEditingLimitation] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   useEffect(() => {
     if (!tariffPlanId) return;
@@ -196,6 +199,155 @@ const TariffLimitations: React.FC<TariffLimitationsProps> = ({ tariffPlanId }) =
     }
   };
 
+  const handleStartEdit = (limitation: PlanLimitation) => {
+    setEditingLimitation(limitation.id);
+    setEditValue(String(limitation.value));
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLimitation(null);
+    setEditValue('');
+  };
+
+  const handleSaveEdit = async (limitationId: string) => {
+    const numValue = Number(editValue);
+    if (isNaN(numValue) || numValue < 0) {
+      toast({
+        title: 'Помилка',
+        description: 'Значення має бути додатнім числом',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from('tariff_plan_limitations')
+        .update({ value: numValue })
+        .eq('id', limitationId);
+      
+      if (error) throw error;
+
+      // Оновлюємо локальний стан
+      setPlanLimitations(prev => 
+        prev.map(item => 
+          item.id === limitationId ? { ...item, value: numValue } : item
+        )
+      );
+
+      toast({
+        title: 'Успішно',
+        description: 'Значення обмеження оновлено',
+      });
+      
+      setEditingLimitation(null);
+      setHasChanges(true);
+    } catch (error) {
+      console.error('Error updating limitation value:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося оновити значення обмеження',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!hasChanges) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Оновлюємо дату оновлення тарифного плану для тригера змін
+      const { error: updatePlanError } = await supabase
+        .from('tariff_plans')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', tariffPlanId);
+      
+      if (updatePlanError) throw updatePlanError;
+      
+      // Оновлюємо активні підписки користувачів на цей тарифний план
+      await updateActiveSubscriptions();
+      
+      toast({
+        title: 'Успішно',
+        description: 'Зміни збережено та застосовано до активних підписок',
+      });
+      
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося зберегти зміни',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateActiveSubscriptions = async () => {
+    if (!tariffPlanId) return;
+    
+    try {
+      // Отримуємо дані оновленого тарифного плану
+      const { data: planData, error: planError } = await supabase
+        .from('tariff_plans')
+        .select('*')
+        .eq('id', tariffPlanId)
+        .single();
+
+      if (planError) throw planError;
+
+      // Отримуємо всі активні підписки на цей тарифний план
+      const { data: subscriptions, error: subscriptionsError } = await supabase
+        .from('user_tariff_subscriptions')
+        .select('id, start_date')
+        .eq('tariff_plan_id', tariffPlanId)
+        .eq('is_active', true);
+
+      if (subscriptionsError) throw subscriptionsError;
+
+      // Оновлюємо дати закінчення для всіх активних підписок
+      if (subscriptions && subscriptions.length > 0) {
+        const updates = subscriptions.map(subscription => {
+          let endDate = null;
+          if (!planData.is_permanent && planData.duration_days) {
+            const startDate = new Date(subscription.start_date);
+            const end = new Date(startDate);
+            end.setDate(end.getDate() + planData.duration_days);
+            end.setHours(23, 59, 59, 999);
+            endDate = end.toISOString();
+          }
+          
+          return {
+            id: subscription.id,
+            end_date: endDate
+          };
+        });
+
+        // Оновлюємо підписки пакетно
+        for (const update of updates) {
+          const { error: updateError } = await supabase
+            .from('user_tariff_subscriptions')
+            .update({ end_date: update.end_date })
+            .eq('id', update.id);
+          
+          if (updateError) {
+            console.error('Error updating subscription:', updateError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating active subscriptions:', error);
+    }
+  };
+
   // Фільтруємо типи обмежень, щоб показати тільки ті, які ще не використовуються
   const availableLimitationTypes = limitationTypes.filter(
     type => !planLimitations.some(limit => limit.limitation_type_id === type.id)
@@ -268,7 +420,48 @@ const TariffLimitations: React.FC<TariffLimitationsProps> = ({ tariffPlanId }) =
                 <TableRow key={limitation.id}>
                   <TableCell>{limitation.limitation_type?.name || 'Невідомо'}</TableCell>
                   <TableCell>{limitation.limitation_type?.description || 'Без опису'}</TableCell>
-                  <TableCell>{limitation.value}</TableCell>
+                  <TableCell>
+                    {editingLimitation === limitation.id ? (
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="number"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="w-20 h-8"
+                          min={0}
+                          id={`limitation-value-input-${limitation.id}`}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSaveEdit(limitation.id)}
+                          id={`save-limitation-${limitation.id}`}
+                        >
+                          <Check className="h-4 w-4 text-green-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          id={`cancel-limitation-${limitation.id}`}
+                        >
+                          <X className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <span className="font-semibold">{limitation.value}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleStartEdit(limitation)}
+                          id={`edit-limitation-${limitation.id}`}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -285,6 +478,18 @@ const TariffLimitations: React.FC<TariffLimitationsProps> = ({ tariffPlanId }) =
           </TableBody>
         </Table>
       </div>
+
+      {hasChanges && (
+        <div className="flex justify-end">
+          <Button
+            onClick={handleSaveChanges}
+            disabled={isLoading}
+            className="w-full md:w-auto"
+          >
+            {isLoading ? 'Збереження...' : 'Зберегти зміни'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
