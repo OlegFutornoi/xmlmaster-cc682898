@@ -1,3 +1,4 @@
+
 // Головна сторінка для управління тарифними планами в адмін-панелі
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -5,12 +6,56 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import TariffCard from '@/components/admin/tariffs/TariffCard';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TariffItemsManager from '@/components/admin/tariffs/TariffItemsManager';
+
+// Компонент для відображення карток тарифних планів в адмін-панелі
+const AdminTariffCard = ({ plan, onEdit, onDelete, isDeleting }) => {
+  return (
+    <div className="border rounded-lg p-4 bg-white shadow-sm" id={`admin-tariff-card-${plan.id}`}>
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className="font-semibold text-lg">{plan.name}</h3>
+          <p className="text-sm text-gray-600">
+            {plan.is_permanent ? 'Постійний доступ' : `${plan.duration_days} днів`}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-bold">
+            {plan.price} {plan.currencies?.code}
+          </p>
+        </div>
+      </div>
+      
+      {plan.description && (
+        <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
+      )}
+      
+      <div className="flex gap-2">
+        <Button
+          onClick={onEdit}
+          variant="outline"
+          size="sm"
+          id={`edit-tariff-${plan.id}`}
+        >
+          Редагувати
+        </Button>
+        <Button
+          onClick={onDelete}
+          variant="destructive"
+          size="sm"
+          disabled={isDeleting}
+          id={`delete-tariff-${plan.id}`}
+        >
+          {isDeleting ? 'Видалення...' : 'Видалити'}
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const AdminTariffs = () => {
   const { toast } = useToast();
@@ -128,7 +173,7 @@ const AdminTariffs = () => {
                 <div className="space-y-4">
                   {tariffPlans.length > 0 ? (
                     tariffPlans.map((plan) => (
-                      <TariffCard
+                      <AdminTariffCard
                         key={plan.id}
                         plan={plan}
                         onEdit={() => navigate(`/admin/tariffs/${plan.id}`)}
