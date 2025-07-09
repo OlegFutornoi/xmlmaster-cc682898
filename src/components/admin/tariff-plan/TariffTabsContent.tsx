@@ -4,11 +4,9 @@ import React from 'react';
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { UseFormReturn } from 'react-hook-form';
@@ -50,18 +48,6 @@ const TariffTabsContent: React.FC<TariffTabsContentProps> = ({
             <CardContent className="p-4 md:p-6">
               <TariffDetailsForm form={form} currencies={currencies} />
             </CardContent>
-            {id && (
-              <CardFooter className="p-4 md:p-6">
-                <Button
-                  type="button"
-                  className="ml-auto"
-                  onClick={onSubmit}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Збереження...' : 'Зберегти зміни'}
-                </Button>
-              </CardFooter>
-            )}
           </Card>
         </TabsContent>
 

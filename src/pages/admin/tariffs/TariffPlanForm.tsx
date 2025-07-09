@@ -55,28 +55,27 @@ const TariffPlanForm = () => {
                 <Skeleton className="h-96 w-full" />
               </div>
             ) : (
-              <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6'}`}>
-                <div className={`${isMobile ? '' : 'md:col-span-3 lg:col-span-3'}`}>
-                  <TariffFormSidebar 
-                    form={form}
-                    id={id}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    isSubmitting={isSubmitting}
-                    onSubmit={handleSubmit}
-                  />
-                </div>
-                <div className={`${isMobile ? '' : 'md:col-span-9 lg:col-span-9'}`}>
-                  <TariffTabsContent
-                    form={form}
-                    id={id}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    currencies={currencies}
-                    isSubmitting={isSubmitting}
-                    onSubmit={handleSubmit}
-                  />
-                </div>
+              <div className="space-y-6">
+                {/* Горизонтальні таби та кнопки управління */}
+                <TariffFormSidebar 
+                  form={form}
+                  id={id}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  isSubmitting={isSubmitting}
+                  onSubmit={handleSubmit}
+                />
+                
+                {/* Контент вкладок */}
+                <TariffTabsContent
+                  form={form}
+                  id={id}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  currencies={currencies}
+                  isSubmitting={isSubmitting}
+                  onSubmit={handleSubmit}
+                />
               </div>
             )}
           </div>
