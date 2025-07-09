@@ -1,4 +1,3 @@
-
 // Діалог створення нового XML-шаблону з підтримкою різних форматів XML
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -50,9 +49,10 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
         parameters: []
       };
 
-      // Визначаємо формат XML (yml_catalog або price)
+      // Визначаємо формат XML (yml_catalog, price або shop)
       const isYmlFormat = xmlDoc.querySelector('yml_catalog') !== null;
       const isPriceFormat = xmlDoc.querySelector('price') !== null;
+      const isShopFormat = xmlDoc.querySelector('shop') !== null;
 
       if (isYmlFormat) {
         // Парсинг YML формату
@@ -60,8 +60,11 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
       } else if (isPriceFormat) {
         // Парсинг Price формату
         return parsePriceFormat(xmlDoc, structure);
+      } else if (isShopFormat) {
+        // Парсинг Shop формату
+        return parseShopFormat(xmlDoc, structure);
       } else {
-        throw new Error('Невідомий формат XML. Підтримуються формати yml_catalog та price');
+        throw new Error('Невідомий формат XML. Підтримуються формати yml_catalog, price та shop');
       }
     } catch (error) {
       console.error('Помилка парсингу XML:', error);
@@ -427,6 +430,163 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
     return structure;
   };
 
+  const parseShopFormat = (xmlDoc: Document, structure: ParsedXMLStructure): ParsedXMLStructure => {
+    const shopElement = xmlDoc.querySelector('shop');
+    if (!shopElement) {
+      throw new Error('Не знайдено кореневий елемент <shop>');
+    }
+
+    // Парсинг категорій з каталогу
+    const catalogElement = shopElement.querySelector('catalog');
+    if (catalogElement) {
+      const categories = catalogElement.querySelectorAll('category');
+      if (categories.length > 0) {
+        structure.categories = Array.from(categories).map(category => ({
+          id: category.getAttribute('id') || '',
+          name: category.textContent || '',
+          parent_id: category.getAttribute('parentId') || undefined
+        }));
+
+        const firstCategory = categories[0];
+        if (firstCategory) {
+          structure.parameters.push({
+            name: 'category_id',
+            value: firstCategory.getAttribute('id') || '',
+            path: '/shop/catalog/category[@id]',
+            type: 'parameter',
+            category: 'category'
+          });
+          structure.parameters.push({
+            name: 'category_name',
+            value: firstCategory.textContent || '',
+            path: '/shop/catalog/category',
+            type: 'parameter',
+            category: 'category'
+          });
+          if (firstCategory.getAttribute('parentId')) {
+            structure.parameters.push({
+              name: 'category_parent_id',
+              value: firstCategory.getAttribute('parentId') || '',
+              path: '/shop/catalog/category[@parentId]',
+              type: 'parameter',
+              category: 'category'
+            });
+          }
+        }
+      }
+    }
+
+    // Парсинг товарів
+    const itemsElement = shopElement.querySelector('items');
+    if (itemsElement) {
+      const items = itemsElement.querySelectorAll('item');
+      if (items.length > 0) {
+        structure.offers = Array.from(items).map(item => {
+          const itemData: any = {
+            id: item.getAttribute('id') || '',
+            selling_type: item.getAttribute('selling_type') || ''
+          };
+
+          Array.from(item.children).forEach(child => {
+            if (child.tagName === 'param') {
+              const paramName = child.getAttribute('name');
+              if (paramName && !itemData.params) {
+                itemData.params = {};
+              }
+              if (paramName) {
+                itemData.params[paramName] = child.textContent;
+              }
+            } else if (child.tagName === 'image') {
+              if (!itemData.images) {
+                itemData.images = [];
+              }
+              itemData.images.push(child.textContent);
+            } else {
+              itemData[child.tagName] = child.textContent;
+            }
+          });
+
+          return itemData;
+        });
+
+        // Додаємо параметри товарів на основі першого товару
+        const firstItem = items[0];
+        if (firstItem) {
+          // Атрибути item
+          structure.parameters.push({
+            name: 'item_id',
+            value: firstItem.getAttribute('id') || '',
+            path: '/shop/items/item[@id]',
+            type: 'parameter',
+            category: 'offer'
+          });
+          if (firstItem.getAttribute('selling_type')) {
+            structure.parameters.push({
+              name: 'selling_type',
+              value: firstItem.getAttribute('selling_type') || '',
+              path: '/shop/items/item[@selling_type]',
+              type: 'parameter',
+              category: 'offer'
+            });
+          }
+
+          // Основні поля товару
+          const basicFields = ['name', 'categoryId', 'priceuah', 'priceusd', 'available', 'in_stock', 'url', 'vendor', 'description'];
+          
+          basicFields.forEach(field => {
+            const element = firstItem.querySelector(field);
+            if (element) {
+              structure.parameters.push({
+                name: field,
+                value: element.textContent || '',
+                path: `/shop/items/item/${field}`,
+                type: 'parameter',
+                category: 'offer'
+              });
+            }
+          });
+
+          // Зображення товару
+          const images = firstItem.querySelectorAll('image');
+          if (images.length > 0) {
+            structure.parameters.push({
+              name: 'image',
+              value: images[0].textContent || '',
+              path: '/shop/items/item/image',
+              type: 'parameter',
+              category: 'offer'
+            });
+          }
+
+          // Характеристики товару (param elements)
+          const params = firstItem.querySelectorAll('param');
+          if (params.length > 0) {
+            const firstParam = params[0];
+            const paramName = firstParam.getAttribute('name');
+            if (paramName) {
+              structure.parameters.push({
+                name: 'param_name',
+                value: paramName,
+                path: '/shop/items/item/param[@name]',
+                type: 'characteristic',
+                category: 'offer'
+              });
+              structure.parameters.push({
+                name: 'param_value',
+                value: firstParam.textContent || '',
+                path: '/shop/items/item/param',
+                type: 'characteristic',
+                category: 'offer'
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return structure;
+  };
+
   const handleParseXML = async () => {
     if (!templateName.trim()) {
       alert('Будь ласка, введіть назву шаблону');
@@ -494,7 +654,7 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
             Створити новий XML-шаблон
           </DialogTitle>
           <DialogDescription>
-            Завантажте XML-файл або вкажіть URL для створення шаблону. Підтримуються формати YML та Price.
+            Завантажте XML-файл або вкажіть URL для створення шаблону. Підтримуються формати YML, Price та Shop.
           </DialogDescription>
         </DialogHeader>
 
