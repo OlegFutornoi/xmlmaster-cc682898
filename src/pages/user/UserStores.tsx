@@ -168,6 +168,12 @@ const UserStores = () => {
   };
 
   const handleCreateStore = async () => {
+    // Перевіряємо, чи не відбувається вже створення
+    if (isSubmitting) {
+      console.log('Store creation already in progress, ignoring duplicate request');
+      return;
+    }
+
     if (!newStoreName.trim()) {
       toast({
         title: 'Помилка',
@@ -176,6 +182,7 @@ const UserStores = () => {
       });
       return;
     }
+    
     if (!user) {
       toast({
         title: 'Помилка',
@@ -185,16 +192,19 @@ const UserStores = () => {
       return;
     }
 
+    // Перевіряємо ліміт перед створенням
     if (storesLimit !== null && stores.length >= storesLimit) {
       toast({
         title: 'Помилка',
-        description: 'Ви досягли ліміту створення магазинів. Оновіть тарифний план.',
+        description: `Ви досягли ліміту створення магазинів (${storesLimit}). Оновіть тарифний план.`,
         variant: 'destructive'
       });
       return;
     }
     
     setIsSubmitting(true);
+    console.log('Starting store creation process...');
+    
     try {
       const templateIdToSave = selectedTemplateId === 'none' ? null : selectedTemplateId;
       
@@ -205,34 +215,45 @@ const UserStores = () => {
           name: newStoreName.trim(),
           template_id: templateIdToSave
         })
-        .select();
+        .select()
+        .single();
 
       if (error) {
+        console.error('Error creating store:', error);
         throw error;
       }
 
+      console.log('Store created successfully:', data);
+
       // Якщо вибрано шаблон, копіюємо його параметри
-      if (templateIdToSave && data && data[0]) {
-        await copyTemplateParametersToStore(templateIdToSave, data[0].id);
+      if (templateIdToSave && data) {
+        console.log('Copying template parameters...');
+        await copyTemplateParametersToStore(templateIdToSave, data.id);
       }
 
       toast({
         title: 'Успішно',
         description: 'Магазин успішно створено'
       });
+      
+      // Очищуємо форму та закриваємо діалог
       setNewStoreName('');
       setSelectedTemplateId('none');
       setIsDialogOpen(false);
-      fetchUserStores();
+      
+      // Оновлюємо список магазинів
+      await fetchUserStores();
+      
     } catch (error) {
-      console.error('Error creating store:', error);
+      console.error('Error in store creation process:', error);
       toast({
         title: 'Помилка',
-        description: 'Не вдалося створити магазин',
+        description: 'Не вдалося створити магазин. Спробуйте ще раз.',
         variant: 'destructive'
       });
     } finally {
       setIsSubmitting(false);
+      console.log('Store creation process completed');
     }
   };
 
@@ -482,11 +503,16 @@ const UserStores = () => {
                 onChange={e => setNewStoreName(e.target.value)}
                 placeholder="Введіть назву магазину"
                 className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="template-select" className="text-gray-700">XML шаблон</Label>
-              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+              <Select 
+                value={selectedTemplateId} 
+                onValueChange={setSelectedTemplateId}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger id="template-select" className="border-emerald-200 focus:border-emerald-400">
                   <SelectValue placeholder="Виберіть шаблон (необов'язково)" />
                 </SelectTrigger>
@@ -508,12 +534,17 @@ const UserStores = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-emerald-200 hover:bg-emerald-50">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDialogOpen(false)} 
+              className="border-emerald-200 hover:bg-emerald-50"
+              disabled={isSubmitting}
+            >
               Скасувати
             </Button>
             <Button
               onClick={handleCreateStore}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !newStoreName.trim()}
               className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
               type="button"
             >
