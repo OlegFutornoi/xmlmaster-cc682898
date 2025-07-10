@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,7 +38,7 @@ const UserStores = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [storesLimit, setStoresLimit] = useState<number | null>(null);
   const [canCreateStore, setCanCreateStore] = useState(false);
@@ -148,12 +149,14 @@ const UserStores = () => {
     
     setIsSubmitting(true);
     try {
+      const templateIdToSave = selectedTemplateId === 'none' ? null : selectedTemplateId;
+      
       const { data, error } = await extendedSupabase
         .from('user_stores')
         .insert({
           user_id: user.id,
           name: newStoreName.trim(),
-          template_id: selectedTemplateId
+          template_id: templateIdToSave
         })
         .select();
 
@@ -162,9 +165,9 @@ const UserStores = () => {
       }
 
       // Якщо вибрано шаблон, копіюємо його параметри
-      if (selectedTemplateId && data && data[0]) {
+      if (templateIdToSave && data && data[0]) {
         const { copyTemplateParameters } = useStoreTemplateParameters(data[0].id);
-        await copyTemplateParameters(selectedTemplateId, data[0].id);
+        await copyTemplateParameters(templateIdToSave, data[0].id);
       }
 
       toast({
@@ -172,7 +175,7 @@ const UserStores = () => {
         description: 'Магазин успішно створено'
       });
       setNewStoreName('');
-      setSelectedTemplateId(null);
+      setSelectedTemplateId('none');
       setIsDialogOpen(false);
       fetchUserStores();
     } catch (error) {
@@ -230,7 +233,7 @@ const UserStores = () => {
 
   const resetDialog = () => {
     setNewStoreName('');
-    setSelectedTemplateId(null);
+    setSelectedTemplateId('none');
     setIsDialogOpen(true);
   };
 
@@ -437,7 +440,7 @@ const UserStores = () => {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="template-select" className="text-gray-700">XML шаблон</Label>
-              <Select value={selectedTemplateId || ''} onValueChange={setSelectedTemplateId}>
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
                 <SelectTrigger id="template-select" className="border-emerald-200 focus:border-emerald-400">
                   <SelectValue placeholder="Виберіть шаблон (необов'язково)" />
                 </SelectTrigger>
@@ -446,7 +449,7 @@ const UserStores = () => {
                     <SelectItem value="loading" disabled>Завантаження...</SelectItem>
                   ) : (
                     <>
-                      <SelectItem value="">Без шаблону</SelectItem>
+                      <SelectItem value="none">Без шаблону</SelectItem>
                       {templates.map(template => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}
