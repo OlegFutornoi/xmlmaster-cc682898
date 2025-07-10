@@ -1,4 +1,3 @@
-
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +18,6 @@ import { uk } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 import { useUserXMLTemplates } from '@/hooks/xml-templates/useUserXMLTemplates';
-import { useStoreTemplateParameters } from '@/hooks/xml-templates/useStoreTemplateParameters';
 import StoreTemplateEditor from '@/components/user/stores/StoreTemplateEditor';
 
 interface UserStore {
@@ -47,6 +45,55 @@ const UserStores = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingStore, setEditingStore] = useState<UserStore | null>(null);
   const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
+
+  // Функція для копіювання параметрів шаблону в магазин
+  const copyTemplateParametersToStore = async (templateId: string, storeId: string) => {
+    try {
+      console.log('Copying template parameters for template:', templateId, 'to store:', storeId);
+      
+      // Отримуємо параметри шаблону
+      const { data: templateParams, error } = await extendedSupabase
+        .from('template_xml_parameters')
+        .select('*')
+        .eq('template_id', templateId);
+
+      if (error) {
+        console.error('Error fetching template parameters:', error);
+        throw error;
+      }
+
+      console.log('Template parameters found:', templateParams);
+
+      // Копіюємо параметри в магазин
+      if (templateParams && templateParams.length > 0) {
+        const storeParams = templateParams.map(param => ({
+          store_id: storeId,
+          template_id: templateId,
+          parameter_name: param.parameter_name,
+          parameter_value: param.parameter_value,
+          xml_path: param.xml_path,
+          parameter_type: param.parameter_type,
+          parameter_category: param.parameter_category,
+          is_active: param.is_active,
+          is_required: param.is_required
+        }));
+
+        const { error: insertError } = await extendedSupabase
+          .from('store_template_parameters')
+          .insert(storeParams);
+
+        if (insertError) {
+          console.error('Error inserting store parameters:', insertError);
+          throw insertError;
+        }
+
+        console.log('Successfully copied', storeParams.length, 'parameters to store');
+      }
+    } catch (error) {
+      console.error('Error copying template parameters:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     refetchSubscriptions();
@@ -166,8 +213,7 @@ const UserStores = () => {
 
       // Якщо вибрано шаблон, копіюємо його параметри
       if (templateIdToSave && data && data[0]) {
-        const { copyTemplateParameters } = useStoreTemplateParameters(data[0].id);
-        await copyTemplateParameters(templateIdToSave, data[0].id);
+        await copyTemplateParametersToStore(templateIdToSave, data[0].id);
       }
 
       toast({
