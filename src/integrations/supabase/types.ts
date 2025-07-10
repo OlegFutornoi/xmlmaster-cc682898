@@ -368,6 +368,66 @@ export type Database = {
           },
         ]
       }
+      store_template_parameters: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          parameter_category: string
+          parameter_name: string
+          parameter_type: string
+          parameter_value: string | null
+          store_id: string
+          template_id: string
+          updated_at: string
+          xml_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          parameter_category?: string
+          parameter_name: string
+          parameter_type?: string
+          parameter_value?: string | null
+          store_id: string
+          template_id: string
+          updated_at?: string
+          xml_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          parameter_category?: string
+          parameter_name?: string
+          parameter_type?: string
+          parameter_value?: string | null
+          store_id?: string
+          template_id?: string
+          updated_at?: string
+          xml_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_template_parameters_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "user_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_template_parameters_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           created_at: string
@@ -763,6 +823,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          template_id: string | null
           updated_at: string
           user_id: string
         }
@@ -770,6 +831,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          template_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -777,10 +839,18 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          template_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_stores_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_stores_user_id_fkey"
             columns: ["user_id"]

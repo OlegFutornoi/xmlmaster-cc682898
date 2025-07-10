@@ -1,13 +1,14 @@
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, PlusCircle, Store, Trash2, ChevronRight } from 'lucide-react';
+import { Building2, PlusCircle, Store, Trash2, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,10 +17,14 @@ import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
+import { useUserXMLTemplates } from '@/hooks/xml-templates/useUserXMLTemplates';
+import { useStoreTemplateParameters } from '@/hooks/xml-templates/useStoreTemplateParameters';
+import StoreTemplateEditor from '@/components/user/stores/StoreTemplateEditor';
 
 interface UserStore {
   id: string;
   name: string;
+  template_id: string | null;
   created_at: string;
 }
 
@@ -27,16 +32,20 @@ const UserStores = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { activeSubscription, refetchSubscriptions } = useUserSubscriptions();
+  const { templates, isLoading: templatesLoading } = useUserXMLTemplates();
   const [stores, setStores] = useState<UserStore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [storesLimit, setStoresLimit] = useState<number | null>(null);
   const [canCreateStore, setCanCreateStore] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<UserStore | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editingStore, setEditingStore] = useState<UserStore | null>(null);
+  const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
 
   useEffect(() => {
     refetchSubscriptions();
@@ -136,13 +145,15 @@ const UserStores = () => {
       });
       return;
     }
+    
     setIsSubmitting(true);
     try {
       const { data, error } = await extendedSupabase
         .from('user_stores')
         .insert({
           user_id: user.id,
-          name: newStoreName.trim()
+          name: newStoreName.trim(),
+          template_id: selectedTemplateId
         })
         .select();
 
@@ -150,11 +161,18 @@ const UserStores = () => {
         throw error;
       }
 
+      // Якщо вибрано шаблон, копіюємо його параметри
+      if (selectedTemplateId && data && data[0]) {
+        const { copyTemplateParameters } = useStoreTemplateParameters(data[0].id);
+        await copyTemplateParameters(selectedTemplateId, data[0].id);
+      }
+
       toast({
         title: 'Успішно',
         description: 'Магазин успішно створено'
       });
       setNewStoreName('');
+      setSelectedTemplateId(null);
       setIsDialogOpen(false);
       fetchUserStores();
     } catch (error) {
@@ -212,7 +230,13 @@ const UserStores = () => {
 
   const resetDialog = () => {
     setNewStoreName('');
+    setSelectedTemplateId(null);
     setIsDialogOpen(true);
+  };
+
+  const handleEditTemplate = (store: UserStore) => {
+    setEditingStore(store);
+    setIsTemplateEditorOpen(true);
   };
 
   const handleManageStore = (e: React.MouseEvent, storeId: string) => {
@@ -223,6 +247,12 @@ const UserStores = () => {
       title: 'Функція в розробці',
       description: 'Управління магазином буде додано пізніше'
     });
+  };
+
+  const getTemplateName = (templateId: string | null) => {
+    if (!templateId) return 'Шаблон не вибрано';
+    const template = templates.find(t => t.id === templateId);
+    return template?.name || 'Невідомий шаблон';
   };
 
   return (
@@ -293,9 +323,31 @@ const UserStores = () => {
                         <CardDescription className="text-sm text-gray-600">
                           {format(new Date(store.created_at), "dd.MM.yyyy", { locale: uk })}
                         </CardDescription>
+                        <div className="mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {getTemplateName(store.template_id)}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-1 relative z-20">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditTemplate(store)}
+                              className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 relative z-30"
+                              id={`edit-template-${store.id}`}
+                              type="button"
+                            >
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Налаштувати шаблон</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -369,7 +421,7 @@ const UserStores = () => {
           <DialogHeader>
             <DialogTitle className="text-gray-900">Створити новий магазин</DialogTitle>
             <DialogDescription className="text-gray-600">
-              Введіть назву для вашого нового магазину
+              Введіть назву та виберіть шаблон для вашого нового магазину
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -382,6 +434,28 @@ const UserStores = () => {
                 placeholder="Введіть назву магазину"
                 className="border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="template-select" className="text-gray-700">XML шаблон</Label>
+              <Select value={selectedTemplateId || ''} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger id="template-select" className="border-emerald-200 focus:border-emerald-400">
+                  <SelectValue placeholder="Виберіть шаблон (необов'язково)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templatesLoading ? (
+                    <SelectItem value="loading" disabled>Завантаження...</SelectItem>
+                  ) : (
+                    <>
+                      <SelectItem value="">Без шаблону</SelectItem>
+                      {templates.map(template => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -422,6 +496,15 @@ const UserStores = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Редактор шаблону магазину */}
+      {editingStore && (
+        <StoreTemplateEditor 
+          store={editingStore}
+          isOpen={isTemplateEditorOpen}
+          onOpenChange={setIsTemplateEditorOpen}
+        />
+      )}
     </div>
   );
 };
