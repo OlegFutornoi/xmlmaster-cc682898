@@ -7,8 +7,7 @@ import UserTariffs from './UserTariffs';
 import UserStores from './UserStores';
 import UserSuppliers from './UserSuppliers';
 import UserSettings from './UserSettings';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 import { tryActivateDefaultPlan } from '@/services/subscriptionService';
 
@@ -24,6 +23,7 @@ const UserDashboard = () => {
     const checkAndActivateDemoPlan = async () => {
       if (!user) return;
       
+      console.log('Checking subscription status for user:', user.id);
       await refetchSubscriptions();
       
       // Якщо у користувача немає активної підписки, пробуємо активувати демо-план
@@ -34,37 +34,57 @@ const UserDashboard = () => {
           console.log('Demo plan activated:', result);
           await refetchSubscriptions();
         }
+      } else {
+        console.log('User has active subscription:', activeSubscription.tariff_plan.name);
       }
     };
     
     // Перевіряємо підписку та активуємо демо-план при потребі
-    checkAndActivateDemoPlan();
+    if (user) {
+      checkAndActivateDemoPlan();
+    }
     
     // Встановлюємо інтервал для регулярної перевірки підписки
     const intervalId = setInterval(() => {
       if (user) {
+        console.log('Periodic subscription check');
         refetchSubscriptions();
       }
-    }, 120000); // перевірка кожні 2 хвилини
+    }, 60000); // перевірка кожну хвилину
     
     return () => {
-      clearInterval(intervalId); // Очищаємо інтервал при розмонтуванні компонента
+      clearInterval(intervalId);
     };
   }, [user]);
 
+  console.log('UserDashboard render:', {
+    subscriptionsLoading,
+    hasActiveSubscription: !!activeSubscription,
+    subscriptionName: activeSubscription?.tariff_plan?.name
+  });
+
   if (subscriptionsLoading) {
-    return <div className="flex justify-center items-center h-screen">Завантаження...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Завантаження...</p>
+        </div>
+      </div>
+    );
   }
+
+  const hasActiveSubscription = !!activeSubscription;
 
   return (
     <div className="flex h-screen">
-      <UserSidebar />
+      <UserSidebar hasActiveSubscription={hasActiveSubscription} />
       <div className="flex-1 overflow-auto">
         <Routes>
           <Route 
             path="/" 
             element={
-              activeSubscription 
+              hasActiveSubscription 
                 ? <UserHome /> 
                 : <Navigate to="/user/dashboard/tariffs" replace />
             } 
@@ -73,7 +93,7 @@ const UserDashboard = () => {
           <Route 
             path="/stores" 
             element={
-              activeSubscription 
+              hasActiveSubscription 
                 ? <UserStores /> 
                 : <Navigate to="/user/dashboard/tariffs" replace />
             } 
@@ -81,7 +101,7 @@ const UserDashboard = () => {
           <Route 
             path="/suppliers" 
             element={
-              activeSubscription 
+              hasActiveSubscription 
                 ? <UserSuppliers /> 
                 : <Navigate to="/user/dashboard/tariffs" replace />
             } 
@@ -89,7 +109,7 @@ const UserDashboard = () => {
           <Route 
             path="/settings" 
             element={
-              activeSubscription 
+              hasActiveSubscription 
                 ? <UserSettings /> 
                 : <Navigate to="/user/dashboard/tariffs" replace />
             } 

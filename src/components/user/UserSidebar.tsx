@@ -1,133 +1,131 @@
 
-import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Home, Store, Package, Settings, LogOut, Menu, X, User, CreditCard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+// Компонент бічної панелі користувача
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Home, 
+  Store, 
+  Truck, 
+  CreditCard, 
+  Settings, 
+  LogOut,
+  Lock
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-const UserSidebar = () => {
-  const { logout, user } = useAuth();
+interface UserSidebarProps {
+  hasActiveSubscription: boolean;
+}
+
+const UserSidebar: React.FC<UserSidebarProps> = ({ hasActiveSubscription }) => {
   const location = useLocation();
-  const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(isMobile);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  useEffect(() => {
-    setCollapsed(isMobile);
-  }, [isMobile]);
-
-  const handleMenuItemClick = () => {
-    if (isMobile) {
-      setCollapsed(true);
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/user/login');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
-
-  const getUserInitials = () => {
-    if (!user || !user.email) return '?';
-    
-    const emailParts = user.email.split('@')[0].split('.');
-    if (emailParts.length > 1) {
-      return (emailParts[0][0] + emailParts[1][0]).toUpperCase();
-    }
-    
-    return user.email[0].toUpperCase();
-  };
-
-  const sidebarClasses = `
-    ${collapsed ? 'w-[60px]' : isMobile ? 'w-full fixed z-50 bg-white/95 backdrop-blur-sm shadow-xl border-r border-emerald-100' : 'w-64'} 
-    flex flex-col justify-between
-    h-screen bg-white/80 backdrop-blur-sm border-r border-emerald-100 transition-all duration-300
-  `;
 
   const menuItems = [
-    { to: "/user/dashboard", end: true, icon: Home, label: "Головна" },
-    { to: "/user/dashboard/stores", icon: Store, label: "Магазини" },
-    { to: "/user/dashboard/suppliers", icon: Package, label: "Постачальники" },
-    { to: "/user/dashboard/tariffs", icon: CreditCard, label: "Тарифи" },
-    { to: "/user/dashboard/settings", icon: Settings, label: "Налаштування" }
+    {
+      path: '/user/dashboard',
+      icon: Home,
+      label: 'Головна',
+      requiresSubscription: true,
+    },
+    {
+      path: '/user/dashboard/stores',
+      icon: Store,
+      label: 'Магазини',
+      requiresSubscription: true,
+    },
+    {
+      path: '/user/dashboard/suppliers',
+      icon: Truck,
+      label: 'Постачальники',
+      requiresSubscription: true,
+    },
+    {
+      path: '/user/dashboard/tariffs',
+      icon: CreditCard,
+      label: 'Тарифи',
+      requiresSubscription: false,
+    },
+    {
+      path: '/user/dashboard/settings',
+      icon: Settings,
+      label: 'Налаштування',
+      requiresSubscription: true,
+    },
   ];
 
   return (
-    <div className={sidebarClasses}>
-      <div>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-emerald-100/50">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">X</span>
-              </div>
-              <span className="font-semibold text-gray-900">XML Master</span>
-            </div>
-          )}
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto hover:bg-emerald-50 text-gray-600 hover:text-emerald-600"
-            id="sidebar-toggle"
-          >
-            {isMobile ? (
-              collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />
-            ) : (
-              collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-
-        {/* Navigation */}
-        <div className="mt-6 px-3">
-          <nav className="space-y-1">
-            {menuItems.map((item) => (
-              <NavLink 
-                key={item.to}
-                to={item.to} 
-                end={item.end} 
-                className={({ isActive }) => `
-                  flex items-center px-3 py-2.5 rounded-lg transition-all duration-200
-                  ${isActive 
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm' 
-                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'
-                  }
-                  ${collapsed ? 'justify-center' : ''}
-                `}
-                onClick={handleMenuItemClick}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span className="ml-3 font-medium">{item.label}</span>}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900">XML Master</h2>
+        <p className="text-sm text-gray-600">Панель користувача</p>
       </div>
 
-      {/* User Profile & Logout */}
-      <div className="p-3 border-t border-emerald-100/50">
-        {!collapsed && (
-          <div className="mb-3 p-3 bg-emerald-50/50 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.email}</p>
-                <p className="text-xs text-emerald-600">Активний користувач</p>
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-2">
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          const isBlocked = item.requiresSubscription && !hasActiveSubscription;
+          const Icon = item.icon;
+
+          if (isBlocked) {
+            return (
+              <div
+                key={item.path}
+                className={cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                  "text-gray-400 cursor-not-allowed opacity-60"
+                )}
+                title="Потрібна активна підписка"
+              >
+                <Icon className="mr-3 h-5 w-5" />
+                {item.label}
+                <Lock className="ml-auto h-4 w-4" />
               </div>
-            </div>
-          </div>
-        )}
-        
-        <button 
-          onClick={logout}
-          className={`flex w-full items-center px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${collapsed ? 'justify-center' : ''}`}
-          id="logout-button"
+            );
+          }
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                isActive
+                  ? "bg-emerald-100 text-emerald-900 border-r-2 border-emerald-500"
+                  : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              )}
+            >
+              <Icon className="mr-3 h-5 w-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200">
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
         >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span className="ml-3 font-medium">Вихід</span>}
-        </button>
+          <LogOut className="mr-3 h-5 w-5" />
+          Вихід
+        </Button>
       </div>
     </div>
   );

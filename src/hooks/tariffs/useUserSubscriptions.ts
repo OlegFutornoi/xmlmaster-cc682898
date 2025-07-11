@@ -37,8 +37,8 @@ export const useUserSubscriptions = () => {
     try {
       console.log('Fetching subscriptions for user:', user.id);
       
-      // Отримуємо активну підписку з додатковою інформацією про дату оновлення тарифу
-      const { data: activeData, error: activeError } = await supabase
+      // Отримуємо всі підписки користувача
+      const { data: allSubscriptions, error: fetchError } = await supabase
         .from('user_tariff_subscriptions')
         .select(`
           id,
@@ -56,102 +56,63 @@ export const useUserSubscriptions = () => {
           )
         `)
         .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
-      if (activeError) throw activeError;
+      if (fetchError) throw fetchError;
 
-      // Перевіряємо чи не закінчився термін підписки або чи не оновився тарифний план
-      if (activeData && !activeData.tariff_plans.is_permanent && activeData.end_date) {
-        const endDate = new Date(activeData.end_date);
-        const now = new Date();
-        const planUpdatedAt = new Date(activeData.tariff_plans.updated_at);
-        const subscriptionStartDate = new Date(activeData.start_date);
-        
-        // Порівнюємо тільки дати, без урахування часу
-        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        if (nowDateOnly > endDateOnly) {
-          console.log('Subscription expired, deactivating:', activeData.id);
-          // Підписка закінчилась - деактивуємо її
-          const { error: updateError } = await supabase
-            .from('user_tariff_subscriptions')
-            .update({ is_active: false })
-            .eq('id', activeData.id);
-          
-          if (updateError) {
-            console.error('Error deactivating expired subscription:', updateError);
-          }
-          // Не встановлюємо активну підписку, так як вона закінчилась
-          setActiveSubscription(null);
+      let currentActiveSubscription = null;
+      const expiredSubscriptions = [];
+      const validHistorySubscriptions = [];
+
+      // Перевіряємо кожну підписку
+      for (const subscription of allSubscriptions || []) {
+        const isCurrentlyActive = subscription.is_active;
+        const isExpired = checkIfSubscriptionExpired(subscription);
+
+        console.log(`Checking subscription ${subscription.id}:`, {
+          name: subscription.tariff_plans.name,
+          isCurrentlyActive,
+          isExpired,
+          end_date: subscription.end_date,
+          is_permanent: subscription.tariff_plans.is_permanent
+        });
+
+        if (isCurrentlyActive && isExpired) {
+          // Підписка активна, але прострочена - деактивуємо
+          console.log('Deactivating expired subscription:', subscription.id);
+          expiredSubscriptions.push(subscription.id);
+        } else if (isCurrentlyActive && !isExpired) {
+          // Активна і не прострочена підписка
+          currentActiveSubscription = formatSubscriptionData(subscription);
+          console.log('Found valid active subscription:', subscription.id);
         } else {
-          // Перевіряємо, чи тарифний план не оновився після створення підписки
-          if (planUpdatedAt > subscriptionStartDate) {
-            console.log('Tariff plan was updated after subscription, recalculating end date');
-            // Перераховуємо дату закінчення на основі оновленої інформації про тариф
-            const newEndDate = new Date(subscriptionStartDate);
-            newEndDate.setDate(newEndDate.getDate() + (activeData.tariff_plans.duration_days || 0));
-            newEndDate.setHours(23, 59, 59, 999);
-            
-            // Оновлюємо дату закінчення в базі даних
-            const { error: updateEndDateError } = await supabase
-              .from('user_tariff_subscriptions')
-              .update({ end_date: newEndDate.toISOString() })
-              .eq('id', activeData.id);
-            
-            if (updateEndDateError) {
-              console.error('Error updating subscription end date:', updateEndDateError);
-            } else {
-              // Оновлюємо локальні дані
-              activeData.end_date = newEndDate.toISOString();
-            }
-          }
-          
-          console.log('Active subscription found:', activeData.id);
-          // Перетворюємо дані для активної підписки
-          const formattedActive = formatSubscriptionData(activeData);
-          setActiveSubscription(formattedActive);
+          // Неактивна підписка - додаємо в історію
+          validHistorySubscriptions.push(formatSubscriptionData(subscription));
         }
-      } else if (activeData && (activeData.tariff_plans.is_permanent || !activeData.end_date)) {
-        console.log('Permanent active subscription found:', activeData.id);
-        // Постійна підписка
-        const formattedActive = formatSubscriptionData(activeData);
-        setActiveSubscription(formattedActive);
-      } else {
-        console.log('No active subscription found');
-        // Немає активної підписки
-        setActiveSubscription(null);
       }
 
-      // Отримуємо історію підписок
-      const { data: historyData, error: historyError } = await supabase
-        .from('user_tariff_subscriptions')
-        .select(`
-          id,
-          is_active,
-          start_date,
-          end_date,
-          tariff_plans:tariff_plan_id (
-            id,
-            name,
-            price,
-            duration_days,
-            is_permanent,
-            updated_at,
-            currencies:currency_id (code)
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('is_active', false)
-        .order('start_date', { ascending: false });
-
-      if (historyError) throw historyError;
-
-      if (historyData) {
-        const formattedHistory = historyData.map(item => formatSubscriptionData(item));
-        setSubscriptionHistory(formattedHistory);
+      // Деактивуємо прострочені підписки
+      if (expiredSubscriptions.length > 0) {
+        const { error: deactivateError } = await supabase
+          .from('user_tariff_subscriptions')
+          .update({ is_active: false })
+          .in('id', expiredSubscriptions);
+        
+        if (deactivateError) {
+          console.error('Error deactivating expired subscriptions:', deactivateError);
+        } else {
+          console.log('Successfully deactivated expired subscriptions:', expiredSubscriptions);
+        }
       }
+
+      setActiveSubscription(currentActiveSubscription);
+      setSubscriptionHistory(validHistorySubscriptions);
+
+      console.log('Final state:', {
+        activeSubscription: currentActiveSubscription?.tariff_plan?.name || 'None',
+        historyCount: validHistorySubscriptions.length
+      });
+
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       toast({
@@ -162,6 +123,32 @@ export const useUserSubscriptions = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Функція для перевірки чи підписка прострочена
+  const checkIfSubscriptionExpired = (subscription: any): boolean => {
+    if (subscription.tariff_plans.is_permanent) {
+      return false; // Постійні підписки не можуть бути прострочені
+    }
+
+    if (!subscription.end_date) {
+      return false; // Якщо немає дати закінчення, вважаємо активною
+    }
+
+    const now = new Date();
+    const endDate = new Date(subscription.end_date);
+    
+    // Встановлюємо час для поточної дати на початок дня для точного порівняння
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endDateStart = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    
+    console.log('Date comparison:', {
+      today: todayStart.toISOString(),
+      endDate: endDateStart.toISOString(),
+      isExpired: todayStart > endDateStart
+    });
+
+    return todayStart > endDateStart;
   };
 
   // Функція для форматування даних підписки

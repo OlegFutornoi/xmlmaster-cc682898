@@ -52,7 +52,7 @@ export const activateUserPlan = async (
       // Встановлюємо час на кінець дня для дати закінчення
       end.setHours(23, 59, 59, 999);
       endDate = end.toISOString();
-      console.log(`Subscription will end at: ${endDate}`);
+      console.log(`Subscription will end at: ${endDate} (${planData.duration_days} days from ${startDate.toISOString()})`);
     } else {
       console.log('Subscription is permanent or has no duration');
     }
@@ -94,6 +94,7 @@ export const tryActivateDefaultPlan = async (userId: string) => {
         id,
         is_active,
         end_date,
+        start_date,
         tariff_plans:tariff_plan_id (
           id,
           name,
@@ -119,9 +120,15 @@ export const tryActivateDefaultPlan = async (userId: string) => {
         const endDate = new Date(existingSubscription.end_date);
         const now = new Date();
         
-        // Порівнюємо тільки дати, без урахування часу
+        // Порівнюємо дати (без урахування часу)
         const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
         const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        console.log('Subscription expiry check:', {
+          endDate: endDateOnly.toISOString(),
+          today: nowDateOnly.toISOString(),
+          isExpired: nowDateOnly > endDateOnly
+        });
         
         if (nowDateOnly > endDateOnly) {
           console.log('Subscription has expired, deactivating it');
@@ -153,12 +160,11 @@ export const tryActivateDefaultPlan = async (userId: string) => {
 
     console.log(`Found demo tariff: ${demoTariffId}`);
 
-    // Деактивуємо будь-які існуючі підписки для цього користувача (якщо вони чомусь існують але не активні)
+    // Деактивуємо будь-які існуючі підписки для цього користувача
     const { error: deactivateError } = await supabase
       .from('user_tariff_subscriptions')
       .update({ is_active: false })
-      .eq('user_id', userId)
-      .neq('is_active', true);
+      .eq('user_id', userId);
       
     if (deactivateError) {
       console.warn('Error deactivating existing subscriptions:', deactivateError);
