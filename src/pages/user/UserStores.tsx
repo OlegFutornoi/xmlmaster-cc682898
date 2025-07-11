@@ -36,7 +36,7 @@ const UserStores = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [storesLimit, setStoresLimit] = useState<number | null>(null);
   const [canCreateStore, setCanCreateStore] = useState(false);
@@ -51,7 +51,6 @@ const UserStores = () => {
     try {
       console.log('Copying template parameters for template:', templateId, 'to store:', storeId);
       
-      // Отримуємо параметри шаблону
       const { data: templateParams, error } = await extendedSupabase
         .from('template_xml_parameters')
         .select('*')
@@ -64,7 +63,6 @@ const UserStores = () => {
 
       console.log('Template parameters found:', templateParams);
 
-      // Копіюємо параметри в магазин
       if (templateParams && templateParams.length > 0) {
         const storeParams = templateParams.map(param => ({
           store_id: storeId,
@@ -168,9 +166,8 @@ const UserStores = () => {
   };
 
   const handleCreateStore = async () => {
-    // Перевіряємо, чи не відбувається вже створення
     if (isSubmitting) {
-      console.log('Store creation already in progress, ignoring duplicate request');
+      console.log('Store creation already in progress');
       return;
     }
 
@@ -192,7 +189,6 @@ const UserStores = () => {
       return;
     }
 
-    // Перевіряємо ліміт перед створенням
     if (storesLimit !== null && stores.length >= storesLimit) {
       toast({
         title: 'Помилка',
@@ -206,8 +202,14 @@ const UserStores = () => {
     console.log('Starting store creation process...');
     
     try {
-      const templateIdToSave = selectedTemplateId === 'none' ? null : selectedTemplateId;
+      const templateIdToSave = selectedTemplateId === '' ? null : selectedTemplateId;
       
+      console.log('Creating store with data:', {
+        user_id: user.id,
+        name: newStoreName.trim(),
+        template_id: templateIdToSave
+      });
+
       const { data, error } = await extendedSupabase
         .from('user_stores')
         .insert({
@@ -220,7 +222,7 @@ const UserStores = () => {
 
       if (error) {
         console.error('Error creating store:', error);
-        throw error;
+        throw new Error('Помилка створення магазину: ' + error.message);
       }
 
       console.log('Store created successfully:', data);
@@ -236,19 +238,17 @@ const UserStores = () => {
         description: 'Магазин успішно створено'
       });
       
-      // Очищуємо форму та закриваємо діалог
       setNewStoreName('');
-      setSelectedTemplateId('none');
+      setSelectedTemplateId('');
       setIsDialogOpen(false);
       
-      // Оновлюємо список магазинів
       await fetchUserStores();
       
     } catch (error) {
       console.error('Error in store creation process:', error);
       toast({
         title: 'Помилка',
-        description: 'Не вдалося створити магазин. Спробуйте ще раз.',
+        description: error instanceof Error ? error.message : 'Не вдалося створити магазин',
         variant: 'destructive'
       });
     } finally {
@@ -300,7 +300,7 @@ const UserStores = () => {
 
   const resetDialog = () => {
     setNewStoreName('');
-    setSelectedTemplateId('none');
+    setSelectedTemplateId('');
     setIsDialogOpen(true);
   };
 
@@ -351,14 +351,14 @@ const UserStores = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      disabled={!canCreateStore}
+                      disabled={!canCreateStore || isSubmitting}
                       onClick={resetDialog}
                       className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
                       id="create-store-button"
                       type="button"
                     >
                       <PlusCircle className="h-4 w-4 mr-2" />
-                      Створити магазин
+                      {isSubmitting ? 'Створення...' : 'Створити магазин'}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -486,7 +486,11 @@ const UserStores = () => {
       </div>
 
       {/* Dialog для створення магазину */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        if (!isSubmitting) {
+          setIsDialogOpen(open);
+        }
+      }}>
         <DialogContent className="bg-white/95 backdrop-blur-sm border-emerald-100">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Створити новий магазин</DialogTitle>
@@ -521,7 +525,7 @@ const UserStores = () => {
                     <SelectItem value="loading" disabled>Завантаження...</SelectItem>
                   ) : (
                     <>
-                      <SelectItem value="none">Без шаблону</SelectItem>
+                      <SelectItem value="">Без шаблону</SelectItem>
                       {templates.map(template => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}

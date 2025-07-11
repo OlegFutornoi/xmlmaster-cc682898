@@ -1,4 +1,3 @@
-
 // Компонент для редагування XML-шаблону конкретного магазину
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Plus, Trash2, Save, Edit, Copy } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, Edit, Copy, Eye, EyeOff } from 'lucide-react';
 import { useStoreTemplateParameters } from '@/hooks/xml-templates/useStoreTemplateParameters';
 import { useUserXMLTemplates } from '@/hooks/xml-templates/useUserXMLTemplates';
 import { useToast } from '@/hooks/use-toast';
@@ -64,7 +63,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
       await saveParameter({
         ...parameterData,
         store_id: store.id,
-        template_id: store.template_id
+        template_id: store.template_id || ''
       });
       setEditingParameter(null);
       setIsAddingParameter(false);
@@ -114,69 +113,82 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
   };
 
   const categories = [
-    { value: 'parameter', label: 'Параметри', color: 'bg-blue-100 text-blue-800' },
-    { value: 'characteristic', label: 'Характеристики', color: 'bg-green-100 text-green-800' },
-    { value: 'category', label: 'Категорії', color: 'bg-purple-100 text-purple-800' },
-    { value: 'offer', label: 'Товари', color: 'bg-orange-100 text-orange-800' }
+    { value: 'parameter', label: 'Параметри', color: 'bg-blue-100 text-blue-800', count: getParametersByCategory('parameter').length },
+    { value: 'characteristic', label: 'Характеристики', color: 'bg-green-100 text-green-800', count: getParametersByCategory('characteristic').length },
+    { value: 'category', label: 'Категорії', color: 'bg-purple-100 text-purple-800', count: getParametersByCategory('category').length },
+    { value: 'offer', label: 'Товари', color: 'bg-orange-100 text-orange-800', count: getParametersByCategory('offer').length }
   ];
 
-  const renderParameterCard = (parameter: any) => (
-    <Card key={parameter.id} className="relative">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <CardTitle className="text-base font-medium">{parameter.parameter_name}</CardTitle>
-              <Badge variant={parameter.is_active ? "default" : "secondary"} className="text-xs">
-                {parameter.is_active ? 'Активний' : 'Неактивний'}
-              </Badge>
-              {parameter.is_required && (
-                <Badge variant="destructive" className="text-xs">Обов'язковий</Badge>
-              )}
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">XML шлях:</span> {parameter.xml_path}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Тип:</span> {parameter.parameter_type}
-              </p>
-              {parameter.parameter_value && (
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Значення:</span> {parameter.parameter_value}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-1 ml-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setEditingParameter(parameter)}
-              className="h-8 w-8 p-0"
-              type="button"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteParameter(parameter.id)}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+  const renderParameterRow = (parameter: any, index: number) => (
+    <tr key={parameter.id} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+        {parameter.parameter_name}
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-600">
+        {parameter.xml_path}
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-600">
+        <Badge variant="outline" className="text-xs">
+          {parameter.parameter_type}
+        </Badge>
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+        {parameter.parameter_value || '-'}
+      </td>
+      <td className="px-4 py-3 text-sm">
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant={parameter.is_active ? "default" : "secondary"} 
+            className="text-xs"
+          >
+            {parameter.is_active ? (
+              <>
+                <Eye className="h-3 w-3 mr-1" />
+                Активний
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-3 w-3 mr-1" />
+                Неактивний
+              </>
+            )}
+          </Badge>
+          {parameter.is_required && (
+            <Badge variant="destructive" className="text-xs">
+              Обов'язковий
+            </Badge>
+          )}
         </div>
-      </CardHeader>
-    </Card>
+      </td>
+      <td className="px-4 py-3 text-sm">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditingParameter(parameter)}
+            className="h-8 w-8 p-0"
+            type="button"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteParameter(parameter.id)}
+            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+            type="button"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </td>
+    </tr>
   );
 
   const renderParameterForm = (parameter: any, isNew: boolean = false) => (
-    <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
+    <Card className="border-2 border-dashed border-emerald-200 bg-emerald-50/50 mb-6">
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="text-lg flex items-center gap-2 text-emerald-700">
           {isNew ? <Plus className="h-5 w-5" /> : <Edit className="h-5 w-5" />}
           {isNew ? 'Додати параметр' : 'Редагувати параметр'}
         </CardTitle>
@@ -329,6 +341,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
             <Button
               onClick={() => handleSaveParameter(parameter)}
               disabled={isSaving || !parameter.parameter_name || !parameter.xml_path}
+              className="bg-emerald-500 hover:bg-emerald-600"
               type="button"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -342,7 +355,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -381,7 +394,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                   )}
                   <Button
                     onClick={() => setIsAddingParameter(true)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600"
                     type="button"
                   >
                     <Plus className="h-4 w-4" />
@@ -396,46 +409,71 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
 
               {isLoading ? (
                 <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-4"></div>
                   <p className="text-gray-600">Завантаження параметрів...</p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Параметри за категоріями */}
-                  {categories.map(category => {
-                    const categoryParams = getParametersByCategory(category.value);
-                    if (categoryParams.length === 0) return null;
-
-                    return (
-                      <div key={category.value} className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className={category.color}>
-                            {category.label} ({categoryParams.length})
+                  {/* Статистика за категоріями */}
+                  <div className="grid grid-cols-4 gap-4">
+                    {categories.map(category => (
+                      <Card key={category.value}>
+                        <CardContent className="p-4 text-center">
+                          <Badge className={`${category.color} mb-2`}>
+                            {category.label}
                           </Badge>
-                        </div>
-                        <div className="grid gap-3">
-                          {categoryParams.map((parameter) => (
-                            <div key={parameter.id}>
-                              {editingParameter?.id === parameter.id ? 
-                                renderParameterForm(editingParameter) : 
-                                renderParameterCard(parameter)
-                              }
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                          <p className="text-2xl font-bold text-gray-900">{category.count}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
 
-                  {/* Повідомлення, якщо немає параметрів */}
-                  {parameters.length === 0 && !isAddingParameter && (
+                  {/* Таблиця параметрів */}
+                  {parameters.length > 0 ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Усі параметри</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Назва
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  XML Шлях
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Тип
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Значення
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Статус
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Дії
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {parameters.map((parameter, index) => renderParameterRow(parameter, index))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
                     <Card className="text-center py-12">
                       <CardContent>
                         <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">Немає налаштованих параметрів</p>
                         <Button
                           onClick={() => setIsAddingParameter(true)}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600"
                           type="button"
                         >
                           <Plus className="h-4 w-4" />
@@ -496,12 +534,11 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                       </p>
                     </div>
                     {categories.map(category => {
-                      const count = getParametersByCategory(category.value).length;
-                      if (count === 0) return null;
+                      if (category.count === 0) return null;
                       return (
                         <div key={category.value}>
                           <Label>{category.label}</Label>
-                          <p className="font-medium">{count}</p>
+                          <p className="font-medium">{category.count}</p>
                         </div>
                       );
                     })}
