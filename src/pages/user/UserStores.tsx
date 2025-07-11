@@ -36,7 +36,7 @@ const UserStores = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStoreName, setNewStoreName] = useState('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [storesLimit, setStoresLimit] = useState<number | null>(null);
   const [canCreateStore, setCanCreateStore] = useState(false);
@@ -202,7 +202,7 @@ const UserStores = () => {
     console.log('Starting store creation process...');
     
     try {
-      const templateIdToSave = selectedTemplateId === '' ? null : selectedTemplateId;
+      const templateIdToSave = selectedTemplateId === 'none' ? null : selectedTemplateId;
       
       console.log('Creating store with data:', {
         user_id: user.id,
@@ -239,7 +239,7 @@ const UserStores = () => {
       });
       
       setNewStoreName('');
-      setSelectedTemplateId('');
+      setSelectedTemplateId('none');
       setIsDialogOpen(false);
       
       await fetchUserStores();
@@ -300,7 +300,7 @@ const UserStores = () => {
 
   const resetDialog = () => {
     setNewStoreName('');
-    setSelectedTemplateId('');
+    setSelectedTemplateId('none');
     setIsDialogOpen(true);
   };
 
@@ -525,7 +525,7 @@ const UserStores = () => {
                     <SelectItem value="loading" disabled>Завантаження...</SelectItem>
                   ) : (
                     <>
-                      <SelectItem value="">Без шаблону</SelectItem>
+                      <SelectItem value="none">Без шаблону</SelectItem>
                       {templates.map(template => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}
