@@ -27,12 +27,13 @@ export const useStoreTemplateParameters = (storeId: string) => {
 
   const fetchParameters = async () => {
     if (!storeId) {
+      setParameters([]);
       setIsLoading(false);
       return;
     }
     
     try {
-      console.log('Fetching parameters for store:', storeId);
+      console.log('Fetching store template parameters for store:', storeId);
       
       const { data, error } = await extendedSupabase
         .from('store_template_parameters')
@@ -41,22 +42,24 @@ export const useStoreTemplateParameters = (storeId: string) => {
         .order('parameter_name');
 
       if (error) {
-        console.error('Error fetching parameters:', error);
+        console.error('Error fetching store parameters:', error);
         toast({
           title: 'Помилка',
-          description: 'Не вдалося завантажити параметри',
+          description: 'Не вдалося завантажити параметри магазину',
           variant: 'destructive'
         });
+        setParameters([]);
         return;
       }
 
-      console.log('Store parameters found:', data);
+      console.log('Store parameters loaded:', data?.length || 0);
       setParameters(data || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in fetchParameters:', error);
+      setParameters([]);
       toast({
         title: 'Помилка',
-        description: 'Не вдалося завантажити параметри',
+        description: 'Помилка завантаження параметрів',
         variant: 'destructive'
       });
     } finally {
@@ -67,9 +70,11 @@ export const useStoreTemplateParameters = (storeId: string) => {
   const saveParameter = async (parameter: Partial<StoreTemplateParameter>) => {
     setIsSaving(true);
     try {
+      console.log('Saving parameter:', parameter);
+
       if (parameter.id) {
         // Оновлення існуючого параметра
-        const { error } = await extendedSupabase
+        const { data, error } = await extendedSupabase
           .from('store_template_parameters')
           .update({
             parameter_name: parameter.parameter_name,
@@ -80,12 +85,19 @@ export const useStoreTemplateParameters = (storeId: string) => {
             is_active: parameter.is_active,
             is_required: parameter.is_required
           })
-          .eq('id', parameter.id);
+          .eq('id', parameter.id)
+          .select()
+          .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating parameter:', error);
+          throw error;
+        }
+
+        console.log('Parameter updated:', data);
       } else {
         // Створення нового параметра
-        const { error } = await extendedSupabase
+        const { data, error } = await extendedSupabase
           .from('store_template_parameters')
           .insert({
             store_id: parameter.store_id!,
@@ -97,24 +109,22 @@ export const useStoreTemplateParameters = (storeId: string) => {
             parameter_category: parameter.parameter_category!,
             is_active: parameter.is_active!,
             is_required: parameter.is_required!
-          });
+          })
+          .select()
+          .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating parameter:', error);
+          throw error;
+        }
+
+        console.log('Parameter created:', data);
       }
 
-      toast({
-        title: 'Успішно',
-        description: 'Параметр збережено'
-      });
-      
-      fetchParameters();
+      await fetchParameters();
     } catch (error) {
       console.error('Error saving parameter:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося зберегти параметр',
-        variant: 'destructive'
-      });
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -122,26 +132,23 @@ export const useStoreTemplateParameters = (storeId: string) => {
 
   const deleteParameter = async (parameterId: string) => {
     try {
+      console.log('Deleting parameter:', parameterId);
+
       const { error } = await extendedSupabase
         .from('store_template_parameters')
         .delete()
         .eq('id', parameterId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting parameter:', error);
+        throw error;
+      }
 
-      toast({
-        title: 'Успішно',
-        description: 'Параметр видалено'
-      });
-      
-      fetchParameters();
+      console.log('Parameter deleted successfully');
+      await fetchParameters();
     } catch (error) {
       console.error('Error deleting parameter:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося видалити параметр',
-        variant: 'destructive'
-      });
+      throw error;
     }
   };
 
@@ -150,10 +157,15 @@ export const useStoreTemplateParameters = (storeId: string) => {
       console.log('Copying template parameters from template:', templateId, 'to store:', storeId);
       
       // Спочатку видаляємо існуючі параметри магазину
-      await extendedSupabase
+      const { error: deleteError } = await extendedSupabase
         .from('store_template_parameters')
         .delete()
         .eq('store_id', storeId);
+
+      if (deleteError) {
+        console.error('Error deleting existing store parameters:', deleteError);
+        throw deleteError;
+      }
 
       // Отримуємо параметри шаблону
       const { data: templateParams, error } = await extendedSupabase
@@ -166,7 +178,7 @@ export const useStoreTemplateParameters = (storeId: string) => {
         throw error;
       }
 
-      console.log('Template parameters to copy:', templateParams);
+      console.log('Template parameters found:', templateParams?.length || 0);
 
       // Копіюємо параметри в магазин
       if (templateParams && templateParams.length > 0) {
@@ -182,19 +194,20 @@ export const useStoreTemplateParameters = (storeId: string) => {
           is_required: param.is_required
         }));
 
-        const { error: insertError } = await extendedSupabase
+        const { data, error: insertError } = await extendedSupabase
           .from('store_template_parameters')
-          .insert(storeParams);
+          .insert(storeParams)
+          .select();
 
         if (insertError) {
           console.error('Error inserting store parameters:', insertError);
           throw insertError;
         }
 
-        console.log('Successfully copied', storeParams.length, 'parameters');
+        console.log('Successfully copied', data?.length || 0, 'parameters');
       }
 
-      fetchParameters();
+      await fetchParameters();
     } catch (error) {
       console.error('Error copying template parameters:', error);
       throw error;
