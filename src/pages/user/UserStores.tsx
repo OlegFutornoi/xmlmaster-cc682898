@@ -1,3 +1,4 @@
+
 // Компонент для відображення та управління магазинами користувача
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,14 +96,24 @@ const UserStores = () => {
 
   useEffect(() => {
     refetchSubscriptions();
-    fetchUserStores();
-  }, []);
+    if (user) {
+      fetchUserStores();
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (stores.length > 0 || !isLoading || activeSubscription) {
+    if (user && activeSubscription) {
       fetchUserLimitations();
     }
-  }, [stores, isLoading, activeSubscription]);
+  }, [activeSubscription, user]);
+
+  // Оновлюємо можливість створення після завантаження магазинів та лімітів
+  useEffect(() => {
+    if (storesLimit !== null && !isLoading) {
+      setCanCreateStore(stores.length < storesLimit);
+      console.log('Updated canCreateStore:', stores.length < storesLimit, 'stores:', stores.length, 'limit:', storesLimit);
+    }
+  }, [stores.length, storesLimit, isLoading]);
 
   const fetchUserStores = async () => {
     if (!user) return;
@@ -121,11 +132,14 @@ const UserStores = () => {
           description: 'Не вдалося завантажити магазини',
           variant: 'destructive'
         });
+        setStores([]);
       } else {
+        console.log('Fetched stores:', data?.length || 0);
         setStores(data || []);
       }
     } catch (error) {
       console.error('Error:', error);
+      setStores([]);
     } finally {
       setIsLoading(false);
     }
@@ -133,10 +147,12 @@ const UserStores = () => {
 
   const fetchUserLimitations = async () => {
     if (!user || !activeSubscription) {
+      console.log('No user or active subscription for limitations');
       setStoresLimit(0);
       setCanCreateStore(false);
       return;
     }
+    
     try {
       const { data: limitationData, error: limitationError } = await extendedSupabase
         .from('tariff_plan_limitations')
@@ -154,23 +170,34 @@ const UserStores = () => {
 
       if (limitationData && limitationData.length > 0) {
         const storesLimitValue = parseInt(limitationData[0].value);
+        console.log('Stores limit from DB:', storesLimitValue);
         setStoresLimit(storesLimitValue);
-        setCanCreateStore(stores.length < storesLimitValue);
       } else {
+        console.log('No stores limit found, setting to 0');
         setStoresLimit(0);
         setCanCreateStore(false);
       }
     } catch (error) {
       console.error('Error fetching limitations:', error);
+      setStoresLimit(0);
+      setCanCreateStore(false);
     }
   };
 
   const handleCreateStore = async () => {
+    console.log('=== CREATE STORE START ===');
+    console.log('isSubmitting:', isSubmitting);
+    console.log('canCreateStore:', canCreateStore);
+    console.log('stores.length:', stores.length);
+    console.log('storesLimit:', storesLimit);
+
+    // Блокуємо повторні виклики
     if (isSubmitting) {
-      console.log('Store creation already in progress');
+      console.log('Already submitting, blocking duplicate call');
       return;
     }
 
+    // Перевіряємо назву магазину
     if (!newStoreName.trim()) {
       toast({
         title: 'Помилка',
@@ -180,6 +207,7 @@ const UserStores = () => {
       return;
     }
     
+    // Перевіряємо аутентифікацію
     if (!user) {
       toast({
         title: 'Помилка',
@@ -189,7 +217,9 @@ const UserStores = () => {
       return;
     }
 
+    // КРИТИЧНО: Перевіряємо ліміт ДО початку створення
     if (storesLimit !== null && stores.length >= storesLimit) {
+      console.log('BLOCKING: Store limit exceeded', stores.length, 'vs', storesLimit);
       toast({
         title: 'Помилка',
         description: `Ви досягли ліміту створення магазинів (${storesLimit}). Оновіть тарифний план.`,
@@ -197,9 +227,19 @@ const UserStores = () => {
       });
       return;
     }
+
+    // Якщо не можемо створювати - блокуємо
+    if (!canCreateStore) {
+      console.log('BLOCKING: canCreateStore is false');
+      toast({
+        title: 'Помилка',
+        description: 'Неможливо створити магазин. Перевірте ваш тарифний план.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     setIsSubmitting(true);
-    console.log('Starting store creation process...');
     
     try {
       const templateIdToSave = selectedTemplateId === 'none' ? null : selectedTemplateId;
@@ -221,8 +261,13 @@ const UserStores = () => {
         .single();
 
       if (error) {
-        console.error('Error creating store:', error);
-        throw new Error('Помилка створення магазину: ' + error.message);
+        console.error('Database error creating store:', error);
+        throw new Error(`Помилка створення магазину: ${error.message}`);
+      }
+
+      if (!data) {
+        console.error('No data returned from store creation');
+        throw new Error('Не отримано дані про створений магазин');
       }
 
       console.log('Store created successfully:', data);
@@ -230,7 +275,18 @@ const UserStores = () => {
       // Якщо вибрано шаблон, копіюємо його параметри
       if (templateIdToSave && data) {
         console.log('Copying template parameters...');
-        await copyTemplateParametersToStore(templateIdToSave, data.id);
+        try {
+          await copyTemplateParametersToStore(templateIdToSave, data.id);
+          console.log('Template parameters copied successfully');
+        } catch (paramError) {
+          console.error('Error copying template parameters:', paramError);
+          // Не блокуємо створення магазину через помилку копіювання параметрів
+          toast({
+            title: 'Попередження',
+            description: 'Магазин створено, але не вдалося скопіювати параметри шаблону',
+            variant: 'default'
+          });
+        }
       }
 
       toast({
@@ -238,10 +294,12 @@ const UserStores = () => {
         description: 'Магазин успішно створено'
       });
       
+      // Очищуємо форму та закриваємо діалог
       setNewStoreName('');
       setSelectedTemplateId('none');
       setIsDialogOpen(false);
       
+      // Оновлюємо список магазинів
       await fetchUserStores();
       
     } catch (error) {
@@ -253,7 +311,7 @@ const UserStores = () => {
       });
     } finally {
       setIsSubmitting(false);
-      console.log('Store creation process completed');
+      console.log('=== CREATE STORE END ===');
     }
   };
 
@@ -548,7 +606,7 @@ const UserStores = () => {
             </Button>
             <Button
               onClick={handleCreateStore}
-              disabled={isSubmitting || !newStoreName.trim()}
+              disabled={isSubmitting || !newStoreName.trim() || !canCreateStore}
               className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
               type="button"
             >
