@@ -157,6 +157,7 @@ export const useStoreTemplateParameters = (storeId: string) => {
       console.log('Copying template parameters from template:', templateId, 'to store:', storeId);
       
       // Спочатку видаляємо існуючі параметри магазину
+      console.log('Deleting existing store parameters...');
       const { error: deleteError } = await extendedSupabase
         .from('store_template_parameters')
         .delete()
@@ -166,8 +167,10 @@ export const useStoreTemplateParameters = (storeId: string) => {
         console.error('Error deleting existing store parameters:', deleteError);
         throw deleteError;
       }
+      console.log('Existing store parameters deleted successfully');
 
       // Отримуємо параметри шаблону
+      console.log('Fetching template parameters...');
       const { data: templateParams, error } = await extendedSupabase
         .from('template_xml_parameters')
         .select('*')
@@ -182,7 +185,20 @@ export const useStoreTemplateParameters = (storeId: string) => {
 
       // Копіюємо параметри в магазин з обов'язковим статусом
       if (templateParams && templateParams.length > 0) {
-        const storeParams = templateParams.map(param => ({
+        console.log('Copying parameters to store...');
+        
+        // Групуємо параметри по назві та XML шляху для виявлення дублікатів
+        const uniqueParams = new Map();
+        templateParams.forEach(param => {
+          const key = `${param.parameter_name}-${param.xml_path}`;
+          if (!uniqueParams.has(key)) {
+            uniqueParams.set(key, param);
+          } else {
+            console.warn('Duplicate parameter detected:', param.parameter_name, param.xml_path);
+          }
+        });
+
+        const storeParams = Array.from(uniqueParams.values()).map(param => ({
           store_id: storeId,
           template_id: templateId,
           parameter_name: param.parameter_name,
@@ -193,6 +209,8 @@ export const useStoreTemplateParameters = (storeId: string) => {
           is_active: param.is_active,
           is_required: true // ВСІ ПАРАМЕТРИ ОБОВ'ЯЗКОВІ ЗА ЗАМОВЧУВАННЯМ
         }));
+
+        console.log('Parameters to insert:', storeParams.length);
 
         const { data, error: insertError } = await extendedSupabase
           .from('store_template_parameters')
@@ -208,8 +226,19 @@ export const useStoreTemplateParameters = (storeId: string) => {
       }
 
       await fetchParameters();
+      
+      toast({
+        title: 'Успіх',
+        description: `Параметри шаблону успішно скопійовано (${templateParams?.length || 0} параметрів)`,
+      });
+      
     } catch (error) {
       console.error('Error copying template parameters:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Помилка копіювання параметрів шаблону',
+        variant: 'destructive'
+      });
       throw error;
     }
   };
