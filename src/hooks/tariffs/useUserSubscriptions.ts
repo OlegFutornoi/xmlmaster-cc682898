@@ -64,16 +64,21 @@ export const useUserSubscriptions = () => {
       const expiredSubscriptions = [];
       const validHistorySubscriptions = [];
 
+      const now = new Date();
+      console.log('Current date and time:', now.toISOString());
+
       // Перевіряємо кожну підписку
       for (const subscription of allSubscriptions || []) {
         const isCurrentlyActive = subscription.is_active;
-        const isExpired = checkIfSubscriptionExpired(subscription);
+        const isExpired = checkIfSubscriptionExpired(subscription, now);
 
         console.log(`Checking subscription ${subscription.id}:`, {
           name: subscription.tariff_plans.name,
           isCurrentlyActive,
           isExpired,
+          start_date: subscription.start_date,
           end_date: subscription.end_date,
+          duration_days: subscription.tariff_plans.duration_days,
           is_permanent: subscription.tariff_plans.is_permanent
         });
 
@@ -81,6 +86,7 @@ export const useUserSubscriptions = () => {
           // Підписка активна, але прострочена - деактивуємо
           console.log('Deactivating expired subscription:', subscription.id);
           expiredSubscriptions.push(subscription.id);
+          validHistorySubscriptions.push(formatSubscriptionData(subscription));
         } else if (isCurrentlyActive && !isExpired) {
           // Активна і не прострочена підписка
           currentActiveSubscription = formatSubscriptionData(subscription);
@@ -126,29 +132,36 @@ export const useUserSubscriptions = () => {
   };
 
   // Функція для перевірки чи підписка прострочена
-  const checkIfSubscriptionExpired = (subscription: any): boolean => {
+  const checkIfSubscriptionExpired = (subscription: any, currentTime: Date): boolean => {
     if (subscription.tariff_plans.is_permanent) {
+      console.log(`Subscription ${subscription.id} is permanent - never expires`);
       return false; // Постійні підписки не можуть бути прострочені
     }
 
     if (!subscription.end_date) {
+      console.log(`Subscription ${subscription.id} has no end date - treating as active`);
       return false; // Якщо немає дати закінчення, вважаємо активною
     }
 
-    const now = new Date();
     const endDate = new Date(subscription.end_date);
     
-    // Встановлюємо час для поточної дати на початок дня для точного порівняння
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endDateStart = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    // Встановлюємо час для поточної дати та дати закінчення на кінець дня для точного порівняння
+    const currentTimeMs = currentTime.getTime();
+    const endTimeMs = endDate.getTime();
     
-    console.log('Date comparison:', {
-      today: todayStart.toISOString(),
-      endDate: endDateStart.toISOString(),
-      isExpired: todayStart > endDateStart
+    const isExpired = currentTimeMs > endTimeMs;
+    
+    console.log(`Subscription ${subscription.id} expiry check:`, {
+      currentTime: currentTime.toISOString(),
+      endDate: endDate.toISOString(),
+      currentTimeMs,
+      endTimeMs,
+      isExpired,
+      timeDifference: endTimeMs - currentTimeMs,
+      hoursLeft: Math.round((endTimeMs - currentTimeMs) / (1000 * 60 * 60))
     });
 
-    return todayStart > endDateStart;
+    return isExpired;
   };
 
   // Функція для форматування даних підписки

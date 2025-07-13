@@ -60,7 +60,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
     if (subscription.end_date) {
       const endDate = parseISO(subscription.end_date);
       if (isValid(endDate)) {
-        return format(endDate, "d MMMM yyyy", { locale: uk });
+        return format(endDate, "d MMMM yyyy 'о' HH:mm", { locale: uk });
       }
     }
     
@@ -73,7 +73,9 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
     
     const today = new Date();
     const expiryDate = addDays(today, durationDays);
-    return format(expiryDate, "d MMMM yyyy", { locale: uk });
+    // Встановлюємо час на кінець дня
+    expiryDate.setHours(23, 59, 59, 999);
+    return format(expiryDate, "d MMMM yyyy 'о' HH:mm", { locale: uk });
   };
 
   // Визначаємо дату закінчення для відображення
@@ -87,7 +89,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
     } else if (selectedPlan.is_permanent) {
       return "Постійний доступ";
     } else {
-      return "Активируйте тариф";
+      return "Активуйте тариф";
     }
   };
 
@@ -120,7 +122,7 @@ const PlanConfirmDialog: React.FC<PlanConfirmDialogProps> = ({
               <Clock className="text-amber-500 mr-1 h-4 w-4" />
             )}
             <span>
-              {expiryDate === "Активируйте тариф" 
+              {expiryDate === "Активуйте тариф" 
                 ? expiryDate 
                 : (expiryDate ? `Дійсний до: ${expiryDate}` : `Тривалість: ${selectedPlan.duration_days} днів`)
               }

@@ -51,29 +51,39 @@ const CurrentSubscription: React.FC<CurrentSubscriptionProps> = ({
     if (!subscription.is_active) {
       return <Badge variant="outline" className="flex items-center gap-1 text-xs">
           <Clock className="h-3 w-3" />
-          Активируйте тариф
+          Неактивний
         </Badge>;
     }
 
     if (subscription.tariff_plan.is_permanent) {
       return <Badge variant="outline" className="flex items-center gap-1 text-xs">
-          <Infinity className="h-3 w-3" />
+          <Infinity className="h-3 w-3 text-green-500" />
           Постійний доступ
         </Badge>;
     } else if (subscription.end_date) {
-      // Перевіряємо валідність дати закінчення
+      // Перевіряємо валідність дати закінчення та чи не прострочена підписка
       const endDate = parseISO(subscription.end_date);
+      const now = new Date();
+      
       if (isValid(endDate)) {
-        return <Badge variant="outline" className="flex items-center gap-1 text-xs">
-            <Clock className="h-3 w-3" />
-            До {format(endDate, "d MMMM yyyy", {
-            locale: uk
-          })}
-          </Badge>;
+        const isExpired = now.getTime() > endDate.getTime();
+        const timeLeft = endDate.getTime() - now.getTime();
+        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+        
+        return <Badge 
+          variant="outline" 
+          className={`flex items-center gap-1 text-xs ${isExpired ? 'text-red-600 border-red-300' : hoursLeft < 24 ? 'text-amber-600 border-amber-300' : 'text-green-600 border-green-300'}`}
+        >
+          <Clock className={`h-3 w-3 ${isExpired ? 'text-red-500' : hoursLeft < 24 ? 'text-amber-500' : 'text-green-500'}`} />
+          {isExpired 
+            ? `Закінчився ${format(endDate, "d MMMM yyyy 'о' HH:mm", { locale: uk })}`
+            : `До ${format(endDate, "d MMMM yyyy 'о' HH:mm", { locale: uk })}`
+          }
+        </Badge>;
       }
     }
 
-    // Якщо немає валідної дати закінчення або is_permanent
+    // Якщо немає валідної дати закінчення
     return <Badge variant="outline" className="flex items-center gap-1 text-xs">
         <Clock className="h-3 w-3" />
         Активний тариф

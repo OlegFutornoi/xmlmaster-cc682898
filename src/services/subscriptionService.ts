@@ -46,13 +46,22 @@ export const activateUserPlan = async (
     let endDate = null;
     
     if (!planData.is_permanent && planData.duration_days) {
+      // Створюємо дату закінчення точно через вказану кількість днів
       const end = new Date(startDate);
-      // Додаємо кількість днів до дати початку
       end.setDate(end.getDate() + planData.duration_days);
-      // Встановлюємо час на кінець дня для дати закінчення
+      // Встановлюємо час на 23:59:59 в день закінчення
       end.setHours(23, 59, 59, 999);
       endDate = end.toISOString();
-      console.log(`Subscription will end at: ${endDate} (${planData.duration_days} days from ${startDate.toISOString()})`);
+      
+      console.log(`Subscription calculation:`, {
+        startDate: startDate.toISOString(),
+        durationDays: planData.duration_days,
+        endDate: endDate,
+        startDateMs: startDate.getTime(),
+        endDateMs: end.getTime(),
+        durationMs: end.getTime() - startDate.getTime(),
+        expectedDurationMs: planData.duration_days * 24 * 60 * 60 * 1000
+      });
     } else {
       console.log('Subscription is permanent or has no duration');
     }
@@ -120,17 +129,19 @@ export const tryActivateDefaultPlan = async (userId: string) => {
         const endDate = new Date(existingSubscription.end_date);
         const now = new Date();
         
-        // Порівнюємо дати (без урахування часу)
-        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const isExpired = now.getTime() > endDate.getTime();
         
         console.log('Subscription expiry check:', {
-          endDate: endDateOnly.toISOString(),
-          today: nowDateOnly.toISOString(),
-          isExpired: nowDateOnly > endDateOnly
+          endDate: endDate.toISOString(),
+          now: now.toISOString(),
+          endDateMs: endDate.getTime(),
+          nowMs: now.getTime(),
+          isExpired,
+          timeDifference: endDate.getTime() - now.getTime(),
+          hoursLeft: Math.round((endDate.getTime() - now.getTime()) / (1000 * 60 * 60))
         });
         
-        if (nowDateOnly > endDateOnly) {
+        if (isExpired) {
           console.log('Subscription has expired, deactivating it');
           // Деактивуємо прострочену підписку
           await supabase
