@@ -47,11 +47,22 @@ const UserStores = () => {
   const [editingStore, setEditingStore] = useState<UserStore | null>(null);
   const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
 
-  // Функція для копіювання параметрів шаблону в магазин
+  // Функція для копіювання параметрів шаблону в магазин з виправленням дублювання
   const copyTemplateParametersToStore = async (templateId: string, storeId: string) => {
     try {
       console.log('Copying template parameters for template:', templateId, 'to store:', storeId);
       
+      // Спочатку видаляємо існуючі параметри для цього магазину
+      const { error: deleteError } = await extendedSupabase
+        .from('store_template_parameters')
+        .delete()
+        .eq('store_id', storeId);
+
+      if (deleteError) {
+        console.error('Error deleting existing store parameters:', deleteError);
+        // Не кидаємо помилку, продовжуємо
+      }
+
       const { data: templateParams, error } = await extendedSupabase
         .from('template_xml_parameters')
         .select('*')
@@ -74,7 +85,7 @@ const UserStores = () => {
           parameter_type: param.parameter_type,
           parameter_category: param.parameter_category,
           is_active: param.is_active,
-          is_required: param.is_required
+          is_required: true // ВСІ ПАРАМЕТРИ ОБОВ'ЯЗКОВІ ЗА ЗАМОВЧУВАННЯМ
         }));
 
         const { error: insertError } = await extendedSupabase
@@ -278,21 +289,25 @@ const UserStores = () => {
         try {
           await copyTemplateParametersToStore(templateIdToSave, data.id);
           console.log('Template parameters copied successfully');
+          
+          toast({
+            title: 'Успішно',
+            description: 'Магазин та параметри шаблону успішно створено'
+          });
         } catch (paramError) {
           console.error('Error copying template parameters:', paramError);
-          // Не блокуємо створення магазину через помилку копіювання параметрів
           toast({
             title: 'Попередження',
-            description: 'Магазин створено, але не вдалося скопіювати параметри шаблону',
+            description: 'Магазин створено, але виникла помилка з параметрами шаблону. Спробуйте скопіювати параметри пізніше.',
             variant: 'default'
           });
         }
+      } else {
+        toast({
+          title: 'Успішно',
+          description: 'Магазин успішно створено'
+        });
       }
-
-      toast({
-        title: 'Успішно',
-        description: 'Магазин успішно створено'
-      });
       
       // Очищуємо форму та закриваємо діалог
       setNewStoreName('');

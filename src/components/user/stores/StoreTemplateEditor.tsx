@@ -1,3 +1,4 @@
+
 // Компонент для редагування XML-шаблону конкретного магазину
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -54,7 +55,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
     parameter_type: 'text',
     parameter_category: 'parameter',
     is_active: true,
-    is_required: false
+    is_required: true // ОБОВ'ЯЗКОВИЙ ЗА ЗАМОВЧУВАННЯМ
   });
 
   const currentTemplate = templates.find(t => t.id === store.template_id);
@@ -75,7 +76,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
         parameter_type: 'text',
         parameter_category: 'parameter',
         is_active: true,
-        is_required: false
+        is_required: true // ОБОВ'ЯЗКОВИЙ ЗА ЗАМОВЧУВАННЯМ
       });
       toast({
         title: 'Успішно',
@@ -272,6 +273,38 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                     ))}
                   </div>
 
+                  {/* Статистика за статусами */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <Badge className="bg-gray-100 text-gray-800 mb-2">
+                          Всього параметрів
+                        </Badge>
+                        <p className="text-2xl font-bold text-gray-900">{parameters.length}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <Badge className="bg-green-100 text-green-800 mb-2">
+                          Активних параметрів
+                        </Badge>
+                        <p className="text-2xl font-bold text-green-600">
+                          {parameters.filter(p => p.is_active).length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <Badge className="bg-red-100 text-red-800 mb-2">
+                          Обов'язкових параметрів
+                        </Badge>
+                        <p className="text-2xl font-bold text-red-600">
+                          {parameters.filter(p => p.is_required).length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
                   {/* Таблиця параметрів з прокруткою */}
                   {parameters.length > 0 ? (
                     <Card>
@@ -338,7 +371,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
-                                    <div className="flex gap-1">
+                                    <div className="flex flex-col gap-1">
                                       {parameter.is_active && (
                                         <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
                                           Активний
@@ -592,7 +625,7 @@ const StoreParameterForm: React.FC<StoreParameterFormProps> = ({
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t">
-            <div className="flex items-center space-x-6">
+            <div className="flex flex-col items-start space-y-3">
               <div className="flex items-center space-x-2">
                 <Switch
                   id="param-active"

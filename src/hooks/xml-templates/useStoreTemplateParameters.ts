@@ -96,7 +96,7 @@ export const useStoreTemplateParameters = (storeId: string) => {
 
         console.log('Parameter updated:', data);
       } else {
-        // Створення нового параметра
+        // Створення нового параметра з обов'язковим статусом за замовчуванням
         const { data, error } = await extendedSupabase
           .from('store_template_parameters')
           .insert({
@@ -107,8 +107,8 @@ export const useStoreTemplateParameters = (storeId: string) => {
             xml_path: parameter.xml_path!,
             parameter_type: parameter.parameter_type!,
             parameter_category: parameter.parameter_category!,
-            is_active: parameter.is_active!,
-            is_required: parameter.is_required!
+            is_active: parameter.is_active !== undefined ? parameter.is_active : true,
+            is_required: parameter.is_required !== undefined ? parameter.is_required : true // ОБОВ'ЯЗКОВИЙ ЗА ЗАМОВЧУВАННЯМ
           })
           .select()
           .single();
@@ -180,7 +180,7 @@ export const useStoreTemplateParameters = (storeId: string) => {
 
       console.log('Template parameters found:', templateParams?.length || 0);
 
-      // Копіюємо параметри в магазин
+      // Копіюємо параметри в магазин з обов'язковим статусом
       if (templateParams && templateParams.length > 0) {
         const storeParams = templateParams.map(param => ({
           store_id: storeId,
@@ -191,7 +191,7 @@ export const useStoreTemplateParameters = (storeId: string) => {
           parameter_type: param.parameter_type,
           parameter_category: param.parameter_category,
           is_active: param.is_active,
-          is_required: param.is_required
+          is_required: true // ВСІ ПАРАМЕТРИ ОБОВ'ЯЗКОВІ ЗА ЗАМОВЧУВАННЯМ
         }));
 
         const { data, error: insertError } = await extendedSupabase
