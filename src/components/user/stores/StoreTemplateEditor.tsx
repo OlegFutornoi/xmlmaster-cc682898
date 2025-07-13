@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Plus, Trash2, Save, Edit, Copy, Eye, EyeOff, Building } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Settings, Plus, Trash2, Save, Edit, Copy, Building } from 'lucide-react';
 import { useStoreTemplateParameters } from '@/hooks/xml-templates/useStoreTemplateParameters';
 import { useUserXMLTemplates } from '@/hooks/xml-templates/useUserXMLTemplates';
 import { useToast } from '@/hooks/use-toast';
@@ -126,10 +127,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
     }
   };
 
-  const handleUpdateParameter = (updatedParameter: any) => {
-    handleSaveParameter(updatedParameter);
-  };
-
   const getParametersByCategory = (category: string) => {
     return parameters.filter(param => param.parameter_category === category);
   };
@@ -143,8 +140,8 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Налаштування шаблону: {store.name}
@@ -275,7 +272,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                     ))}
                   </div>
 
-                  {/* Таблиця параметрів */}
+                  {/* Таблиця параметрів з прокруткою */}
                   {parameters.length > 0 ? (
                     <Card>
                       <CardHeader>
@@ -284,48 +281,37 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                           Налаштуйте параметри XML-шаблону для вашого магазину
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="p-6">
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
-                              <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Назва параметру
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Значення
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  XML шлях
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Тип
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Категорія
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Дії
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {parameters.map((parameter, index) => (
-                                <tr key={parameter.id} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <CardContent className="p-0">
+                        <div className="max-h-96 overflow-y-auto">
+                          <Table>
+                            <TableHeader className="sticky top-0 bg-white z-10">
+                              <TableRow>
+                                <TableHead>Назва параметру</TableHead>
+                                <TableHead>Значення</TableHead>
+                                <TableHead>XML шлях</TableHead>
+                                <TableHead>Тип</TableHead>
+                                <TableHead>Категорія</TableHead>
+                                <TableHead>Статус</TableHead>
+                                <TableHead>Дії</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {parameters.map((parameter) => (
+                                <TableRow key={parameter.id} className="hover:bg-gray-50">
+                                  <TableCell className="font-medium">
                                     {parameter.parameter_name}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                                  </TableCell>
+                                  <TableCell className="max-w-xs">
                                     <div className="truncate" title={parameter.parameter_value || ''}>
                                       {parameter.parameter_value || '-'}
                                     </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-600 font-mono text-xs">
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
                                     <code className="bg-gray-100 px-2 py-1 rounded">
                                       {parameter.xml_path}
                                     </code>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                  </TableCell>
+                                  <TableCell>
                                     <Badge variant="outline" className="text-xs">
                                       {parameter.parameter_type === 'text' ? 'Текст' :
                                        parameter.parameter_type === 'number' ? 'Число' :
@@ -333,8 +319,8 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                                        parameter.parameter_type === 'date' ? 'Дата' :
                                        parameter.parameter_type}
                                     </Badge>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm">
+                                  </TableCell>
+                                  <TableCell>
                                     <Badge 
                                       className={
                                         parameter.parameter_category === 'parameter' ? 'bg-blue-100 text-blue-800' :
@@ -350,8 +336,22 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                                        parameter.parameter_category === 'offer' ? 'Товар' :
                                        parameter.parameter_category}
                                     </Badge>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm">
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      {parameter.is_active && (
+                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                          Активний
+                                        </Badge>
+                                      )}
+                                      {parameter.is_required && (
+                                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700">
+                                          Обов'язковий
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
                                     <div className="flex items-center gap-1">
                                       <Button
                                         variant="ghost"
@@ -374,11 +374,11 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </div>
-                                  </td>
-                                </tr>
+                                  </TableCell>
+                                </TableRow>
                               ))}
-                            </tbody>
-                          </table>
+                            </TableBody>
+                          </Table>
                         </div>
                       </CardContent>
                     </Card>
