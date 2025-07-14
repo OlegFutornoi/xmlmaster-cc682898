@@ -34,10 +34,10 @@ import AdminXMLTemplates from "./pages/admin/xml-templates/AdminXMLTemplates";
 import XMLTemplateEditor from "./pages/admin/xml-templates/XMLTemplateEditor";
 
 const App = () => (
-  <BrowserRouter>
-    <AuthProvider>
-      <AdminAuthProvider>
-        <TooltipProvider>
+  <AuthProvider>
+    <AdminAuthProvider>
+      <TooltipProvider>
+        <BrowserRouter>
           <Toaster />
           <Sonner />
           <Routes>
@@ -138,10 +138,10 @@ const App = () => (
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </TooltipProvider>
-      </AdminAuthProvider>
-    </AuthProvider>
-  </BrowserRouter>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AdminAuthProvider>
+  </AuthProvider>
 );
 
 export default App;
