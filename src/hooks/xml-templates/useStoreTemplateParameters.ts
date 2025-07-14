@@ -4,8 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface UpdateParameterData {
-  id: string;
+  id?: string;
   parameter_value: string | null;
+  parameter_name?: string;
+  parameter_type?: string;
+  parameter_category?: string;
+  xml_path?: string;
+  is_active?: boolean;
+  is_required?: boolean;
+  store_id?: string;
+  template_id?: string;
 }
 
 export const useStoreTemplateParameters = (storeId: string, templateId: string | null) => {
@@ -39,54 +47,55 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
     enabled: !!storeId && !!templateId,
   });
 
-  const updateParameterMutation = useMutation({
-    mutationFn: async (data: UpdateParameterData) => {
-      console.log('Updating parameter:', data);
-      
-      const { error } = await supabase
-        .from('store_template_parameters')
-        .update({ parameter_value: data.parameter_value })
-        .eq('id', data.id);
-
-      if (error) {
-        console.error('Error updating parameter:', error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.setQueryData(['store-template-parameters', storeId, templateId], (oldData: any[]) => {
-        return oldData;
-      });
-      toast({
-        title: "Успіх",
-        description: "Параметр успішно оновлено",
-      });
-    },
-    onError: (error: any) => {
-      console.error('Update parameter error:', error);
-      toast({
-        title: "Помилка",
-        description: "Не вдалося оновити параметр",
-        variant: "destructive",
-      });
-    },
-  });
-
   const saveParameterMutation = useMutation({
     mutationFn: async (data: UpdateParameterData) => {
       console.log('Saving parameter:', data);
       
-      const { error } = await supabase
-        .from('store_template_parameters')
-        .update({ parameter_value: data.parameter_value })
-        .eq('id', data.id);
+      if (data.id) {
+        // Обновляем существующий параметр
+        const { error } = await supabase
+          .from('store_template_parameters')
+          .update({
+            parameter_value: data.parameter_value,
+            parameter_name: data.parameter_name,
+            parameter_type: data.parameter_type,
+            parameter_category: data.parameter_category,
+            xml_path: data.xml_path,
+            is_active: data.is_active,
+            is_required: data.is_required
+          })
+          .eq('id', data.id);
 
-      if (error) {
-        console.error('Error saving parameter:', error);
-        throw error;
+        if (error) {
+          console.error('Error updating parameter:', error);
+          throw error;
+        }
+      } else {
+        // Создаем новый параметр
+        const { error } = await supabase
+          .from('store_template_parameters')
+          .insert({
+            store_id: data.store_id!,
+            template_id: data.template_id!,
+            parameter_name: data.parameter_name!,
+            parameter_value: data.parameter_value,
+            parameter_type: data.parameter_type!,
+            parameter_category: data.parameter_category!,
+            xml_path: data.xml_path!,
+            is_active: data.is_active!,
+            is_required: data.is_required!
+          });
+
+        if (error) {
+          console.error('Error creating parameter:', error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['store-template-parameters', storeId, templateId] 
+      });
       toast({
         title: "Успіх",
         description: "Параметр успішно збережено",
@@ -223,13 +232,11 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
     parameters,
     isLoading,
     error,
-    updateParameter: updateParameterMutation.mutate,
     saveParameter: saveParameterMutation.mutate,
     deleteParameter: deleteParameterMutation.mutate,
     copyTemplateParameters: (templateId: string, storeId: string) => 
       copyParametersMutation.mutateAsync({ templateId, storeId }),
     refetchParameters,
-    isUpdating: updateParameterMutation.isPending,
     isSaving: saveParameterMutation.isPending,
   };
 };

@@ -1,4 +1,4 @@
-// Компонент для редагування XML-шаблону конкретного магазину
+// Компонент для редагування XML-шаблону конкретного магазину з drag-and-drop функціональністю
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Settings, Plus, Trash2, Save, Edit, Copy, Building, ShoppingCart, DollarSign, FolderTree, Package } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, Edit, Copy, Building, ShoppingCart, DollarSign, FolderTree, Package, GripVertical } from 'lucide-react';
 import { useStoreTemplateParameters } from '@/hooks/xml-templates/useStoreTemplateParameters';
 import { useUserXMLTemplates } from '@/hooks/xml-templates/useUserXMLTemplates';
 import { useToast } from '@/hooks/use-toast';
@@ -57,18 +57,24 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
     is_required: true
   });
 
+  // Состояние для drag and drop
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [sortedParameters, setSortedParameters] = useState<any[]>([]);
+
   const currentTemplate = templates.find(t => t.id === store.template_id);
 
   // Функція для сортування параметрів згідно з ієрархією XML
   const sortParametersByHierarchy = (params: any[]) => {
     const hierarchyOrder = {
-      // Основна інформація магазину (shop)
       'parameter': {
         'shop_name': 1,
-        'shop_company': 2,
-        'shop_url': 3,
+        'name': 2,
+        'company': 3,
+        'shop_company': 4,
+        'url': 5,
+        'shop_url': 6,
       },
-      // Валюти
       'currency': {
         'currencyId': 10,
         'currency_id': 11,
@@ -76,15 +82,13 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
         'currency_code': 13,
         'rate': 14,
       },
-      // Категорії
       'category': {
         'category_id': 20,
-        'category_name': 21,
-        'categoryId': 22,
+        'categoryId': 21,
+        'category_name': 22,
         'external_id': 23,
         'rz_id': 24,
       },
-      // Товари (offers)
       'offer': {
         'offer_id': 30,
         'available': 31,
@@ -100,7 +104,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
         'stock_quantity': 41,
         'url': 42,
       },
-      // Характеристики товарів
       'characteristic': {
         'param': 50,
       }
@@ -117,13 +120,18 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
         return orderA - orderB;
       }
       
-      // Якщо порядок однаковий, сортуємо за назвою
       return a.parameter_name.localeCompare(b.parameter_name);
     });
   };
 
+  // Обновляем отсортированные параметры при изменении данных
+  useEffect(() => {
+    setSortedParameters(sortParametersByHierarchy([...parameters]));
+  }, [parameters]);
+
   const handleSaveParameter = async (parameterData: any) => {
     try {
+      console.log('Saving parameter data:', parameterData);
       await saveParameter({
         ...parameterData,
         store_id: store.id,
@@ -189,6 +197,45 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
     }
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newSortedParameters = [...sortedParameters];
+    const draggedItem = newSortedParameters[draggedIndex];
+    
+    // Удаляем элемент из старой позиции
+    newSortedParameters.splice(draggedIndex, 1);
+    
+    // Вставляем элемент в новую позицию
+    newSortedParameters.splice(dropIndex, 0, draggedItem);
+    
+    setSortedParameters(newSortedParameters);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   const getParametersByCategory = (category: string) => {
     return parameters.filter(param => param.parameter_category === category);
   };
@@ -236,9 +283,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
     }
   ];
 
-  // Отримуємо відсортовані параметри
-  const sortedParameters = sortParametersByHierarchy(parameters);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
@@ -263,7 +307,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
             </TabsList>
 
             <TabsContent value="parameters" className="space-y-6 mt-4">
-              {/* Основна інформація про шаблон */}
               <Card className="border-0 shadow-sm bg-white">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -324,7 +367,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Header з кнопками */}
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Параметри шаблону ({parameters.length})</h3>
                 <div className="flex gap-2">
@@ -359,7 +401,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Статистика за категоріями */}
                   <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     {categories.map(category => {
                       const IconComponent = category.icon;
@@ -378,13 +419,12 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                     })}
                   </div>
 
-                  {/* Таблиця параметрів з прокруткою */}
                   {sortedParameters.length > 0 ? (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Параметри шаблону (згідно з ієрархією XML)</CardTitle>
+                        <CardTitle>Параметри шаблону (з можливістю перетягування)</CardTitle>
                         <CardDescription>
-                          Параметри відсортовані згідно зі структурою XML: основна інформація → валюти → категорії → товари → характеристики
+                          Перетягуйте рядки для зміни порядку. Параметри відсортовані згідно зі структурою XML.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-0">
@@ -392,6 +432,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                           <Table>
                             <TableHeader className="sticky top-0 bg-white z-10">
                               <TableRow>
+                                <TableHead className="w-8"></TableHead>
                                 <TableHead>Назва параметру</TableHead>
                                 <TableHead>Значення</TableHead>
                                 <TableHead>XML шлях</TableHead>
@@ -402,8 +443,21 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {sortedParameters.map(parameter => (
-                                <TableRow key={parameter.id} className="hover:bg-gray-50">
+                              {sortedParameters.map((parameter, index) => (
+                                <TableRow 
+                                  key={parameter.id} 
+                                  className={`hover:bg-gray-50 cursor-move ${
+                                    dragOverIndex === index ? 'bg-blue-50 border-t-2 border-blue-400' : ''
+                                  }`}
+                                  draggable
+                                  onDragStart={(e) => handleDragStart(e, index)}
+                                  onDragOver={(e) => handleDragOver(e, index)}
+                                  onDragLeave={handleDragLeave}
+                                  onDrop={(e) => handleDrop(e, index)}
+                                >
+                                  <TableCell className="text-center">
+                                    <GripVertical className="h-4 w-4 text-gray-400" />
+                                  </TableCell>
                                   <TableCell className="font-medium">
                                     {parameter.parameter_name}
                                   </TableCell>
@@ -572,7 +626,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
           </Tabs>
         </div>
 
-        {/* Діалог редагування/додавання параметру */}
         {(isAddingParameter || editingParameter) && (
           <StoreParameterForm 
             parameter={editingParameter || newParameter} 
@@ -590,7 +643,6 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
   );
 };
 
-// Окремий компонент для форми параметру
 interface StoreParameterFormProps {
   parameter: any;
   isEditing: boolean;
@@ -608,8 +660,13 @@ const StoreParameterForm: React.FC<StoreParameterFormProps> = ({
 }) => {
   const [formData, setFormData] = useState(parameter);
 
+  useEffect(() => {
+    setFormData(parameter);
+  }, [parameter]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting form data:', formData);
     onSave(formData);
   };
 
