@@ -1,10 +1,11 @@
 
-// Хук для роботи з параметрами шаблону конкретного магазину
+// Хук для роботи з параметрами шаблону магазину
 import { useState, useEffect } from 'react';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-export interface StoreTemplateParameter {
+interface StoreTemplateParameter {
   id: string;
   store_id: string;
   template_id: string;
@@ -19,139 +20,93 @@ export interface StoreTemplateParameter {
   updated_at: string;
 }
 
-export const useStoreTemplateParameters = (storeId: string) => {
-  const [parameters, setParameters] = useState<StoreTemplateParameter[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
+interface UpdateParameterData {
+  id: string;
+  parameter_value?: string;
+  is_active?: boolean;
+  is_required?: boolean;
+}
 
-  const fetchParameters = async () => {
-    if (!storeId) {
-      setParameters([]);
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      console.log('Fetching store template parameters for store:', storeId);
-      
+export const useStoreTemplateParameters = (storeId?: string) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { 
+    data: parameters, 
+    isLoading, 
+    error,
+    refetch: refetchParameters 
+  } = useQuery({
+    queryKey: ['storeTemplateParameters', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+
       const { data, error } = await extendedSupabase
         .from('store_template_parameters')
         .select('*')
         .eq('store_id', storeId)
-        .order('parameter_name');
+        .order('parameter_category', { ascending: true })
+        .order('parameter_name', { ascending: true });
 
       if (error) {
-        console.error('Error fetching store parameters:', error);
-        toast({
-          title: 'Помилка',
-          description: 'Не вдалося завантажити параметри магазину',
-          variant: 'destructive'
-        });
-        setParameters([]);
-        return;
-      }
-
-      console.log('Store parameters loaded:', data?.length || 0);
-      setParameters(data || []);
-    } catch (error) {
-      console.error('Error in fetchParameters:', error);
-      setParameters([]);
-      toast({
-        title: 'Помилка',
-        description: 'Помилка завантаження параметрів',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const saveParameter = async (parameter: Partial<StoreTemplateParameter>) => {
-    setIsSaving(true);
-    try {
-      console.log('Saving parameter:', parameter);
-
-      if (parameter.id) {
-        // Оновлення існуючого параметра
-        const { data, error } = await extendedSupabase
-          .from('store_template_parameters')
-          .update({
-            parameter_name: parameter.parameter_name,
-            parameter_value: parameter.parameter_value,
-            xml_path: parameter.xml_path,
-            parameter_type: parameter.parameter_type,
-            parameter_category: parameter.parameter_category,
-            is_active: parameter.is_active,
-            is_required: parameter.is_required
-          })
-          .eq('id', parameter.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error updating parameter:', error);
-          throw error;
-        }
-
-        console.log('Parameter updated:', data);
-      } else {
-        // Створення нового параметра з обов'язковим статусом за замовчуванням
-        const { data, error } = await extendedSupabase
-          .from('store_template_parameters')
-          .insert({
-            store_id: parameter.store_id!,
-            template_id: parameter.template_id!,
-            parameter_name: parameter.parameter_name!,
-            parameter_value: parameter.parameter_value,
-            xml_path: parameter.xml_path!,
-            parameter_type: parameter.parameter_type!,
-            parameter_category: parameter.parameter_category!,
-            is_active: parameter.is_active !== undefined ? parameter.is_active : true,
-            is_required: parameter.is_required !== undefined ? parameter.is_required : true // ОБОВ'ЯЗКОВИЙ ЗА ЗАМОВЧУВАННЯМ
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating parameter:', error);
-          throw error;
-        }
-
-        console.log('Parameter created:', data);
-      }
-
-      await fetchParameters();
-    } catch (error) {
-      console.error('Error saving parameter:', error);
-      throw error;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteParameter = async (parameterId: string) => {
-    try {
-      console.log('Deleting parameter:', parameterId);
-
-      const { error } = await extendedSupabase
-        .from('store_template_parameters')
-        .delete()
-        .eq('id', parameterId);
-
-      if (error) {
-        console.error('Error deleting parameter:', error);
+        console.error('Error fetching store template parameters:', error);
         throw error;
       }
 
-      console.log('Parameter deleted successfully');
-      await fetchParameters();
-    } catch (error) {
-      console.error('Error deleting parameter:', error);
-      throw error;
+      return data || [];
+    },
+    enabled: !!storeId,
+    // Збільшуємо staleTime для параметрів
+    staleTime: 10 * 60 * 1000, // 10 хвилин
+    // Вимикаємо автоматичний рефетч
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  // Мутація для оновлення параметра
+  const updateParameterMutation = useMutation({
+    mutationFn: async (data: UpdateParameterData) => {
+      const { id, ...updateData } = data;
+      
+      const { data: result, error } = await extendedSupabase
+        .from('store_template_parameters')
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating parameter:', error);
+        throw error;
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      // Оновлюємо кеш без рефетчу
+      queryClient.invalidateQueries({ 
+        queryKey: ['storeTemplateParameters', storeId],
+        refetchType: 'none' // Не робимо автоматичний рефетч
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating parameter:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося оновити параметр',
+        variant: 'destructive'
+      });
     }
+  });
+
+  const updateParameter = (data: UpdateParameterData) => {
+    updateParameterMutation.mutate(data);
   };
 
+  // Функція копіювання параметрів з шаблону
   const copyTemplateParameters = async (templateId: string, storeId: string) => {
     try {
       console.log('Copying template parameters from template:', templateId, 'to store:', storeId);
@@ -222,10 +177,14 @@ export const useStoreTemplateParameters = (storeId: string) => {
           throw insertError;
         }
 
-        console.log('Successfully copied', data?.length || 0, 'parameters');
+        console.log('Successfully copied', storeParams.length, 'parameters to store');
       }
 
-      await fetchParameters();
+      // Оновлюємо кеш без автоматичного рефетчу
+      queryClient.invalidateQueries({ 
+        queryKey: ['storeTemplateParameters', storeId],
+        refetchType: 'none'
+      });
       
       toast({
         title: 'Успіх',
@@ -243,17 +202,13 @@ export const useStoreTemplateParameters = (storeId: string) => {
     }
   };
 
-  useEffect(() => {
-    fetchParameters();
-  }, [storeId]);
-
   return {
-    parameters,
+    parameters: parameters || [],
     isLoading,
-    isSaving,
-    saveParameter,
-    deleteParameter,
+    error,
+    updateParameter,
     copyTemplateParameters,
-    refetchParameters: fetchParameters
+    refetchParameters,
+    isUpdating: updateParameterMutation.isPending
   };
 };

@@ -4,14 +4,19 @@ import { useState, useEffect } from 'react';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 import { XMLTemplate } from '@/types/xml-template';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 export const useUserXMLTemplates = () => {
-  const [templates, setTemplates] = useState<XMLTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchTemplates = async () => {
-    try {
+  const { 
+    data: templates, 
+    isLoading, 
+    error,
+    refetch: refetchTemplates 
+  } = useQuery({
+    queryKey: ['xmlTemplates'],
+    queryFn: async () => {
       const { data, error } = await extendedSupabase
         .from('template_xml')
         .select(`
@@ -26,34 +31,31 @@ export const useUserXMLTemplates = () => {
 
       if (error) {
         console.error('Error fetching templates:', error);
-        toast({
-          title: 'Помилка',
-          description: 'Не вдалося завантажити шаблони',
-          variant: 'destructive'
-        });
-        return;
+        throw error;
       }
 
-      setTemplates(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+      return data || [];
+    },
+    // Збільшуємо staleTime для шаблонів
+    staleTime: 15 * 60 * 1000, // 15 хвилин
+    // Вимикаємо автоматичний рефетч
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  useEffect(() => {
+    if (error) {
       toast({
         title: 'Помилка',
         description: 'Не вдалося завантажити шаблони',
         variant: 'destructive'
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
+  }, [error, toast]);
 
   return {
-    templates,
+    templates: templates || [],
     isLoading,
-    refetchTemplates: fetchTemplates
+    refetchTemplates
   };
 };
