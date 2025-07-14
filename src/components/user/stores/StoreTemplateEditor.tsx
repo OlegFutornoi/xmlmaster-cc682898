@@ -1,4 +1,3 @@
-
 // Компонент для редагування XML-шаблону конкретного магазину
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -44,7 +43,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
     saveParameter, 
     deleteParameter,
     copyTemplateParameters 
-  } = useStoreTemplateParameters(store.id);
+  } = useStoreTemplateParameters(store.id, store.template_id || '');
 
   const [editingParameter, setEditingParameter] = useState<any>(null);
   const [isAddingParameter, setIsAddingParameter] = useState(false);
