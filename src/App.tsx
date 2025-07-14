@@ -3,8 +3,9 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
+import { AuthProvider } from "./context/AuthContext";
 
 // Public pages
 import Index from "./pages/Index";
@@ -14,10 +15,6 @@ import NotFound from "./pages/NotFound";
 import UserLogin from "./pages/user/UserLogin";
 import UserRegister from "./pages/user/UserRegister";
 import UserDashboard from "./pages/user/UserDashboard";
-import UserHome from "./pages/user/UserHome";
-import UserTariffs from "./pages/user/UserTariffs";
-import UserStores from "./pages/user/UserStores";
-import UserSettings from "./pages/user/UserSettings";
 import UserRoute from "./components/auth/UserRoute";
 
 // Admin pages
@@ -37,110 +34,114 @@ import AdminXMLTemplates from "./pages/admin/xml-templates/AdminXMLTemplates";
 import XMLTemplateEditor from "./pages/admin/xml-templates/XMLTemplateEditor";
 
 const App = () => (
-  <AdminAuthProvider>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<Index />} />
-        
-        {/* User routes */}
-        <Route path="/user/login" element={<UserLogin />} />
-        <Route path="/user/register" element={<UserRegister />} />
-        <Route 
-          path="/user/dashboard/*" 
-          element={
-            <UserRoute>
-              <UserDashboard />
-            </UserRoute>
-          } 
-        />
-        
-        {/* Admin routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route 
-          path="/admin/dashboard" 
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/settings" 
-          element={
-            <AdminRoute>
-              <AdminSettings />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/users" 
-          element={
-            <AdminRoute>
-              <AdminUsers />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Tariff routes */}
-        <Route 
-          path="/admin/tariffs" 
-          element={
-            <AdminRoute>
-              <AdminTariffs />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/tariffs/currencies" 
-          element={
-            <AdminRoute>
-              <AdminCurrencies />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/tariffs/new" 
-          element={
-            <AdminRoute>
-              <TariffPlanForm />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/tariffs/:id" 
-          element={
-            <AdminRoute>
-              <TariffPlanForm />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* XML Template routes */}
-        <Route 
-          path="/admin/xml-templates" 
-          element={
-            <AdminRoute>
-              <AdminXMLTemplates />
-            </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/admin/xml-templates/:id" 
-          element={
-            <AdminRoute>
-              <XMLTemplateEditor />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Catch-all route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
-  </AdminAuthProvider>
+  <BrowserRouter>
+    <AuthProvider>
+      <AdminAuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Index />} />
+            
+            {/* User routes */}
+            <Route path="/user/login" element={<UserLogin />} />
+            <Route path="/user/register" element={<UserRegister />} />
+            <Route 
+              path="/user/dashboard/*" 
+              element={
+                <UserRoute>
+                  <UserDashboard />
+                </UserRoute>
+              } 
+            />
+            
+            {/* Admin routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/settings" 
+              element={
+                <AdminRoute>
+                  <AdminSettings />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <AdminRoute>
+                  <AdminUsers />
+                </AdminRoute>
+              } 
+            />
+            
+            {/* Tariff routes */}
+            <Route 
+              path="/admin/tariffs" 
+              element={
+                <AdminRoute>
+                  <AdminTariffs />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/tariffs/currencies" 
+              element={
+                <AdminRoute>
+                  <AdminCurrencies />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/tariffs/new" 
+              element={
+                <AdminRoute>
+                  <TariffPlanForm />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/tariffs/:id" 
+              element={
+                <AdminRoute>
+                  <TariffPlanForm />
+                </AdminRoute>
+              } 
+            />
+            
+            {/* XML Template routes */}
+            <Route 
+              path="/admin/xml-templates" 
+              element={
+                <AdminRoute>
+                  <AdminXMLTemplates />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/xml-templates/:id" 
+              element={
+                <AdminRoute>
+                  <XMLTemplateEditor />
+                </AdminRoute>
+              } 
+            />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </AdminAuthProvider>
+    </AuthProvider>
+  </BrowserRouter>
 );
 
 export default App;
