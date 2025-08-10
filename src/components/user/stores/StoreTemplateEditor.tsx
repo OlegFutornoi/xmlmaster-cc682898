@@ -1,3 +1,4 @@
+
 // Компонент для редагування XML-шаблону конкретного магазину з drag-and-drop функціональністю
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -300,13 +301,14 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">
-          <Tabs defaultValue="parameters" className="h-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="parameters">Параметри шаблону</TabsTrigger>
-              <TabsTrigger value="info">Інформація</TabsTrigger>
+          <Tabs defaultValue="general-info" className="h-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="general-info" id="general-info-tab">Основна інформація</TabsTrigger>
+              <TabsTrigger value="parameters" id="parameters-tab">Параметри шаблону</TabsTrigger>
+              <TabsTrigger value="info" id="info-tab">Інформація</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="parameters" className="space-y-6 mt-4">
+            <TabsContent value="general-info" className="space-y-6 mt-4">
               <Card className="border-0 shadow-sm bg-white">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -366,7 +368,9 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
 
+            <TabsContent value="parameters" className="space-y-6 mt-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Параметри шаблону ({parameters.length})</h3>
                 <div className="flex gap-2">

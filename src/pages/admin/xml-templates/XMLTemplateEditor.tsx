@@ -27,6 +27,7 @@ const XMLTemplateEditor = () => {
   const [importMethod, setImportMethod] = useState<'file' | 'url'>('file');
   const [xmlUrl, setXmlUrl] = useState('');
   const [xmlFile, setXmlFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState('general-info');
 
   // Форма для редагування шаблону
   const [templateForm, setTemplateForm] = useState({
@@ -166,86 +167,97 @@ const XMLTemplateEditor = () => {
           </header>
 
           <div className={`flex-1 ${isMobile ? 'p-3' : 'p-4 md:p-8'} space-y-${isMobile ? '4' : '6'}`}>
-            {/* Основна інформація про шаблон */}
-            <Card className="border-0 shadow-sm bg-white">
-              <CardHeader className={isMobile ? 'p-4' : ''}>
-                <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
-                  <Building className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
-                  Основна інформація
-                </CardTitle>
-                <CardDescription className={isMobile ? 'text-sm' : ''}>
-                  Налаштуйте назву, інформацію про магазин та статус XML-шаблону
-                </CardDescription>
-              </CardHeader>
-              <CardContent className={`space-y-4 ${isMobile ? 'p-4' : ''}`}>
-                <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'md:grid-cols-2 gap-4'}`}>
-                  <div>
-                    <Label htmlFor="template-name">Назва шаблону</Label>
-                    <Input 
-                      id="template-name" 
-                      value={templateForm.name} 
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))} 
-                      placeholder="Введіть назву шаблону" 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="shop-name">Назва магазину</Label>
-                    <Input 
-                      id="shop-name" 
-                      value={templateForm.shop_name} 
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_name: e.target.value }))} 
-                      placeholder="Назва магазину з XML" 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="shop-company">Назва компанії</Label>
-                    <Input 
-                      id="shop-company" 
-                      value={templateForm.shop_company} 
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_company: e.target.value }))} 
-                      placeholder="Юридична назва компанії" 
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="shop-url">URL магазину</Label>
-                    <Input 
-                      id="shop-url" 
-                      value={templateForm.shop_url} 
-                      onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_url: e.target.value }))} 
-                      placeholder="https://example.com" 
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="template-active" 
-                    checked={templateForm.is_active} 
-                    onCheckedChange={(checked) => setTemplateForm(prev => ({ ...prev, is_active: checked }))} 
-                  />
-                  <Label htmlFor="template-active">Активний шаблон</Label>
-                </div>
-              </CardContent>
-            </Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="general-info" id="general-info-tab">Основна інформація</TabsTrigger>
+                <TabsTrigger value="parameters" id="parameters-tab">Параметри шаблону</TabsTrigger>
+              </TabsList>
 
-            {/* Структура параметрів */}
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-6">
-                {isLoadingParameters ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">Завантаження параметрів...</p>
-                  </div>
-                ) : (
-                  <TemplateParametersTable 
-                    parameters={parameters} 
-                    onUpdateParameter={handleUpdateParameter}
-                    onDeleteParameter={handleDeleteParameter}
-                    onCreateParameter={handleCreateParameter} 
-                    onUpdateParametersOrder={updateParametersOrder}
-                    templateId={id || ''} 
-                  />
-                )}
-              </CardContent>
-            </Card>
+              <TabsContent value="general-info" className="space-y-6 mt-6">
+                {/* Основна інформація про шаблон */}
+                <Card className="border-0 shadow-sm bg-white">
+                  <CardHeader className={isMobile ? 'p-4' : ''}>
+                    <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
+                      <Building className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                      Основна інформація
+                    </CardTitle>
+                    <CardDescription className={isMobile ? 'text-sm' : ''}>
+                      Налаштуйте назву, інформацію про магазин та статус XML-шаблону
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className={`space-y-4 ${isMobile ? 'p-4' : ''}`}>
+                    <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'md:grid-cols-2 gap-4'}`}>
+                      <div>
+                        <Label htmlFor="template-name">Назва шаблону</Label>
+                        <Input 
+                          id="template-name" 
+                          value={templateForm.name} 
+                          onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))} 
+                          placeholder="Введіть назву шаблону" 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="shop-name">Назва магазину</Label>
+                        <Input 
+                          id="shop-name" 
+                          value={templateForm.shop_name} 
+                          onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_name: e.target.value }))} 
+                          placeholder="Назва магазину з XML" 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="shop-company">Назва компанії</Label>
+                        <Input 
+                          id="shop-company" 
+                          value={templateForm.shop_company} 
+                          onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_company: e.target.value }))} 
+                          placeholder="Юридична назва компанії" 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="shop-url">URL магазину</Label>
+                        <Input 
+                          id="shop-url" 
+                          value={templateForm.shop_url} 
+                          onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_url: e.target.value }))} 
+                          placeholder="https://example.com" 
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="template-active" 
+                        checked={templateForm.is_active} 
+                        onCheckedChange={(checked) => setTemplateForm(prev => ({ ...prev, is_active: checked }))} 
+                      />
+                      <Label htmlFor="template-active">Активний шаблон</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="parameters" className="space-y-6 mt-6">
+                {/* Структура параметрів */}
+                <Card className="border-0 shadow-sm bg-white">
+                  <CardContent className="p-6">
+                    {isLoadingParameters ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">Завантаження параметрів...</p>
+                      </div>
+                    ) : (
+                      <TemplateParametersTable 
+                        parameters={parameters} 
+                        onUpdateParameter={handleUpdateParameter}
+                        onDeleteParameter={handleDeleteParameter}
+                        onCreateParameter={handleCreateParameter} 
+                        onUpdateParametersOrder={updateParametersOrder}
+                        templateId={id || ''} 
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Діалог імпорту XML */}
