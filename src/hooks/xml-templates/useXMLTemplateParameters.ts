@@ -2,9 +2,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { XMLTemplateParameter } from '@/types/xml-template';
 
 // Функція для автоматичного визначення категорії на основі XML-шляху
-const getCategoryFromXmlPath = (xmlPath: string): string => {
+const getCategoryFromXmlPath = (xmlPath: string): 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency' => {
   if (xmlPath.includes('/currencies/') || xmlPath.includes('/currency')) {
     return 'currency';
   }
@@ -26,7 +27,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   const { data: parameters = [], isLoading, error } = useQuery({
     queryKey: ['template-xml-parameters', templateId],
-    queryFn: async () => {
+    queryFn: async (): Promise<XMLTemplateParameter[]> => {
       if (!templateId) return [];
       
       const { data, error } = await supabase
@@ -38,7 +39,12 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
         .order('parameter_name', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      // Приводимо типи до правильного формату
+      return (data || []).map(item => ({
+        ...item,
+        parameter_category: item.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency'
+      }));
     },
     enabled: !!templateId,
   });

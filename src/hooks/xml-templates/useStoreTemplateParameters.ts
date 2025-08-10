@@ -8,7 +8,7 @@ export interface UpdateParameterData {
   parameter_value: string | null;
   parameter_name?: string;
   parameter_type?: string;
-  parameter_category?: string;
+  parameter_category?: 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency';
   xml_path?: string;
   is_active?: boolean;
   is_required?: boolean;
@@ -18,7 +18,7 @@ export interface UpdateParameterData {
 }
 
 // Функція для автоматичного визначення категорії на основі XML-шляху
-const getCategoryFromXmlPath = (xmlPath: string): string => {
+const getCategoryFromXmlPath = (xmlPath: string): 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency' => {
   if (xmlPath.includes('/currencies/') || xmlPath.includes('/currency')) {
     return 'currency';
   }
@@ -60,7 +60,12 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
       }
 
       console.log('Fetched store template parameters:', data);
-      return data || [];
+      
+      // Приводимо типи до правильного формату
+      return (data || []).map(item => ({
+        ...item,
+        parameter_category: item.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency'
+      }));
     },
     staleTime: 10 * 60 * 1000, // 10 хвилин
     enabled: !!storeId && !!templateId,
