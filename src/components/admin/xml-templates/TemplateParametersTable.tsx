@@ -1,12 +1,12 @@
 
-// Компонент таблиці параметрів шаблону з інлайн редагуванням
+// Компонент таблиці параметрів шаблону з інлайн редагуванням та drag-and-drop
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Save, Copy, Edit, Plus } from 'lucide-react';
+import { Trash2, Save, Copy, Edit, Plus, GripVertical } from 'lucide-react';
 import { XMLTemplateParameter } from '@/types/xml-template';
 import { toast } from '@/hooks/use-toast';
 
@@ -15,6 +15,7 @@ interface TemplateParametersTableProps {
   onUpdateParameter: (id: string, updates: Partial<XMLTemplateParameter>) => void;
   onDeleteParameter: (id: string) => void;
   onCreateParameter: (parameter: Omit<XMLTemplateParameter, 'id' | 'created_at' | 'updated_at'>) => void;
+  onUpdateParametersOrder: (parametersWithOrder: { id: string; display_order: number }[]) => void;
   templateId: string;
 }
 
@@ -23,7 +24,7 @@ type NewParameterType = {
   parameter_value: string;
   xml_path: string;
   parameter_type: 'text' | 'number' | 'date';
-  parameter_category: 'parameter' | 'characteristic' | 'category' | 'offer';
+  parameter_category: 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency';
 };
 
 const TemplateParametersTable = ({ 
@@ -31,6 +32,7 @@ const TemplateParametersTable = ({
   onUpdateParameter, 
   onDeleteParameter,
   onCreateParameter,
+  onUpdateParametersOrder,
   templateId
 }: TemplateParametersTableProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,6 +45,10 @@ const TemplateParametersTable = ({
     parameter_type: 'text',
     parameter_category: 'parameter'
   });
+
+  // Состояние для drag and drop
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleEdit = (parameter: XMLTemplateParameter) => {
     setEditingId(parameter.id);
@@ -76,7 +82,8 @@ const TemplateParametersTable = ({
         template_id: templateId,
         ...newParameter,
         is_active: true,
-        is_required: false
+        is_required: false,
+        display_order: parameters.length
       });
       setNewParameter({
         parameter_name: '',
@@ -98,6 +105,52 @@ const TemplateParametersTable = ({
       parameter_category: 'parameter'
     });
     setIsAddingNew(false);
+  };
+
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newParameters = [...parameters];
+    const draggedItem = newParameters[draggedIndex];
+    
+    // Удаляем элемент из старой позиции
+    newParameters.splice(draggedIndex, 1);
+    
+    // Вставляем элемент в новую позицию
+    newParameters.splice(dropIndex, 0, draggedItem);
+    
+    // Обновляем порядок отображения
+    const parametersWithOrder = newParameters.map((param, index) => ({
+      id: param.id,
+      display_order: index
+    }));
+    
+    onUpdateParametersOrder(parametersWithOrder);
+    
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const getShortPath = (fullPath: string) => {
@@ -134,20 +187,22 @@ const TemplateParametersTable = ({
 
   const getCategoryDisplayName = (category: string) => {
     const categoryMap: { [key: string]: string } = {
-      'parameter': 'Параметр',
-      'characteristic': 'Характеристика',
+      'parameter': 'Основна інформація',
+      'currency': 'Валюта',
       'category': 'Категорія',
-      'offer': 'Пропозиція'
+      'offer': 'Товар',
+      'characteristic': 'Характеристика'
     };
     return categoryMap[category] || category;
   };
 
   const getCategoryColor = (category: string) => {
     const colorMap: { [key: string]: string } = {
-      'parameter': 'bg-indigo-100 text-indigo-700 border-indigo-200',
-      'characteristic': 'bg-orange-100 text-orange-700 border-orange-200',
-      'category': 'bg-pink-100 text-pink-700 border-pink-200',
-      'offer': 'bg-teal-100 text-teal-700 border-teal-200'
+      'parameter': 'bg-blue-100 text-blue-800',
+      'currency': 'bg-green-100 text-green-800',
+      'category': 'bg-purple-100 text-purple-800',
+      'offer': 'bg-orange-100 text-orange-800',
+      'characteristic': 'bg-red-100 text-red-800'
     };
     return colorMap[category] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
@@ -155,7 +210,10 @@ const TemplateParametersTable = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Параметри шаблону</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Параметри шаблону ({parameters.length})</h3>
+          <p className="text-sm text-gray-600">Перетягуйте рядки для зміни порядку</p>
+        </div>
         <Button 
           onClick={handleAddNew} 
           size="sm" 
@@ -171,6 +229,7 @@ const TemplateParametersTable = ({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead className="min-w-[150px]">Назва параметру</TableHead>
               <TableHead className="min-w-[120px] hidden md:table-cell">Значення</TableHead>
               <TableHead className="min-w-[200px]">XML шлях</TableHead>
@@ -182,6 +241,9 @@ const TemplateParametersTable = ({
           <TableBody>
             {isAddingNew && (
               <TableRow className="bg-blue-50">
+                <TableCell className="text-center">
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </TableCell>
                 <TableCell>
                   <Input
                     value={newParameter.parameter_name}
@@ -202,7 +264,7 @@ const TemplateParametersTable = ({
                   <Input
                     value={newParameter.xml_path}
                     onChange={(e) => setNewParameter(prev => ({...prev, xml_path: e.target.value}))}
-                    placeholder="XML шлях"
+                    placeholder="/shop/currencies/currency/@id"
                     className="min-w-0"
                   />
                 </TableCell>
@@ -224,16 +286,17 @@ const TemplateParametersTable = ({
                 <TableCell className="hidden lg:table-cell">
                   <Select 
                     value={newParameter.parameter_category}
-                    onValueChange={(value: 'parameter' | 'characteristic' | 'category' | 'offer') => setNewParameter(prev => ({...prev, parameter_category: value}))}
+                    onValueChange={(value: 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency') => setNewParameter(prev => ({...prev, parameter_category: value}))}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="parameter">Параметр</SelectItem>
-                      <SelectItem value="characteristic">Характеристика</SelectItem>
+                      <SelectItem value="parameter">Основна інформація</SelectItem>
+                      <SelectItem value="currency">Валюта</SelectItem>
                       <SelectItem value="category">Категорія</SelectItem>
-                      <SelectItem value="offer">Пропозиція</SelectItem>
+                      <SelectItem value="offer">Товар</SelectItem>
+                      <SelectItem value="characteristic">Характеристика</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -262,8 +325,21 @@ const TemplateParametersTable = ({
               </TableRow>
             )}
 
-            {parameters.map((parameter) => (
-              <TableRow key={parameter.id}>
+            {parameters.map((parameter, index) => (
+              <TableRow 
+                key={parameter.id}
+                className={`hover:bg-gray-50 cursor-move ${
+                  dragOverIndex === index ? 'bg-blue-50 border-t-2 border-blue-400' : ''
+                }`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+              >
+                <TableCell className="text-center">
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </TableCell>
                 <TableCell>
                   {editingId === parameter.id ? (
                     <Input
@@ -334,17 +410,18 @@ const TemplateParametersTable = ({
                 <TableCell className="hidden lg:table-cell">
                   {editingId === parameter.id ? (
                     <Select 
-                      value={editForm.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' || 'parameter'}
-                      onValueChange={(value: 'parameter' | 'characteristic' | 'category' | 'offer') => setEditForm(prev => ({...prev, parameter_category: value}))}
+                      value={editForm.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency' || 'parameter'}
+                      onValueChange={(value: 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency') => setEditForm(prev => ({...prev, parameter_category: value}))}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="parameter">Параметр</SelectItem>
-                        <SelectItem value="characteristic">Характеристика</SelectItem>
+                        <SelectItem value="parameter">Основна інформація</SelectItem>
+                        <SelectItem value="currency">Валюта</SelectItem>
                         <SelectItem value="category">Категорія</SelectItem>
-                        <SelectItem value="offer">Пропозиція</SelectItem>
+                        <SelectItem value="offer">Товар</SelectItem>
+                        <SelectItem value="characteristic">Характеристика</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
@@ -404,7 +481,7 @@ const TemplateParametersTable = ({
 
             {parameters.length === 0 && !isAddingNew && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <p className="text-gray-500">Параметри не знайдено</p>
                 </TableCell>
               </TableRow>

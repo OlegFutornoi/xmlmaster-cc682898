@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +13,25 @@ export interface UpdateParameterData {
   is_required?: boolean;
   store_id?: string;
   template_id?: string;
+  display_order?: number;
 }
+
+// Функція для автоматичного визначення категорії на основі XML-шляху
+const getCategoryFromXmlPath = (xmlPath: string): string => {
+  if (xmlPath.includes('/currencies/') || xmlPath.includes('/currency')) {
+    return 'currency';
+  }
+  if (xmlPath.includes('/categories/') || xmlPath.includes('/category')) {
+    return 'category';
+  }
+  if (xmlPath.includes('/offers/') || xmlPath.includes('/offer')) {
+    return 'offer';
+  }
+  if (xmlPath.includes('/param') || xmlPath.includes('characteristic')) {
+    return 'characteristic';
+  }
+  return 'parameter';
+};
 
 export const useStoreTemplateParameters = (storeId: string, templateId: string | null) => {
   const { toast } = useToast();
@@ -32,6 +49,7 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
         .select('*')
         .eq('store_id', storeId)
         .eq('template_id', templateId)
+        .order('display_order', { ascending: true })
         .order('parameter_category', { ascending: true })
         .order('parameter_name', { ascending: true });
 
@@ -51,6 +69,11 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
     mutationFn: async (data: UpdateParameterData) => {
       console.log('Saving parameter:', data);
       
+      // Автоматично визначаємо категорію якщо вона не вказана
+      if (!data.parameter_category && data.xml_path) {
+        data.parameter_category = getCategoryFromXmlPath(data.xml_path);
+      }
+      
       if (data.id) {
         // Обновляем существующий параметр
         const { error } = await supabase
@@ -62,7 +85,8 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
             parameter_category: data.parameter_category,
             xml_path: data.xml_path,
             is_active: data.is_active,
-            is_required: data.is_required
+            is_required: data.is_required,
+            display_order: data.display_order
           })
           .eq('id', data.id);
 
@@ -83,7 +107,8 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
             parameter_category: data.parameter_category!,
             xml_path: data.xml_path!,
             is_active: data.is_active!,
-            is_required: data.is_required!
+            is_required: data.is_required!,
+            display_order: data.display_order || 0
           });
 
         if (error) {
@@ -106,6 +131,40 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
       toast({
         title: "Помилка",
         description: "Не вдалося зберегти параметр",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateParametersOrderMutation = useMutation({
+    mutationFn: async (parametersWithOrder: { id: string; display_order: number }[]) => {
+      console.log('Updating parameters order:', parametersWithOrder);
+      
+      const { error } = await supabase
+        .from('store_template_parameters')
+        .upsert(
+          parametersWithOrder.map(p => ({
+            id: p.id,
+            display_order: p.display_order
+          })),
+          { onConflict: 'id' }
+        );
+
+      if (error) {
+        console.error('Error updating parameters order:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['store-template-parameters', storeId, templateId] 
+      });
+    },
+    onError: (error: any) => {
+      console.error('Update order error:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося оновити порядок параметрів",
         variant: "destructive",
       });
     },
@@ -179,17 +238,18 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
       const uniqueParamsArray = Object.values(uniqueParams);
       console.log('Unique parameters to copy:', uniqueParamsArray);
 
-      // Підготовка даних для вставки
-      const storeParams = uniqueParamsArray.map(param => ({
+      // Підготовка даних для вставки з автоматичним призначенням категорій
+      const storeParams = uniqueParamsArray.map((param, index) => ({
         store_id: storeId,
         template_id: templateId,
         parameter_name: param.parameter_name,
         parameter_type: param.parameter_type,
-        parameter_category: param.parameter_category,
+        parameter_category: getCategoryFromXmlPath(param.xml_path),
         xml_path: param.xml_path,
         parameter_value: param.parameter_value,
         is_required: param.is_required,
         is_active: param.is_active,
+        display_order: index
       }));
 
       console.log('Prepared store parameters for insertion:', storeParams);
@@ -234,6 +294,7 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
     error,
     saveParameter: saveParameterMutation.mutate,
     deleteParameter: deleteParameterMutation.mutate,
+    updateParametersOrder: updateParametersOrderMutation.mutate,
     copyTemplateParameters: (templateId: string, storeId: string) => 
       copyParametersMutation.mutateAsync({ templateId, storeId }),
     refetchParameters,

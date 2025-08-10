@@ -1,150 +1,162 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { XMLTemplateParameter } from '@/types/xml-template';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
-interface CreateParameterData {
-  template_id: string;
-  parameter_name: string;
-  parameter_value?: string;
-  xml_path: string;
-  parameter_type: string;
-  is_active: boolean;
-  is_required: boolean;
-}
+// Функція для автоматичного визначення категорії на основі XML-шляху
+const getCategoryFromXmlPath = (xmlPath: string): string => {
+  if (xmlPath.includes('/currencies/') || xmlPath.includes('/currency')) {
+    return 'currency';
+  }
+  if (xmlPath.includes('/categories/') || xmlPath.includes('/category')) {
+    return 'category';
+  }
+  if (xmlPath.includes('/offers/') || xmlPath.includes('/offer')) {
+    return 'offer';
+  }
+  if (xmlPath.includes('/param') || xmlPath.includes('characteristic')) {
+    return 'characteristic';
+  }
+  return 'parameter';
+};
 
-export const useXMLTemplateParameters = (templateId?: string) => {
+export const useXMLTemplateParameters = (templateId: string | undefined) => {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: parameters = [], isLoading, error } = useQuery({
-    queryKey: ['xml-template-parameters', templateId],
+    queryKey: ['template-xml-parameters', templateId],
     queryFn: async () => {
       if (!templateId) return [];
-      
-      console.log('Завантаження параметрів XML-шаблону:', templateId);
       
       const { data, error } = await supabase
         .from('template_xml_parameters')
         .select('*')
         .eq('template_id', templateId)
-        .order('created_at', { ascending: true });
+        .order('display_order', { ascending: true })
+        .order('parameter_category', { ascending: true })
+        .order('parameter_name', { ascending: true });
 
-      if (error) {
-        console.error('Помилка завантаження параметрів:', error);
-        throw error;
-      }
-
-      console.log('Параметри завантажено:', data);
-      return data as XMLTemplateParameter[];
+      if (error) throw error;
+      return data || [];
     },
-    enabled: !!templateId
+    enabled: !!templateId,
   });
 
   const createParameterMutation = useMutation({
-    mutationFn: async (parameterData: CreateParameterData) => {
-      console.log('Створення параметру:', parameterData);
-      
-      const { data, error } = await supabase
-        .from('template_xml_parameters')
-        .insert(parameterData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Помилка створення параметру:', error);
-        throw error;
+    mutationFn: async (parameterData: any) => {
+      // Автоматично визначаємо категорію якщо вона не вказана
+      if (!parameterData.parameter_category && parameterData.xml_path) {
+        parameterData.parameter_category = getCategoryFromXmlPath(parameterData.xml_path);
       }
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xml-template-parameters', templateId] });
-      toast({
-        title: 'Успіх',
-        description: 'Параметр успішно створено',
-        duration: 1000
-      });
-    },
-    onError: (error) => {
-      console.error('Помилка створення параметру:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося створити параметр',
-        variant: 'destructive',
-        duration: 1000
-      });
-    }
-  });
-
-  const updateParameterMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<XMLTemplateParameter> }) => {
-      console.log('Оновлення параметру:', id, updates);
-      
-      const { data, error } = await supabase
-        .from('template_xml_parameters')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Помилка оновлення параметру:', error);
-        throw error;
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xml-template-parameters', templateId] });
-      toast({
-        title: 'Успіх',
-        description: 'Параметр успішно оновлено',
-        duration: 1000
-      });
-    },
-    onError: (error) => {
-      console.error('Помилка оновлення параметру:', error);
-      toast({
-        title: 'Помилка',
-        description: 'Не вдалося оновити параметр',
-        variant: 'destructive',
-        duration: 1000
-      });
-    }
-  });
-
-  const deleteParameterMutation = useMutation({
-    mutationFn: async (id: string) => {
-      console.log('Видалення параметру:', id);
       
       const { error } = await supabase
         .from('template_xml_parameters')
-        .delete()
+        .insert([parameterData]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-xml-parameters', templateId] });
+      toast({
+        title: "Успіх",
+        description: "Параметр створено успішно",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося створити параметр",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateParameterMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      // Автоматично визначаємо категорію якщо оновлюється xml_path
+      if (updates.xml_path && !updates.parameter_category) {
+        updates.parameter_category = getCategoryFromXmlPath(updates.xml_path);
+      }
+      
+      const { error } = await supabase
+        .from('template_xml_parameters')
+        .update(updates)
         .eq('id', id);
 
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-xml-parameters', templateId] });
+      toast({
+        title: "Успіх",
+        description: "Параметр оновлено успішно",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося оновити параметр",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateParametersOrderMutation = useMutation({
+    mutationFn: async (parametersWithOrder: { id: string; display_order: number }[]) => {
+      console.log('Updating parameters order:', parametersWithOrder);
+      
+      const { error } = await supabase
+        .from('template_xml_parameters')
+        .upsert(
+          parametersWithOrder.map(p => ({
+            id: p.id,
+            display_order: p.display_order
+          })),
+          { onConflict: 'id' }
+        );
+
       if (error) {
-        console.error('Помилка видалення параметру:', error);
+        console.error('Error updating parameters order:', error);
         throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['xml-template-parameters', templateId] });
+      queryClient.invalidateQueries({ queryKey: ['template-xml-parameters', templateId] });
+    },
+    onError: (error: any) => {
+      console.error('Update order error:', error);
       toast({
-        title: 'Успіх',
-        description: 'Параметр успішно видалено',
-        duration: 1000
+        title: "Помилка",
+        description: "Не вдалося оновити порядок параметрів",
+        variant: "destructive",
       });
     },
-    onError: (error) => {
-      console.error('Помилка видалення параметру:', error);
+  });
+
+  const deleteParameterMutation = useMutation({
+    mutationFn: async (parameterId: string) => {
+      const { error } = await supabase
+        .from('template_xml_parameters')
+        .delete()
+        .eq('id', parameterId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-xml-parameters', templateId] });
       toast({
-        title: 'Помилка',
-        description: 'Не вдалося видалити параметр',
-        variant: 'destructive',
-        duration: 1000
+        title: "Успіх",
+        description: "Параметр видалено успішно",
       });
-    }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося видалити параметр",
+        variant: "destructive",
+      });
+    },
   });
 
   return {
@@ -152,12 +164,11 @@ export const useXMLTemplateParameters = (templateId?: string) => {
     isLoading,
     error,
     createParameter: createParameterMutation.mutate,
-    updateParameter: (id: string, updates: Partial<XMLTemplateParameter>) => {
-      updateParameterMutation.mutate({ id, updates });
-    },
+    updateParameter: updateParameterMutation.mutate,
+    updateParametersOrder: updateParametersOrderMutation.mutate,
     deleteParameter: deleteParameterMutation.mutate,
     isCreating: createParameterMutation.isPending,
     isUpdating: updateParameterMutation.isPending,
-    isDeleting: deleteParameterMutation.isPending
+    isDeleting: deleteParameterMutation.isPending,
   };
 };
