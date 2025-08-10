@@ -1,4 +1,3 @@
-
 // Компонент для редагування XML-шаблону конкретного магазину з drag-and-drop функціональністю
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -39,11 +38,15 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
   const { templates } = useUserXMLTemplates();
   const {
     parameters,
+    storeData,
     isLoading,
     isSaving,
     saveParameter,
+    updateStoreInfo,
     deleteParameter,
-    copyTemplateParameters
+    updateParametersOrder,
+    copyTemplateParameters,
+    refetchStore
   } = useStoreTemplateParameters(store.id, store.template_id || '');
   
   const [editingParameter, setEditingParameter] = useState<any>(null);
@@ -61,74 +64,63 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
   // Состояние для drag and drop
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [sortedParameters, setSortedParameters] = useState<any[]>([]);
+
+  // Состояние для редактирования основной информации
+  const [editingStoreInfo, setEditingStoreInfo] = useState(false);
+  const [storeInfoForm, setStoreInfoForm] = useState({
+    name: '',
+    shop_name: '',
+    shop_company: '',
+    shop_url: ''
+  });
 
   const currentTemplate = templates.find(t => t.id === store.template_id);
 
-  // Функція для сортування параметрів згідно з ієрархією XML
-  const sortParametersByHierarchy = (params: any[]) => {
-    const hierarchyOrder = {
-      'parameter': {
-        'shop_name': 1,
-        'name': 2,
-        'company': 3,
-        'shop_company': 4,
-        'url': 5,
-        'shop_url': 6,
-      },
-      'currency': {
-        'currencyId': 10,
-        'currency_id': 11,
-        'currency_rate': 12,
-        'currency_code': 13,
-        'rate': 14,
-      },
-      'category': {
-        'category_id': 20,
-        'categoryId': 21,
-        'category_name': 22,
-        'external_id': 23,
-        'rz_id': 24,
-      },
-      'offer': {
-        'offer_id': 30,
-        'available': 31,
-        'price': 32,
-        'price_old': 33,
-        'price_promo': 34,
-        'currencyId': 35,
-        'categoryId': 36,
-        'picture': 37,
-        'vendor': 38,
-        'name': 39,
-        'description': 40,
-        'stock_quantity': 41,
-        'url': 42,
-      },
-      'characteristic': {
-        'param': 50,
-      }
-    };
-
-    return params.sort((a, b) => {
-      const categoryA = a.parameter_category || 'parameter';
-      const categoryB = b.parameter_category || 'parameter';
-      
-      const orderA = hierarchyOrder[categoryA as keyof typeof hierarchyOrder]?.[a.parameter_name as keyof any] || 999;
-      const orderB = hierarchyOrder[categoryB as keyof typeof hierarchyOrder]?.[b.parameter_name as keyof any] || 999;
-      
-      if (orderA !== orderB) {
-        return orderA - orderB;
-      }
-      
-      return a.parameter_name.localeCompare(b.parameter_name);
-    });
-  };
-
-  // Обновляем отсортированные параметры при изменении данных
+  // Инициализация формы основной информации
   useEffect(() => {
-    setSortedParameters(sortParametersByHierarchy([...parameters]));
-  }, [parameters]);
+    if (storeData && currentTemplate) {
+      setStoreInfoForm({
+        name: storeData.name || '',
+        shop_name: currentTemplate.shop_name || '',
+        shop_company: currentTemplate.shop_company || '',
+        shop_url: currentTemplate.shop_url || ''
+      });
+    }
+  }, [storeData, currentTemplate]);
+
+  const handleSaveStoreInfo = async () => {
+    try {
+      await updateStoreInfo({
+        id: store.id,
+        name: storeInfoForm.name
+      });
+      
+      // Оновлення параметрів шаблону з основною інформацією
+      const basicInfoParameters = [
+        { name: 'name', value: storeInfoForm.shop_name, category: 'parameter' },
+        { name: 'company', value: storeInfoForm.shop_company, category: 'parameter' },
+        { name: 'url', value: storeInfoForm.shop_url, category: 'parameter' }
+      ];
+
+      for (const param of basicInfoParameters) {
+        const existingParam = parameters.find(p => 
+          p.parameter_name === param.name && p.parameter_category === param.category
+        );
+        
+        if (existingParam && param.value) {
+          await saveParameter({
+            ...existingParam,
+            parameter_value: param.value
+          });
+        }
+      }
+
+      setEditingStoreInfo(false);
+      await refetchStore();
+    } catch (error) {
+      console.error('Error saving store info:', error);
+    }
+  };
 
   const handleSaveParameter = async (parameterData: any) => {
     try {
@@ -223,16 +215,23 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
       return;
     }
 
-    const newSortedParameters = [...sortedParameters];
-    const draggedItem = newSortedParameters[draggedIndex];
+    const newParameters = [...parameters];
+    const draggedItem = newParameters[draggedIndex];
     
     // Удаляем элемент из старой позиции
-    newSortedParameters.splice(draggedIndex, 1);
+    newParameters.splice(draggedIndex, 1);
     
     // Вставляем элемент в новую позицию
-    newSortedParameters.splice(dropIndex, 0, draggedItem);
+    newParameters.splice(dropIndex, 0, draggedItem);
     
-    setSortedParameters(newSortedParameters);
+    // Обновляем порядок отображения
+    const parametersWithOrder = newParameters.map((param, index) => ({
+      id: param.id,
+      display_order: index
+    }));
+    
+    updateParametersOrder(parametersWithOrder);
+    
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
@@ -311,9 +310,20 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
             <TabsContent value="general-info" className="space-y-6 mt-4">
               <Card className="border-0 shadow-sm bg-white">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building className="h-5 w-5" />
-                    Основна інформація
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-5 w-5" />
+                      Основна інформація
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingStoreInfo(!editingStoreInfo)}
+                      id="edit-store-info-button"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      {editingStoreInfo ? 'Скасувати' : 'Редагувати'}
+                    </Button>
                   </CardTitle>
                   <CardDescription>
                     Налаштуйте назву, інформацію про магазин та статус XML-шаблону
@@ -322,7 +332,17 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="template-name">Назва шаблону</Label>
+                      <Label htmlFor="store-name">Назва магазину</Label>
+                      <Input 
+                        id="store-name" 
+                        value={editingStoreInfo ? storeInfoForm.name : (storeData?.name || '')}
+                        onChange={(e) => setStoreInfoForm(prev => ({ ...prev, name: e.target.value }))}
+                        disabled={!editingStoreInfo}
+                        placeholder="Назва вашого магазину" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="template-name">Шаблон</Label>
                       <Input 
                         id="template-name" 
                         value={currentTemplate?.name || ''} 
@@ -331,29 +351,32 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="shop-name">Назва магазину</Label>
+                      <Label htmlFor="shop-name">Назва магазину (XML)</Label>
                       <Input 
                         id="shop-name" 
-                        value={currentTemplate?.shop_name || ''} 
-                        disabled 
-                        placeholder="Назва магазину з XML" 
+                        value={editingStoreInfo ? storeInfoForm.shop_name : (currentTemplate?.shop_name || '')}
+                        onChange={(e) => setStoreInfoForm(prev => ({ ...prev, shop_name: e.target.value }))}
+                        disabled={!editingStoreInfo}
+                        placeholder="Назва магазину в XML" 
                       />
                     </div>
                     <div>
                       <Label htmlFor="shop-company">Назва компанії</Label>
                       <Input 
                         id="shop-company" 
-                        value={currentTemplate?.shop_company || ''} 
-                        disabled 
+                        value={editingStoreInfo ? storeInfoForm.shop_company : (currentTemplate?.shop_company || '')}
+                        onChange={(e) => setStoreInfoForm(prev => ({ ...prev, shop_company: e.target.value }))}
+                        disabled={!editingStoreInfo}
                         placeholder="Юридична назва компанії" 
                       />
                     </div>
-                    <div>
+                    <div className="md:col-span-2">
                       <Label htmlFor="shop-url">URL магазину</Label>
                       <Input 
                         id="shop-url" 
-                        value={currentTemplate?.shop_url || ''} 
-                        disabled 
+                        value={editingStoreInfo ? storeInfoForm.shop_url : (currentTemplate?.shop_url || '')}
+                        onChange={(e) => setStoreInfoForm(prev => ({ ...prev, shop_url: e.target.value }))}
+                        disabled={!editingStoreInfo}
                         placeholder="https://example.com" 
                       />
                     </div>
@@ -366,6 +389,27 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                     />
                     <Label htmlFor="template-active">Активний шаблон</Label>
                   </div>
+                  {editingStoreInfo && (
+                    <div className="flex gap-2 pt-4 border-t">
+                      <Button 
+                        onClick={handleSaveStoreInfo} 
+                        disabled={isSaving}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        id="save-store-info"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {isSaving ? 'Збереження...' : 'Зберегти'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setEditingStoreInfo(false)}
+                        disabled={isSaving}
+                        id="cancel-store-info"
+                      >
+                        Скасувати
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -423,7 +467,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                     })}
                   </div>
 
-                  {sortedParameters.length > 0 ? (
+                  {parameters.length > 0 ? (
                     <Card>
                       <CardHeader>
                         <CardTitle>Параметри шаблону (з можливістю перетягування)</CardTitle>
@@ -447,7 +491,7 @@ const StoreTemplateEditor: React.FC<StoreTemplateEditorProps> = ({
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {sortedParameters.map((parameter, index) => (
+                              {parameters.map((parameter, index) => (
                                 <TableRow 
                                   key={parameter.id} 
                                   className={`hover:bg-gray-50 cursor-move ${

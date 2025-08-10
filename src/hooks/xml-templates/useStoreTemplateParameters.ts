@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +14,13 @@ export interface UpdateParameterData {
   store_id?: string;
   template_id?: string;
   display_order?: number;
+}
+
+export interface UpdateStoreData {
+  name?: string;
+  shop_name?: string;
+  shop_company?: string;
+  shop_url?: string;
 }
 
 // Функція для автоматичного визначення категорії на основі XML-шляху
@@ -34,6 +40,78 @@ const getCategoryFromXmlPath = (xmlPath: string): 'parameter' | 'characteristic'
   return 'parameter';
 };
 
+// Функція для правильного сортування параметрів згідно з ієрархією XML
+const sortParametersByXMLHierarchy = (params: any[]) => {
+  const hierarchyOrder = {
+    // Основна інформація магазину (shop level)
+    'parameter': {
+      'name': 1,
+      'shop_name': 2,
+      'company': 3,
+      'shop_company': 4,
+      'url': 5,
+      'shop_url': 6,
+    },
+    // Валюти (currencies level)
+    'currency': {
+      'currency': 10,
+      'currencyId': 11,
+      'currency_id': 12,
+      'currency_code': 13,
+      'rate': 14,
+    },
+    // Категорії (categories level)
+    'category': {
+      'category': 20,
+      'categoryId': 21,
+      'category_id': 22,
+      'category_name': 23,
+      'external_id': 24,
+      'rz_id': 25,
+    },
+    // Товари (offers level)
+    'offer': {
+      'offer': 30,
+      'offer_id': 31,
+      'available': 32,
+      'price': 33,
+      'price_old': 34,
+      'price_promo': 35,
+      'currencyId': 36,
+      'categoryId': 37,
+      'picture': 38,
+      'vendor': 39,
+      'name': 40,
+      'description': 41,
+      'stock_quantity': 42,
+      'url': 43,
+    },
+    // Характеристики товарів (offer params level)
+    'characteristic': {
+      'param': 50,
+    }
+  };
+
+  return params.sort((a, b) => {
+    const categoryA = a.parameter_category || 'parameter';
+    const categoryB = b.parameter_category || 'parameter';
+    
+    const orderA = hierarchyOrder[categoryA as keyof typeof hierarchyOrder]?.[a.parameter_name as keyof any] || 999;
+    const orderB = hierarchyOrder[categoryB as keyof typeof hierarchyOrder]?.[b.parameter_name as keyof any] || 999;
+    
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    
+    // Якщо порядок однаковий, сортуємо по display_order, потім по назві
+    if (a.display_order !== b.display_order) {
+      return (a.display_order || 0) - (b.display_order || 0);
+    }
+    
+    return a.parameter_name.localeCompare(b.parameter_name);
+  });
+};
+
 export const useStoreTemplateParameters = (storeId: string, templateId: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,10 +127,7 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
         .from('store_template_parameters')
         .select('*')
         .eq('store_id', storeId)
-        .eq('template_id', templateId)
-        .order('display_order', { ascending: true })
-        .order('parameter_category', { ascending: true })
-        .order('parameter_name', { ascending: true });
+        .eq('template_id', templateId);
 
       if (error) {
         console.error('Error fetching store template parameters:', error);
@@ -61,14 +136,72 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
 
       console.log('Fetched store template parameters:', data);
       
-      // Приводимо типи до правильного формату
-      return (data || []).map(item => ({
+      // Приводимо типи до правильного формату та сортуємо
+      const typedData = (data || []).map(item => ({
         ...item,
         parameter_category: item.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency'
       }));
+      
+      return sortParametersByXMLHierarchy(typedData);
     },
-    staleTime: 10 * 60 * 1000, // 10 хвилин
+    staleTime: 5 * 60 * 1000, // 5 хвилин
     enabled: !!storeId && !!templateId,
+  });
+
+  // Отримання даних магазину
+  const { data: storeData, refetch: refetchStore } = useQuery({
+    queryKey: ['user-store', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_stores')
+        .select('*')
+        .eq('id', storeId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching store:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    enabled: !!storeId,
+  });
+
+  // Мутація для оновлення основної інформації магазину
+  const updateStoreInfoMutation = useMutation({
+    mutationFn: async (data: UpdateStoreData & { id: string }) => {
+      console.log('Updating store info:', data);
+      
+      const { error } = await supabase
+        .from('user_stores')
+        .update({
+          name: data.name,
+        })
+        .eq('id', data.id);
+
+      if (error) {
+        console.error('Error updating store:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['user-store', storeId] 
+      });
+      toast({
+        title: "Успіх",
+        description: "Інформацію про магазин оновлено",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Update store error:', error);
+      toast({
+        title: "Помилка",
+        description: "Не вдалося оновити інформацію магазину",
+        variant: "destructive",
+      });
+    },
   });
 
   const saveParameterMutation = useMutation({
@@ -167,6 +300,10 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         queryKey: ['store-template-parameters', storeId, templateId] 
+      });
+      toast({
+        title: "Успіх",
+        description: "Порядок параметрів оновлено",
       });
     },
     onError: (error: any) => {
@@ -299,14 +436,17 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
 
   return {
     parameters,
+    storeData,
     isLoading,
     error,
     saveParameter: saveParameterMutation.mutate,
+    updateStoreInfo: updateStoreInfoMutation.mutate,
     deleteParameter: deleteParameterMutation.mutate,
     updateParametersOrder: updateParametersOrderMutation.mutate,
     copyTemplateParameters: (templateId: string, storeId: string) => 
       copyParametersMutation.mutateAsync({ templateId, storeId }),
     refetchParameters,
-    isSaving: saveParameterMutation.isPending,
+    refetchStore,
+    isSaving: saveParameterMutation.isPending || updateStoreInfoMutation.isPending,
   };
 };
