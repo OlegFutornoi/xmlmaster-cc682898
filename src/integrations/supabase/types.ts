@@ -371,6 +371,7 @@ export type Database = {
       store_template_parameters: {
         Row: {
           created_at: string
+          display_order: number | null
           id: string
           is_active: boolean
           is_required: boolean
@@ -385,6 +386,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_order?: number | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -399,6 +401,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_order?: number | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -771,6 +774,7 @@ export type Database = {
       template_xml_parameters: {
         Row: {
           created_at: string
+          display_order: number | null
           id: string
           is_active: boolean
           is_required: boolean
@@ -784,6 +788,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_order?: number | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -797,6 +802,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_order?: number | null
           id?: string
           is_active?: boolean
           is_required?: boolean

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -140,19 +141,22 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
     mutationFn: async (parametersWithOrder: { id: string; display_order: number }[]) => {
       console.log('Updating parameters order:', parametersWithOrder);
       
-      const { error } = await supabase
-        .from('store_template_parameters')
-        .upsert(
-          parametersWithOrder.map(p => ({
-            id: p.id,
-            display_order: p.display_order
-          })),
-          { onConflict: 'id' }
-        );
+      // Оновлюємо кожен параметр окремо
+      const updatePromises = parametersWithOrder.map(param => 
+        supabase
+          .from('store_template_parameters')
+          .update({ display_order: param.display_order })
+          .eq('id', param.id)
+      );
 
-      if (error) {
-        console.error('Error updating parameters order:', error);
-        throw error;
+      const results = await Promise.all(updatePromises);
+      
+      // Перевіряємо чи всі оновлення пройшли успішно
+      for (const result of results) {
+        if (result.error) {
+          console.error('Error updating parameter order:', result.error);
+          throw result.error;
+        }
       }
     },
     onSuccess: () => {

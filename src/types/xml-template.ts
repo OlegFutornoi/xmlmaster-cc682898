@@ -1,4 +1,3 @@
-
 // Типи для роботи з XML-шаблонами
 export interface XMLTemplate {
   id: string;
@@ -25,7 +24,8 @@ export interface XMLTemplateParameter {
   is_active: boolean;
   is_required: boolean;
   parameter_type: string;
-  parameter_category: 'parameter' | 'characteristic' | 'category' | 'offer';
+  parameter_category: 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency';
+  display_order: number;
   created_at: string;
   updated_at: string;
 }

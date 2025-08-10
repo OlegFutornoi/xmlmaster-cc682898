@@ -410,7 +410,7 @@ const TemplateParametersTable = ({
                 <TableCell className="hidden lg:table-cell">
                   {editingId === parameter.id ? (
                     <Select 
-                      value={editForm.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency' || 'parameter'}
+                      value={(editForm.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency') || 'parameter'}
                       onValueChange={(value: 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency') => setEditForm(prev => ({...prev, parameter_category: value}))}
                     >
                       <SelectTrigger className="w-full">

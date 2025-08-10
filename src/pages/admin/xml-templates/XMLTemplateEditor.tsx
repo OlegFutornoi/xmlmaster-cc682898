@@ -1,3 +1,4 @@
+
 // Редактор XML-шаблонів в адміністративній панелі з розширеною функціональністю
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -79,6 +80,10 @@ const XMLTemplateEditor = () => {
 
   const handleCreateParameter = (parameter: any) => {
     createParameter(parameter);
+  };
+
+  const handleUpdateParameter = (id: string, updates: any) => {
+    updateParameter({ id, updates });
   };
 
   const handleDeleteParameter = (parameterId: string) => {
@@ -232,7 +237,7 @@ const XMLTemplateEditor = () => {
                 ) : (
                   <TemplateParametersTable 
                     parameters={parameters} 
-                    onUpdateParameter={updateParameter}
+                    onUpdateParameter={handleUpdateParameter}
                     onDeleteParameter={handleDeleteParameter}
                     onCreateParameter={handleCreateParameter} 
                     onUpdateParametersOrder={updateParametersOrder}
