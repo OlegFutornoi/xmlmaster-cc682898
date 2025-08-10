@@ -41,6 +41,17 @@ export const activateUserPlan = async (
       }
     }
 
+    // Деактивуємо всі інші активні підписки користувача
+    const { error: deactivateAllError } = await supabase
+      .from('user_tariff_subscriptions')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+      .eq('is_active', true);
+      
+    if (deactivateAllError) {
+      console.error('Error deactivating all active subscriptions:', deactivateAllError);
+    }
+
     // Розраховуємо дату закінчення нової підписки
     const startDate = new Date();
     let endDate = null;
@@ -49,7 +60,7 @@ export const activateUserPlan = async (
       // Створюємо дату закінчення точно через вказану кількість днів
       const end = new Date(startDate);
       end.setDate(end.getDate() + planData.duration_days);
-      // Встановлюємо час на 23:59:59 в день закінчення
+      // Встановлюємо час на кінець дня (23:59:59)
       end.setHours(23, 59, 59, 999);
       endDate = end.toISOString();
       
@@ -59,7 +70,7 @@ export const activateUserPlan = async (
         endDate: endDate,
         startDateMs: startDate.getTime(),
         endDateMs: end.getTime(),
-        durationMs: end.getTime() - startDate.getTime(),
+        actualDurationMs: end.getTime() - startDate.getTime(),
         expectedDurationMs: planData.duration_days * 24 * 60 * 60 * 1000
       });
     } else {

@@ -16,51 +16,73 @@ const UserDashboard = () => {
   const { 
     activeSubscription, 
     isLoading: subscriptionsLoading, 
-    refetchSubscriptions 
+    refetchSubscriptions,
+    checkSubscriptionStatus,
+    hasActiveSubscription
   } = useUserSubscriptions();
   
   useEffect(() => {
-    const checkAndActivateDemoPlan = async () => {
+    const initializeUserSubscription = async () => {
       if (!user) return;
       
-      console.log('Checking subscription status for user:', user.id);
-      await refetchSubscriptions();
+      console.log('Initializing subscription for user:', user.id);
       
-      // Якщо у користувача немає активної підписки, пробуємо активувати демо-план
-      if (!activeSubscription) {
-        console.log('No active subscription found, trying to activate demo plan');
-        const result = await tryActivateDefaultPlan(user.id);
-        if (result) {
-          console.log('Demo plan activated:', result);
-          await refetchSubscriptions();
+      // Спочатку перевіряємо поточний статус підписки
+      await checkSubscriptionStatus();
+      
+      // Чекаємо трохи, щоб дані завантажились
+      setTimeout(async () => {
+        // Якщо у користувача немає активної підписки, пробуємо активувати демо-план
+        if (!hasActiveSubscription) {
+          console.log('No active subscription found, trying to activate demo plan');
+          const result = await tryActivateDefaultPlan(user.id);
+          if (result) {
+            console.log('Demo plan activated:', result);
+            await refetchSubscriptions();
+          }
+        } else {
+          console.log('User has active subscription:', activeSubscription?.tariff_plan.name);
         }
-      } else {
-        console.log('User has active subscription:', activeSubscription.tariff_plan.name);
-      }
+      }, 1000);
     };
     
-    // Перевіряємо підписку та активуємо демо-план при потребі
     if (user) {
-      checkAndActivateDemoPlan();
+      initializeUserSubscription();
     }
     
     // Встановлюємо інтервал для регулярної перевірки підписки
     const intervalId = setInterval(() => {
       if (user) {
         console.log('Periodic subscription check');
-        refetchSubscriptions();
+        checkSubscriptionStatus();
       }
-    }, 60000); // перевірка кожну хвилину
+    }, 30000); // перевірка кожні 30 секунд
     
     return () => {
       clearInterval(intervalId);
     };
-  }, [user]);
+  }, [user, hasActiveSubscription]);
+
+  // Додаємо обробник для фокуса вікна
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user) {
+        console.log('Window focused, checking subscription status');
+        checkSubscriptionStatus();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, checkSubscriptionStatus]);
 
   console.log('UserDashboard render:', {
     subscriptionsLoading,
-    hasActiveSubscription: !!activeSubscription,
-    subscriptionName: activeSubscription?.tariff_plan?.name
+    hasActiveSubscription,
+    subscriptionName: activeSubscription?.tariff_plan?.name,
+    userId: user?.id
   });
 
   if (subscriptionsLoading) {
@@ -73,8 +95,6 @@ const UserDashboard = () => {
       </div>
     );
   }
-
-  const hasActiveSubscription = !!activeSubscription;
 
   return (
     <div className="flex h-screen">

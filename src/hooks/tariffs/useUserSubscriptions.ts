@@ -27,6 +27,48 @@ interface UserSubscription {
   };
 }
 
+// Функція для перевірки чи підписка дійсно активна (не прострочена)
+const isSubscriptionValid = (subscription: UserSubscription): boolean => {
+  if (!subscription.is_active) {
+    return false;
+  }
+
+  // Якщо підписка постійна, вона завжди активна
+  if (subscription.tariff_plan.is_permanent) {
+    return true;
+  }
+
+  // Перевіряємо чи не закінчилась підписка
+  if (subscription.end_date) {
+    const currentTime = new Date().getTime();
+    const endTime = new Date(subscription.end_date).getTime();
+    return currentTime <= endTime;
+  }
+
+  return false;
+};
+
+// Функція для автоматичної деактивації прострочених підписок
+const deactivateExpiredSubscription = async (subscriptionId: string) => {
+  try {
+    console.log(`Deactivating expired subscription: ${subscriptionId}`);
+    const { error } = await extendedSupabase
+      .from('user_tariff_subscriptions')
+      .update({ 
+        is_active: false 
+      })
+      .eq('id', subscriptionId);
+
+    if (error) {
+      console.error('Error deactivating expired subscription:', error);
+    } else {
+      console.log('Successfully deactivated expired subscription');
+    }
+  } catch (error) {
+    console.error('Error in deactivateExpiredSubscription:', error);
+  }
+};
+
 export const useUserSubscriptions = () => {
   const { user } = useAuth();
   const [activeSubscription, setActiveSubscription] = useState<UserSubscription | null>(null);
@@ -75,67 +117,81 @@ export const useUserSubscriptions = () => {
       return data || [];
     },
     enabled: !!user?.id,
-    // Збільшуємо staleTime для цього конкретного запиту
-    staleTime: 10 * 60 * 1000, // 10 хвилин
-    // Вимикаємо автоматичний рефетч
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    staleTime: 1 * 60 * 1000, // 1 хвилина для частіших перевірок
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 2 * 60 * 1000, // Перевіряємо кожні 2 хвилини
   });
 
   useEffect(() => {
-    if (!subscriptions || subscriptions.length === 0) {
-      setActiveSubscription(null);
-      setSubscriptionHistory([]);
-      return;
-    }
-
-    console.log('Current date and time:', new Date().toISOString());
-    
-    let foundActiveSubscription: UserSubscription | null = null;
-
-    // Шукаємо активну підписку
-    for (const subscription of subscriptions) {
-      const currentTime = new Date().getTime();
-      const endTime = subscription.end_date ? new Date(subscription.end_date).getTime() : null;
-      
-      const isExpired = endTime ? currentTime > endTime : false;
-      
-      console.log(`Subscription ${subscription.id} expiry check:`, {
-        currentTime: new Date().toISOString(),
-        endDate: subscription.end_date,
-        currentTimeMs: currentTime,
-        endTimeMs: endTime,
-        isExpired,
-        timeDifference: endTime ? endTime - currentTime : null,
-        hoursLeft: endTime ? Math.floor((endTime - currentTime) / (1000 * 60 * 60)) : null
-      });
-
-      const isCurrentlyActive = subscription.is_active && !isExpired;
-      
-      console.log(`Checking subscription ${subscription.id}:`, {
-        name: subscription.tariff_plan.name,
-        isCurrentlyActive,
-        isExpired,
-        start_date: subscription.start_date,
-        end_date: subscription.end_date,
-        duration_days: subscription.tariff_plan.duration_days,
-        is_permanent: subscription.tariff_plan.is_permanent
-      });
-
-      if (isCurrentlyActive && !foundActiveSubscription) {
-        foundActiveSubscription = subscription;
-        console.log('Found valid active subscription:', subscription.id);
+    const processSubscriptions = async () => {
+      if (!subscriptions || subscriptions.length === 0) {
+        setActiveSubscription(null);
+        setSubscriptionHistory([]);
+        return;
       }
-    }
 
-    setActiveSubscription(foundActiveSubscription);
-    setSubscriptionHistory(subscriptions);
-    
-    console.log('Final state:', {
-      activeSubscription: foundActiveSubscription?.tariff_plan.name || 'None',
-      historyCount: subscriptions.length
-    });
-  }, [subscriptions]);
+      console.log('Processing subscriptions at:', new Date().toISOString());
+      
+      let foundActiveSubscription: UserSubscription | null = null;
+      const expiredSubscriptionsToDeactivate: string[] = [];
+
+      // Перевіряємо всі підписки
+      for (const subscription of subscriptions) {
+        const isValid = isSubscriptionValid(subscription);
+        
+        console.log(`Subscription ${subscription.id} validation:`, {
+          name: subscription.tariff_plan.name,
+          is_active_in_db: subscription.is_active,
+          is_permanent: subscription.tariff_plan.is_permanent,
+          end_date: subscription.end_date,
+          is_valid: isValid,
+          current_time: new Date().toISOString()
+        });
+
+        // Якщо підписка в базі позначена як активна, але насправді прострочена
+        if (subscription.is_active && !isValid && !subscription.tariff_plan.is_permanent) {
+          expiredSubscriptionsToDeactivate.push(subscription.id);
+        }
+
+        // Шукаємо дійсно активну підписку
+        if (isValid && !foundActiveSubscription) {
+          foundActiveSubscription = subscription;
+          console.log('Found valid active subscription:', subscription.id);
+        }
+      }
+
+      // Деактивуємо прострочені підписки
+      if (expiredSubscriptionsToDeactivate.length > 0) {
+        console.log('Deactivating expired subscriptions:', expiredSubscriptionsToDeactivate);
+        for (const subscriptionId of expiredSubscriptionsToDeactivate) {
+          await deactivateExpiredSubscription(subscriptionId);
+        }
+        // Перезавантажуємо дані після деактивації
+        setTimeout(() => {
+          refetchSubscriptions();
+        }, 1000);
+        return;
+      }
+
+      setActiveSubscription(foundActiveSubscription);
+      setSubscriptionHistory(subscriptions);
+      
+      console.log('Final subscription state:', {
+        activeSubscription: foundActiveSubscription?.tariff_plan.name || 'None',
+        historyCount: subscriptions.length,
+        hasValidSubscription: !!foundActiveSubscription
+      });
+    };
+
+    processSubscriptions();
+  }, [subscriptions, refetchSubscriptions]);
+
+  // Додаємо функцію для ручної перевірки статусу
+  const checkSubscriptionStatus = () => {
+    console.log('Manual subscription status check triggered');
+    refetchSubscriptions();
+  };
 
   return {
     subscriptions: subscriptions || [],
@@ -143,6 +199,9 @@ export const useUserSubscriptions = () => {
     subscriptionHistory,
     isLoading,
     error,
-    refetchSubscriptions
+    refetchSubscriptions,
+    checkSubscriptionStatus,
+    // Додаємо допоміжну функцію для перевірки чи є активна підписка
+    hasActiveSubscription: !!activeSubscription
   };
 };

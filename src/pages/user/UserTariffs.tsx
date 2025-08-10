@@ -11,6 +11,7 @@ import { activateUserPlan } from '@/services/subscriptionService';
 import TariffCard from '@/components/user/tariffs/TariffCard';
 import SubscriptionHistoryModal from '@/components/user/tariffs/SubscriptionHistoryModal';
 import PlanConfirmDialog from '@/components/user/tariffs/PlanConfirmDialog';
+import CurrentSubscription from '@/components/user/tariffs/CurrentSubscription';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CreditCard, History } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -25,7 +26,8 @@ const UserTariffs = () => {
     activeSubscription, 
     subscriptionHistory, 
     isLoading: subscriptionsLoading, 
-    refetchSubscriptions 
+    refetchSubscriptions,
+    checkSubscriptionStatus
   } = useUserSubscriptions();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -136,6 +138,12 @@ const UserTariffs = () => {
       </div>
 
       <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4 py-6' : 'px-6 py-8'}`} id="user-tariffs-container">
+        {/* Додаємо відображення поточної підписки */}
+        <CurrentSubscription 
+          subscription={activeSubscription} 
+          onRefresh={checkSubscriptionStatus}
+        />
+
         <div className="mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {tariffPlans.map((plan) => (
