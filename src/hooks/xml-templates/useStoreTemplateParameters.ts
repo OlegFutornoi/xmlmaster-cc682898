@@ -42,53 +42,61 @@ const getCategoryFromXmlPath = (xmlPath: string): 'parameter' | 'characteristic'
 
 // Функція для правильного сортування параметрів згідно з ієрархією XML
 const sortParametersByXMLHierarchy = (params: any[]) => {
+  // Визначення порядку згідно з структурою XML файлу (така ж як в адмін панелі)
   const hierarchyOrder = {
-    // Основна інформація магазину (shop level)
+    // 1. Основна інформація магазину (shop level) - порядок 0-99
     'parameter': {
-      'name': 1,
-      'shop_name': 2,
-      'company': 3,
-      'shop_company': 4,
-      'url': 5,
-      'shop_url': 6,
+      'name': 1,           // <name>Назва магазину</name>
+      'shop_name': 1,
+      'company': 2,        // <company>Назва компанії</company>
+      'shop_company': 2,
+      'url': 3,            // <url>https://example.com</url>
+      'shop_url': 3,
     },
-    // Валюти (currencies level)
+    
+    // 2. Валюти (currencies level) - порядок 100-199
     'currency': {
-      'currency': 10,
-      'currencyId': 11,
-      'currency_id': 12,
-      'currency_code': 13,
-      'rate': 14,
+      'currency': 100,     // <currency id="UAH" rate="1"/>
+      'currencyId': 101,
+      'currency_id': 102,
+      'currency_code': 103,
+      'rate': 104,
+      'id': 105,
     },
-    // Категорії (categories level)
+    
+    // 3. Категорії (categories level) - порядок 200-299
     'category': {
-      'category': 20,
-      'categoryId': 21,
-      'category_id': 22,
-      'category_name': 23,
-      'external_id': 24,
-      'rz_id': 25,
+      'category': 200,     // <category id="391">Назва категорії</category>
+      'categoryId': 201,
+      'category_id': 202,
+      'category_name': 203,
+      'external_id': 204,
+      'rz_id': 205,
+      'id': 206,
     },
-    // Товари (offers level)
+    
+    // 4. Товари (offers level) - порядок 300-999
     'offer': {
-      'offer': 30,
-      'offer_id': 31,
-      'available': 32,
-      'price': 33,
-      'price_old': 34,
-      'price_promo': 35,
-      'currencyId': 36,
-      'categoryId': 37,
-      'picture': 38,
-      'vendor': 39,
-      'name': 40,
-      'description': 41,
-      'stock_quantity': 42,
-      'url': 43,
+      'offer': 300,        // <offer id="1001" available="true">
+      'offer_id': 301,
+      'id': 302,
+      'available': 303,    // <available>true</available>
+      'price': 310,        // <price>Ціна товару</price>
+      'price_old': 311,    // <price_old>Попередня ціна</price_old>
+      'price_promo': 312,  // <price_promo>Акційна ціна</price_promo>
+      'currencyId': 320,   // <currencyId>UAH</currencyId>
+      'categoryId': 321,   // <categoryId>391</categoryId>
+      'picture': 330,      // <picture>Посилання на фото</picture>
+      'vendor': 340,       // <vendor>Виробник</vendor>
+      'name': 350,         // <name>Назва товару</name>
+      'description': 360,  // <description><![CDATA[Опис товару]]></description>
+      'stock_quantity': 370, // <stock_quantity>Кількість на складі</stock_quantity>
+      'url': 380,          // <url>Посилання на сайт</url>
     },
-    // Характеристики товарів (offer params level)
+    
+    // 5. Характеристики товарів (offer params level) - порядок від 1000
     'characteristic': {
-      'param': 50,
+      'param': 1000,       // <param name="Название характеристики">Значение характеристики</param>
     }
   };
 
@@ -96,8 +104,11 @@ const sortParametersByXMLHierarchy = (params: any[]) => {
     const categoryA = a.parameter_category || 'parameter';
     const categoryB = b.parameter_category || 'parameter';
     
-    const orderA = hierarchyOrder[categoryA as keyof typeof hierarchyOrder]?.[a.parameter_name as keyof any] || 999;
-    const orderB = hierarchyOrder[categoryB as keyof typeof hierarchyOrder]?.[b.parameter_name as keyof any] || 999;
+    // Отримуємо порядок для кожного параметру
+    const orderA = hierarchyOrder[categoryA as keyof typeof hierarchyOrder]?.[a.parameter_name as keyof any] || 
+                   (categoryA === 'characteristic' ? 1000 + (a.display_order || 0) : 9999);
+    const orderB = hierarchyOrder[categoryB as keyof typeof hierarchyOrder]?.[b.parameter_name as keyof any] || 
+                   (categoryB === 'characteristic' ? 1000 + (b.display_order || 0) : 9999);
     
     if (orderA !== orderB) {
       return orderA - orderB;
@@ -136,7 +147,7 @@ export const useStoreTemplateParameters = (storeId: string, templateId: string |
 
       console.log('Fetched store template parameters:', data);
       
-      // Приводимо типи до правильного формату та сортуємо
+      // Приводимо типи до правильного формату та застосовуємо правильне сортування
       const typedData = (data || []).map(item => ({
         ...item,
         parameter_category: item.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency'
