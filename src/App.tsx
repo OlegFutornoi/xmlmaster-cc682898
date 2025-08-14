@@ -1,4 +1,3 @@
-
 // Файл App.tsx - Головний компонент додатку
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -19,6 +18,7 @@ import UserDashboardHome from "./pages/user/UserDashboardHome";
 import UserTariffs from "./pages/user/UserTariffs";
 import UserStores from "./pages/user/UserStores";
 import UserSuppliers from "./pages/user/UserSuppliers";
+import UserSettings from "./pages/user/UserSettings";
 import UserRoute from "./components/auth/UserRoute";
 
 // Admin pages
@@ -63,6 +63,7 @@ const App = () => (
               <Route path="tariffs" element={<UserTariffs />} />
               <Route path="stores" element={<UserStores />} />
               <Route path="suppliers" element={<UserSuppliers />} />
+              <Route path="settings" element={<UserSettings />} />
             </Route>
             
             {/* Admin routes */}
