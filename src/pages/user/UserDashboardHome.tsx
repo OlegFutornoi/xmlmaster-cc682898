@@ -1,55 +1,32 @@
 
-// Компонент головної сторінки панелі користувача
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Головна сторінка панелі користувача
+import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
-import { tryActivateDefaultPlan } from '@/services/subscriptionService';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Store, 
+  Truck, 
+  CreditCard, 
+  TrendingUp,
+  Calendar,
+  Users
+} from 'lucide-react';
 
 const UserDashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { 
     activeSubscription, 
-    isLoading: subscriptionsLoading, 
     hasActiveSubscription,
-    refetchSubscriptions 
+    isLoading 
   } = useUserSubscriptions();
 
-  useEffect(() => {
-    const initializeSubscription = async () => {
-      if (!user?.id || subscriptionsLoading) {
-        return;
-      }
-
-      console.log('Initializing subscription for user:', user.id);
-
-      if (!hasActiveSubscription) {
-        console.log('No active subscription found, trying to activate demo plan');
-        const demoSubscription = await tryActivateDefaultPlan(user.id);
-        if (demoSubscription) {
-          console.log('Demo plan activated:', demoSubscription);
-          await refetchSubscriptions();
-        }
-      } else {
-        console.log('User has active subscription:', activeSubscription?.tariff_plan.name);
-      }
-    };
-
-    initializeSubscription();
-  }, [user?.id, subscriptionsLoading, hasActiveSubscription]);
-
-  // Блокуємо доступ до дашборду якщо немає активної підписки
-  useEffect(() => {
-    if (!subscriptionsLoading && !hasActiveSubscription) {
-      console.log('No active subscription, redirecting to tariffs');
-      navigate('/user/dashboard/tariffs', { replace: true });
-    }
-  }, [subscriptionsLoading, hasActiveSubscription, navigate]);
-
-  if (subscriptionsLoading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Завантаження...</p>
@@ -58,86 +35,133 @@ const UserDashboardHome = () => {
     );
   }
 
-  if (!hasActiveSubscription) {
-    return null;
-  }
-
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-emerald-100 p-8">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">🏠</span>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Вітаємо!</h1>
-              <p className="text-gray-600">Ваш персональний кабінет готовий до роботи</p>
-            </div>
-          </div>
+    <div className="space-y-6" id="user-dashboard-home">
+      {/* Welcome Section */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Ласкаво просимо, {user?.email}!
+        </h1>
+        <p className="text-gray-600">
+          Керуйте своїми магазинами та постачальниками в одному місці
+        </p>
+      </div>
 
-          {activeSubscription && (
-            <div className="bg-emerald-50 rounded-xl p-6 mb-8 border border-emerald-200">
-              <h2 className="text-lg font-semibold text-emerald-800 mb-2">Поточний тариф</h2>
-              <p className="text-emerald-700">
-                {activeSubscription.tariff_plan.name} 
-                {activeSubscription.tariff_plan.is_permanent 
-                  ? ' (Постійний доступ)' 
-                  : activeSubscription.end_date 
-                    ? ` до ${new Date(activeSubscription.end_date).toLocaleDateString('uk-UA')}` 
-                    : ''
-                }
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-blue-600 text-xl">🏪</span>
+      {/* Subscription Status */}
+      {hasActiveSubscription ? (
+        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-emerald-800">
+              <CreditCard className="h-5 w-5" />
+              Активна підписка
+            </CardTitle>
+            <CardDescription>
+              Ваш поточний тарифний план: <strong>{activeSubscription?.tariff_plan.name}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-emerald-700">
+                Підписка активна до: {new Date(activeSubscription?.ends_at).toLocaleDateString('uk-UA')}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Магазини</h3>
-              <p className="text-gray-600 text-sm mb-4">Керування вашими магазинами</p>
-              <button 
-                onClick={() => navigate('/user/dashboard/stores')}
-                className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                id="go-to-stores-link"
-              >
-                Перейти →
-              </button>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-green-600 text-xl">📦</span>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Постачальники</h3>
-              <p className="text-gray-600 text-sm mb-4">Керування постачальниками</p>
-              <button 
-                onClick={() => navigate('/user/dashboard/suppliers')}
-                className="text-green-600 hover:text-green-700 font-medium text-sm"
-                id="go-to-suppliers-link"
-              >
-                Перейти →
-              </button>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-purple-600 text-xl">💳</span>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Тарифи</h3>
-              <p className="text-gray-600 text-sm mb-4">Керування тарифними планами</p>
-              <button 
+              <Button 
+                variant="outline" 
+                size="sm"
                 onClick={() => navigate('/user/dashboard/tariffs')}
-                className="text-purple-600 hover:text-purple-700 font-medium text-sm"
-                id="go-to-tariffs-link"
+                id="view-tariffs-button"
               >
-                Перейти →
-              </button>
+                Переглянути тарифи
+              </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <CreditCard className="h-5 w-5" />
+              Оберіть тарифний план
+            </CardTitle>
+            <CardDescription>
+              Для доступу до всіх функцій потрібно активувати підписку
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate('/user/dashboard/tariffs')}
+              className="bg-orange-600 hover:bg-orange-700"
+              id="activate-subscription-button"
+            >
+              Обрати тариф
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Actions */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className={!hasActiveSubscription ? "opacity-50" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Store className="h-5 w-5 text-blue-600" />
+              Магазини
+            </CardTitle>
+            <CardDescription>
+              Керування вашими магазинами
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/user/dashboard/stores')}
+              disabled={!hasActiveSubscription}
+              id="manage-stores-button"
+            >
+              {hasActiveSubscription ? 'Керувати магазинами' : 'Потрібна підписка'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className={!hasActiveSubscription ? "opacity-50" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Truck className="h-5 w-5 text-green-600" />
+              Постачальники
+            </CardTitle>
+            <CardDescription>
+              Керування постачальниками
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/user/dashboard/suppliers')}
+              disabled={!hasActiveSubscription}
+              id="manage-suppliers-button"
+            >
+              {hasActiveSubscription ? 'Керувати постачальниками' : 'Потрібна підписка'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+              Статистика
+            </CardTitle>
+            <CardDescription>
+              Аналітика та звіти
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-gray-600">
+              Скоро буде доступно
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
