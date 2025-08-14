@@ -14,7 +14,11 @@ import NotFound from "./pages/NotFound";
 // User pages
 import UserLogin from "./pages/user/UserLogin";
 import UserRegister from "./pages/user/UserRegister";
-import UserDashboard from "./pages/user/UserDashboard";
+import UserDashboardLayout from "./components/user/UserDashboardLayout";
+import UserDashboardHome from "./pages/user/UserDashboardHome";
+import UserTariffs from "./pages/user/UserTariffs";
+import UserStores from "./pages/user/UserStores";
+import UserSuppliers from "./pages/user/UserSuppliers";
 import UserRoute from "./components/auth/UserRoute";
 
 // Admin pages
@@ -48,13 +52,18 @@ const App = () => (
             <Route path="/user/login" element={<UserLogin />} />
             <Route path="/user/register" element={<UserRegister />} />
             <Route 
-              path="/user/dashboard/*" 
+              path="/user/dashboard" 
               element={
                 <UserRoute>
-                  <UserDashboard />
+                  <UserDashboardLayout />
                 </UserRoute>
-              } 
-            />
+              }
+            >
+              <Route index element={<UserDashboardHome />} />
+              <Route path="tariffs" element={<UserTariffs />} />
+              <Route path="stores" element={<UserStores />} />
+              <Route path="suppliers" element={<UserSuppliers />} />
+            </Route>
             
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
