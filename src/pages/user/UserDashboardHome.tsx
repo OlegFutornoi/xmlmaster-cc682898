@@ -1,167 +1,170 @@
 
-// Головна сторінка панелі користувача
+// Компонент головної сторінки панелі користувача
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useUserSubscriptions } from '@/hooks/tariffs/useUserSubscriptions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Store, 
-  Truck, 
-  CreditCard, 
-  TrendingUp,
-  Calendar,
-  Users
-} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Store, Truck, CreditCard, Settings, Calendar, Clock } from 'lucide-react';
 
 const UserDashboardHome = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const { 
-    activeSubscription, 
-    hasActiveSubscription,
-    isLoading 
-  } = useUserSubscriptions();
+  const { activeSubscription, hasActiveSubscription } = useUserSubscriptions();
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Завантаження...</p>
-        </div>
-      </div>
-    );
-  }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('uk-UA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const quickActions = [
+    {
+      title: 'Магазини',
+      description: 'Керуйте своїми магазинами та налаштуваннями',
+      icon: Store,
+      href: '/user/dashboard/stores',
+      disabled: !hasActiveSubscription,
+    },
+    {
+      title: 'Постачальники',
+      description: 'Налаштуйте інтеграції з постачальниками',
+      icon: Truck,
+      href: '/user/dashboard/suppliers',
+      disabled: !hasActiveSubscription,
+    },
+    {
+      title: 'Тарифи',
+      description: 'Переглядайте та керуйте підписками',
+      icon: CreditCard,
+      href: '/user/dashboard/tariffs',
+      disabled: false,
+    },
+    {
+      title: 'Налаштування',
+      description: 'Налаштування профілю та системи',
+      icon: Settings,
+      href: '/user/dashboard/settings',
+      disabled: !hasActiveSubscription,
+    },
+  ];
 
   return (
-    <div className="space-y-6" id="user-dashboard-home">
+    <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Ласкаво просимо, {user?.email}!
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-emerald-100">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Вітаємо, {user?.email}!
         </h1>
         <p className="text-gray-600">
-          Керуйте своїми магазинами та постачальниками в одному місці
+          Керуйте своїми магазинами та інтеграціями з постачальниками через XML Master
         </p>
       </div>
 
       {/* Subscription Status */}
-      {hasActiveSubscription ? (
-        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-emerald-800">
-              <CreditCard className="h-5 w-5" />
-              Активна підписка
-            </CardTitle>
-            <CardDescription>
-              Ваш поточний тарифний план: <strong>{activeSubscription?.tariff_plan.name}</strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-emerald-700">
-                Підписка активна до: {new Date(activeSubscription?.ends_at).toLocaleDateString('uk-UA')}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Статус підписки
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {hasActiveSubscription && activeSubscription ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{activeSubscription.tariff_plan.name}</p>
+                  <p className="text-sm text-gray-600">
+                    Активна підписка
+                  </p>
+                </div>
+                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
+                  Активна
+                </Badge>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate('/user/dashboard/tariffs')}
-                id="view-tariffs-button"
-              >
-                Переглянути тарифи
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <p className="text-sm font-medium">Дата початку</p>
+                    <p className="text-sm text-gray-600">
+                      {formatDate(activeSubscription.start_date)}
+                    </p>
+                  </div>
+                </div>
+                
+                {activeSubscription.end_date && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium">Дата завершення</p>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(activeSubscription.end_date)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">У вас немає активної підписки</p>
+              <Button asChild>
+                <Link to="/user/dashboard/tariffs">
+                  Переглянути тарифи
+                </Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
-              <CreditCard className="h-5 w-5" />
-              Оберіть тарифний план
-            </CardTitle>
-            <CardDescription>
-              Для доступу до всіх функцій потрібно активувати підписку
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => navigate('/user/dashboard/tariffs')}
-              className="bg-orange-600 hover:bg-orange-700"
-              id="activate-subscription-button"
-            >
-              Обрати тариф
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className={!hasActiveSubscription ? "opacity-50" : ""}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Store className="h-5 w-5 text-blue-600" />
-              Магазини
-            </CardTitle>
-            <CardDescription>
-              Керування вашими магазинами
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate('/user/dashboard/stores')}
-              disabled={!hasActiveSubscription}
-              id="manage-stores-button"
-            >
-              {hasActiveSubscription ? 'Керувати магазинами' : 'Потрібна підписка'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className={!hasActiveSubscription ? "opacity-50" : ""}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Truck className="h-5 w-5 text-green-600" />
-              Постачальники
-            </CardTitle>
-            <CardDescription>
-              Керування постачальниками
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate('/user/dashboard/suppliers')}
-              disabled={!hasActiveSubscription}
-              id="manage-suppliers-button"
-            >
-              {hasActiveSubscription ? 'Керувати постачальниками' : 'Потрібна підписка'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
-              Статистика
-            </CardTitle>
-            <CardDescription>
-              Аналітика та звіти
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-gray-600">
-              Скоро буде доступно
-            </div>
-          </CardContent>
-        </Card>
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Швидкі дії</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Card 
+                key={action.title} 
+                className={`transition-all duration-200 ${
+                  action.disabled 
+                    ? 'opacity-60 cursor-not-allowed' 
+                    : 'hover:shadow-md cursor-pointer'
+                }`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Icon className={`h-5 w-5 ${action.disabled ? 'text-gray-400' : 'text-emerald-600'}`} />
+                    <CardTitle className="text-base">{action.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CardDescription className="mb-4">
+                    {action.description}
+                  </CardDescription>
+                  {action.disabled ? (
+                    <Button variant="outline" disabled className="w-full">
+                      Потрібна підписка
+                    </Button>
+                  ) : (
+                    <Button asChild className="w-full">
+                      <Link to={action.href}>
+                        Перейти
+                      </Link>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

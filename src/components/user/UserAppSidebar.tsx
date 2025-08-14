@@ -30,7 +30,7 @@ interface UserAppSidebarProps {
   hasActiveSubscription: boolean;
 }
 
-const UserAppSidebar: React.FC<UserAppSidebarProps> = ({ hasActiveSubscription }) => {
+export const UserAppSidebar: React.FC<UserAppSidebarProps> = ({ hasActiveSubscription }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -82,7 +82,7 @@ const UserAppSidebar: React.FC<UserAppSidebarProps> = ({ hasActiveSubscription }
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
+    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent className="bg-white border-r border-gray-200">
         {/* Header */}
         {!collapsed && (
@@ -163,5 +163,3 @@ const UserAppSidebar: React.FC<UserAppSidebarProps> = ({ hasActiveSubscription }
     </Sidebar>
   );
 };
-
-export default UserAppSidebar;
