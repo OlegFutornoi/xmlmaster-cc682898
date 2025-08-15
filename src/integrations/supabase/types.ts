@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -375,10 +375,12 @@ export type Database = {
           id: string
           is_active: boolean
           is_required: boolean
+          nested_values: Json | null
           parameter_category: string
           parameter_name: string
           parameter_type: string
           parameter_value: string | null
+          parent_parameter: string | null
           store_id: string
           template_id: string
           updated_at: string
@@ -390,10 +392,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
+          nested_values?: Json | null
           parameter_category?: string
           parameter_name: string
           parameter_type?: string
           parameter_value?: string | null
+          parent_parameter?: string | null
           store_id: string
           template_id: string
           updated_at?: string
@@ -405,10 +409,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
+          nested_values?: Json | null
           parameter_category?: string
           parameter_name?: string
           parameter_type?: string
           parameter_value?: string | null
+          parent_parameter?: string | null
           store_id?: string
           template_id?: string
           updated_at?: string
@@ -778,10 +784,12 @@ export type Database = {
           id: string
           is_active: boolean
           is_required: boolean
+          nested_values: Json | null
           parameter_category: string
           parameter_name: string
           parameter_type: string
           parameter_value: string | null
+          parent_parameter: string | null
           template_id: string
           updated_at: string
           xml_path: string
@@ -792,10 +800,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
+          nested_values?: Json | null
           parameter_category?: string
           parameter_name: string
           parameter_type?: string
           parameter_value?: string | null
+          parent_parameter?: string | null
           template_id: string
           updated_at?: string
           xml_path: string
@@ -806,10 +816,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
+          nested_values?: Json | null
           parameter_category?: string
           parameter_name?: string
           parameter_type?: string
           parameter_value?: string | null
+          parent_parameter?: string | null
           template_id?: string
           updated_at?: string
           xml_path?: string

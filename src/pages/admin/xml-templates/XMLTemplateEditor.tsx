@@ -43,9 +43,8 @@ const XMLTemplateEditor = () => {
   const { 
     parameters, 
     isLoading: isLoadingParameters, 
-    createParameter,
+    createParameterAsync,
     updateParameter,
-    updateParametersOrder,
     deleteParameter,
     isCreating,
     isUpdating: isUpdatingParameter,
@@ -80,31 +79,6 @@ const XMLTemplateEditor = () => {
     });
   };
 
-  const handleCreateParameter = (parameter: any) => {
-    createParameter(parameter);
-  };
-
-  const handleUpdateParameter = (id: string, updates: any) => {
-    updateParameter({ id, updates });
-  };
-
-  const handleDeleteParameter = (parameterId: string) => {
-    deleteParameter(parameterId);
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && (file.type === 'text/xml' || file.name.endsWith('.xml'))) {
-      setXmlFile(file);
-    } else {
-      toast({
-        title: "Помилка",
-        description: "Будь ласка, виберіть XML файл",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleImportXML = async () => {
     if (!id) return;
     
@@ -128,8 +102,26 @@ const XMLTemplateEditor = () => {
       
       console.log('Імпорт XML:', { method: importMethod, contentLength: xmlContent.length });
       
-      // Використовуємо нову функцію парсингу
-      const importedCount = await importXMLParameters(xmlContent, id, createParameter);
+      // Спочатку видаляємо всі існуючі параметри шаблону
+      console.log('Clearing existing parameters...');
+      for (const param of parameters) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            deleteParameter(param.id, {
+              onSuccess: () => resolve(),
+              onError: (error: any) => reject(error)
+            });
+          });
+        } catch (error) {
+          console.error(`Error deleting parameter ${param.id}:`, error);
+        }
+      }
+      
+      // Чекаємо трохи щоб база даних оновилася
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Використовуємо нову функцію парсингу з асинхронним створенням параметрів
+      const importedCount = await importXMLParameters(xmlContent, id, createParameterAsync);
       
       toast({
         title: "Успіх",
@@ -149,6 +141,31 @@ const XMLTemplateEditor = () => {
       });
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const handleCreateParameter = (parameter: any) => {
+    createParameterAsync(parameter);
+  };
+
+  const handleUpdateParameter = (id: string, updates: any) => {
+    updateParameter({ id, updates });
+  };
+
+  const handleDeleteParameter = (parameterId: string) => {
+    deleteParameter(parameterId);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && (file.type === 'text/xml' || file.name.endsWith('.xml'))) {
+      setXmlFile(file);
+    } else {
+      toast({
+        title: "Помилка",
+        description: "Будь ласка, виберіть XML файл",
+        variant: "destructive",
+      });
     }
   };
 
@@ -305,7 +322,6 @@ const XMLTemplateEditor = () => {
                         onUpdateParameter={handleUpdateParameter}
                         onDeleteParameter={handleDeleteParameter}
                         onCreateParameter={handleCreateParameter} 
-                        onUpdateParametersOrder={updateParametersOrder}
                         templateId={id || ''} 
                       />
                     )}
