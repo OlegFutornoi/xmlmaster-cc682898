@@ -1,4 +1,3 @@
-
 // Редактор XML-шаблонів в адміністративній панелі з розширеною функціональністю
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -18,6 +17,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { toast } from '@/hooks/use-toast';
 import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { importXMLParameters } from '@/utils/xmlParser';
 
 const XMLTemplateEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +28,7 @@ const XMLTemplateEditor = () => {
   const [xmlUrl, setXmlUrl] = useState('');
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('general-info');
+  const [isImporting, setIsImporting] = useState(false);
 
   // Форма для редагування шаблону
   const [templateForm, setTemplateForm] = useState({
@@ -93,15 +94,62 @@ const XMLTemplateEditor = () => {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === 'text/xml') {
+    if (file && (file.type === 'text/xml' || file.name.endsWith('.xml'))) {
       setXmlFile(file);
+    } else {
+      toast({
+        title: "Помилка",
+        description: "Будь ласка, виберіть XML файл",
+        variant: "destructive",
+      });
     }
   };
 
   const handleImportXML = async () => {
-    console.log('Імпорт XML:', { method: importMethod, url: xmlUrl, file: xmlFile });
-    // TODO: Реалізувати парсинг XML та створення параметрів
-    setIsXMLImportDialogOpen(false);
+    if (!id) return;
+    
+    setIsImporting(true);
+    try {
+      let xmlContent = '';
+      
+      if (importMethod === 'file' && xmlFile) {
+        xmlContent = await xmlFile.text();
+      } else if (importMethod === 'url' && xmlUrl) {
+        const response = await fetch(xmlUrl);
+        if (!response.ok) {
+          throw new Error('Не вдалося завантажити XML за URL');
+        }
+        xmlContent = await response.text();
+      }
+      
+      if (!xmlContent) {
+        throw new Error('Не вдалося отримати XML контент');
+      }
+      
+      console.log('Імпорт XML:', { method: importMethod, contentLength: xmlContent.length });
+      
+      // Використовуємо нову функцію парсингу
+      const importedCount = await importXMLParameters(xmlContent, id, createParameter);
+      
+      toast({
+        title: "Успіх",
+        description: `XML структуру імпортовано успішно! Додано ${importedCount} параметрів.`,
+      });
+      
+      setIsXMLImportDialogOpen(false);
+      setXmlFile(null);
+      setXmlUrl('');
+      
+    } catch (error: any) {
+      console.error('Import XML error:', error);
+      toast({
+        title: "Помилка",
+        description: error.message || "Не вдалося імпортувати XML структуру",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   if (!currentTemplate) {
@@ -153,6 +201,15 @@ const XMLTemplateEditor = () => {
               </div>
               <div className={`flex gap-2 ${isMobile ? 'mt-2' : 'mt-4 md:mt-0'}`}>
                 <Button 
+                  onClick={() => setIsXMLImportDialogOpen(true)} 
+                  variant="outline" 
+                  size={isMobile ? "sm" : "default"}
+                  id="import-xml-button"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isMobile ? 'XML' : 'Імпорт XML'}
+                </Button>
+                <Button 
                   onClick={handleSaveTemplate} 
                   disabled={isUpdating} 
                   className="bg-blue-600 hover:bg-blue-700 text-white" 
@@ -174,7 +231,6 @@ const XMLTemplateEditor = () => {
               </TabsList>
 
               <TabsContent value="general-info" className="space-y-6 mt-6">
-                {/* Основна інформація про шаблон */}
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader className={isMobile ? 'p-4' : ''}>
                     <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
@@ -237,7 +293,6 @@ const XMLTemplateEditor = () => {
               </TabsContent>
 
               <TabsContent value="parameters" className="space-y-6 mt-6">
-                {/* Структура параметрів */}
                 <Card className="border-0 shadow-sm bg-white">
                   <CardContent className="p-6">
                     {isLoadingParameters ? (
@@ -266,7 +321,7 @@ const XMLTemplateEditor = () => {
               <DialogHeader>
                 <DialogTitle>Імпорт XML-структури</DialogTitle>
                 <DialogDescription>
-                  Завантажте XML-файл або вкажіть URL для оновлення структури шаблону
+                  Завантажте XML-файл або вкажіть URL для автоматичного створення параметрів шаблону
                 </DialogDescription>
               </DialogHeader>
               <Tabs value={importMethod} onValueChange={(value) => setImportMethod(value as 'file' | 'url')}>
@@ -280,9 +335,14 @@ const XMLTemplateEditor = () => {
                     <Input 
                       id="xml-file" 
                       type="file" 
-                      accept=".xml" 
+                      accept=".xml,text/xml" 
                       onChange={handleFileUpload} 
                     />
+                    {xmlFile && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Вибрано файл: {xmlFile.name}
+                      </p>
+                    )}
                   </div>
                 </TabsContent>
                 <TabsContent value="url" className="space-y-4">
@@ -298,15 +358,15 @@ const XMLTemplateEditor = () => {
                 </TabsContent>
               </Tabs>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsXMLImportDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsXMLImportDialogOpen(false)} disabled={isImporting}>
                   Скасувати
                 </Button>
                 <Button 
                   onClick={handleImportXML} 
-                  disabled={importMethod === 'file' ? !xmlFile : !xmlUrl} 
+                  disabled={isImporting || (importMethod === 'file' ? !xmlFile : !xmlUrl)} 
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Імпортувати XML
+                  {isImporting ? 'Імпорт...' : 'Імпортувати XML'}
                 </Button>
               </div>
             </DialogContent>
