@@ -28,6 +28,8 @@ export interface XMLTemplateParameter {
   display_order: number;
   created_at: string;
   updated_at: string;
+  parent_parameter?: string;
+  nested_values?: Array<{ lang?: string; value: string }>;
 }
 
 export interface TemplateCurrency {
