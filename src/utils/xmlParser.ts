@@ -20,7 +20,7 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
   const parameters: ParsedXMLParameter[] = [];
   let displayOrder = 0;
 
-  console.log('Starting XML parsing...');
+  console.log('Розпочинаємо детальний парсинг XML...');
 
   // Функція для додавання параметру
   const addParameter = (
@@ -47,78 +47,94 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
     };
     
     parameters.push(parameter);
-    console.log(`Added parameter: ${name} = ${value}, category: ${category}, order: ${parameter.display_order}`);
+    console.log(`✅ Додано параметр [${displayOrder-1}]: ${name} = "${value}" (${category}) -> ${xmlPath}`);
   };
 
-  // 1. ОСНОВНА ІНФОРМАЦІЯ МАГАЗИНУ (shop level) - display_order: 0-99
+  // 1. ОСНОВНА ІНФОРМАЦІЯ МАГАЗИНУ (shop level)
+  console.log('🏪 Обробка інформації магазину...');
   const shop = xmlDoc.querySelector('shop');
   if (shop) {
-    console.log('Processing shop information...');
-    
     const name = shop.querySelector('name');
-    if (name) {
-      addParameter('shop_name', name.textContent, 'parameter', 'shop/name', 'text', true);
+    if (name?.textContent) {
+      addParameter('shop_name', name.textContent.trim(), 'parameter', 'shop/name', 'text', true);
     }
 
     const company = shop.querySelector('company');
-    if (company) {
-      addParameter('shop_company', company.textContent, 'parameter', 'shop/company', 'text', false);
+    if (company?.textContent) {
+      addParameter('shop_company', company.textContent.trim(), 'parameter', 'shop/company', 'text', false);
     }
 
     const url = shop.querySelector('url');
-    if (url) {
-      addParameter('shop_url', url.textContent, 'parameter', 'shop/url', 'url', false);
+    if (url?.textContent) {
+      addParameter('shop_url', url.textContent.trim(), 'parameter', 'shop/url', 'url', false);
     }
   }
 
-  // 2. ВАЛЮТИ (currencies level) - display_order: 100-199
+  // 2. ВАЛЮТИ (currencies level)
+  console.log('💱 Обробка валют...');
   const currencies = xmlDoc.querySelectorAll('currencies currency');
-  console.log(`Found ${currencies.length} currencies`);
+  console.log(`Знайдено ${currencies.length} валют`);
   
   currencies.forEach((currency, index) => {
     const currencyId = currency.getAttribute('id');
-    const rate = currency.getAttribute('rate');
+    const rate = currency.getAttribute('rate') || '1';
     
     if (currencyId) {
-      console.log(`Processing currency: ${currencyId}, rate: ${rate}`);
+      console.log(`💰 Обробка валюти: ${currencyId}, курс: ${rate}`);
+      
       // Додаємо групуючий параметр для валюти
-      addParameter(`currency_${currencyId}`, `${currencyId} (${rate})`, 'currency', `currencies/currency[${index + 1}]`, 'text', true);
+      const groupName = `currency_${currencyId}`;
+      addParameter(groupName, `${currencyId} (курс: ${rate})`, 'currency', `currencies/currency[@id="${currencyId}"]`, 'text', true);
+      
       // Додаємо ID валюти як підпараметр
-      addParameter(`currency_${currencyId}_id`, currencyId, 'currency', `currencies/currency[${index + 1}]/@id`, 'text', true, `currency_${currencyId}`);
+      addParameter(`${groupName}_id`, currencyId, 'currency', `currencies/currency[@id="${currencyId}"]/@id`, 'text', true, groupName);
+      
       // Додаємо курс валюти як підпараметр
-      addParameter(`currency_${currencyId}_rate`, rate || '1', 'currency', `currencies/currency[${index + 1}]/@rate`, 'number', true, `currency_${currencyId}`);
+      addParameter(`${groupName}_rate`, rate, 'currency', `currencies/currency[@id="${currencyId}"]/@rate`, 'number', true, groupName);
     }
   });
 
-  // 3. КАТЕГОРІЇ (categories level) - display_order: 200-299
+  // 3. КАТЕГОРІЇ (categories level)
+  console.log('📂 Обробка категорій...');
   const categories = xmlDoc.querySelectorAll('categories category');
-  console.log(`Found ${categories.length} categories`);
+  console.log(`Знайдено ${categories.length} категорій`);
   
   categories.forEach((category, index) => {
     const categoryId = category.getAttribute('id');
-    const categoryName = category.textContent;
+    const categoryName = category.textContent?.trim();
+    const rzId = category.getAttribute('rz_id');
     
-    if (categoryId) {
-      console.log(`Processing category: ${categoryId} = ${categoryName}`);
+    if (categoryId && categoryName) {
+      console.log(`📋 Обробка категорії: ${categoryId} = "${categoryName}"${rzId ? ` (rz_id: ${rzId})` : ''}`);
+      
       // Додаємо групуючий параметр для категорії
-      addParameter(`category_${categoryId}`, `${categoryName} (ID: ${categoryId})`, 'category', `categories/category[${index + 1}]`, 'text', true);
+      const groupName = `category_${categoryId}`;
+      addParameter(groupName, `${categoryName} (ID: ${categoryId})`, 'category', `categories/category[@id="${categoryId}"]`, 'text', true);
+      
       // Додаємо ID категорії як підпараметр
-      addParameter(`category_${categoryId}_id`, categoryId, 'category', `categories/category[${index + 1}]/@id`, 'text', true, `category_${categoryId}`);
+      addParameter(`${groupName}_id`, categoryId, 'category', `categories/category[@id="${categoryId}"]/@id`, 'text', true, groupName);
+      
       // Додаємо назву категорії як підпараметр
-      addParameter(`category_${categoryId}_name`, categoryName, 'category', `categories/category[${index + 1}]`, 'text', true, `category_${categoryId}`);
+      addParameter(`${groupName}_name`, categoryName, 'category', `categories/category[@id="${categoryId}"]`, 'text', true, groupName);
+      
+      // Додаємо rz_id якщо є
+      if (rzId) {
+        addParameter(`${groupName}_rz_id`, rzId, 'category', `categories/category[@id="${categoryId}"]/@rz_id`, 'text', false, groupName);
+      }
     }
   });
 
-  // 4. ТОВАРИ (offers level) - display_order: 300-899
+  // 4. ТОВАРИ (offers level) - обробляємо перший товар як зразок
+  console.log('🛍️ Обробка товарів...');
   const offers = xmlDoc.querySelectorAll('offers offer');
-  console.log(`Found ${offers.length} offers`);
+  console.log(`Знайдено ${offers.length} товарів`);
   
   if (offers.length > 0) {
-    const offer = offers[0]; // Беремо перший товар як приклад структури
+    const offer = offers[0]; // Беремо перший товар як зразок структури
     const offerId = offer.getAttribute('id');
     const available = offer.getAttribute('available');
     
-    console.log(`Processing offer: ${offerId}, available: ${available}`);
+    console.log(`🎯 Обробка товару-зразка: ${offerId}, доступний: ${available}`);
     
     // Додаємо атрибути товару
     if (offerId) {
@@ -129,15 +145,14 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
     }
 
     // Обробляємо всі дочірні елементи товару в правильному порядку
-    const offerChildren = offer.children;
-    console.log(`Offer has ${offerChildren.length} child elements`);
+    const offerChildren = Array.from(offer.children);
+    console.log(`Товар має ${offerChildren.length} дочірніх елементів`);
     
-    for (let i = 0; i < offerChildren.length; i++) {
-      const child = offerChildren[i];
+    offerChildren.forEach((child, childIndex) => {
       const tagName = child.tagName.toLowerCase();
       
       // Пропускаємо param теги, їх обробимо окремо
-      if (tagName === 'param') continue;
+      if (tagName === 'param') return;
       
       const value = child.textContent?.trim();
       let paramType = 'text';
@@ -151,22 +166,23 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
         paramType = 'textarea';
       }
       
-      console.log(`Adding offer parameter: ${tagName} = ${value?.substring(0, 50)}...`);
+      console.log(`📝 Додаємо параметр товару: ${tagName} = "${value?.substring(0, 50)}${value && value.length > 50 ? '...' : ''}"`);
       addParameter(tagName, value || null, 'offer', `offers/offer/${tagName}`, paramType, false);
-    }
-  }
+    });
 
-  // 5. ХАРАКТЕРИСТИКИ ТОВАРУ (param elements) - display_order: 900+
-  if (offers.length > 0) {
-    const offer = offers[0];
+    // 5. ХАРАКТЕРИСТИКИ ТОВАРУ (param elements)
+    console.log('🔧 Обробка характеристик товару...');
     const params = offer.querySelectorAll('param');
-    console.log(`Found ${params.length} product characteristics`);
+    console.log(`Знайдено ${params.length} характеристик`);
     
-    params.forEach((param, index) => {
+    params.forEach((param, paramIndex) => {
       const paramName = param.getAttribute('name');
-      if (!paramName) return;
+      if (!paramName) {
+        console.log(`⚠️ Пропускаємо param без атрибуту name`);
+        return;
+      }
       
-      console.log(`Processing characteristic: ${paramName}`);
+      console.log(`🏷️ Обробка характеристики: ${paramName}`);
       
       // Перевіряємо чи є вкладені value елементи
       const valueElements = param.querySelectorAll('value');
@@ -174,14 +190,15 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
         const nestedValues: Array<{ lang?: string; value: string }> = [];
         let mainValue = '';
         
-        valueElements.forEach(valueEl => {
+        valueElements.forEach((valueEl, valueIndex) => {
           const lang = valueEl.getAttribute('lang');
           const value = valueEl.textContent?.trim() || '';
-          nestedValues.push({ lang, value });
+          nestedValues.push({ lang: lang || undefined, value });
           if (!mainValue) mainValue = value; // Використовуємо перше значення як основне
+          
+          console.log(`  📌 Вкладене значення [${valueIndex}]: ${lang ? `${lang}:` : ''} "${value}"`);
         });
         
-        console.log(`Adding characteristic with nested values: ${paramName}`, nestedValues);
         addParameter(
           `param_${paramName}`, 
           mainValue, 
@@ -195,7 +212,7 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
       } else {
         // Звичайний параметр без вкладених значень
         const value = param.textContent?.trim();
-        console.log(`Adding simple characteristic: ${paramName} = ${value}`);
+        console.log(`  📋 Просте значення: "${value}"`);
         addParameter(
           `param_${paramName}`, 
           value || null, 
@@ -208,7 +225,16 @@ export const parseXMLToParameters = (xmlContent: string): ParsedXMLParameter[] =
     });
   }
 
-  console.log(`Total parsed parameters: ${parameters.length}`);
+  console.log(`✨ Парсинг завершено! Всього створено параметрів: ${parameters.length}`);
+  console.log('📊 Статистика по категоріях:');
+  const stats = parameters.reduce((acc, param) => {
+    acc[param.parameter_category] = (acc[param.parameter_category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  Object.entries(stats).forEach(([category, count]) => {
+    console.log(`  - ${category}: ${count} параметрів`);
+  });
+
   return parameters;
 };
 
@@ -218,13 +244,24 @@ export const importXMLParameters = async (
   createParameterFn: (parameter: any) => Promise<void>
 ) => {
   try {
-    console.log('Starting XML import process...');
-    const parsedParameters = parseXMLToParameters(xmlContent);
+    console.log('🚀 Розпочинаємо імпорт XML параметрів...');
+    console.log(`📄 Template ID: ${templateId}`);
+    console.log(`📏 Розмір XML контенту: ${xmlContent.length} символів`);
     
-    console.log(`Importing ${parsedParameters.length} parameters to template ${templateId}`);
+    const parsedParameters = parseXMLToParameters(xmlContent);
+    console.log(`📦 Розпарсено ${parsedParameters.length} параметрів`);
+    
+    if (parsedParameters.length === 0) {
+      console.log('⚠️ Немає параметрів для імпорту');
+      return 0;
+    }
     
     // Створюємо параметри в базі даних по черзі
-    for (const param of parsedParameters) {
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 0; i < parsedParameters.length; i++) {
+      const param = parsedParameters[i];
       const parameterData = {
         template_id: templateId,
         parameter_name: param.parameter_name,
@@ -239,20 +276,26 @@ export const importXMLParameters = async (
         nested_values: param.nested_values ? JSON.stringify(param.nested_values) : null
       };
       
-      console.log(`Creating parameter ${param.display_order}:`, parameterData);
+      console.log(`💾 Створюємо параметр ${i + 1}/${parsedParameters.length}: ${param.parameter_name}`);
       
       try {
         await createParameterFn(parameterData);
+        successCount++;
+        console.log(`✅ Успішно створено: ${param.parameter_name}`);
       } catch (error) {
-        console.error(`Error creating parameter ${param.parameter_name}:`, error);
+        errorCount++;
+        console.error(`❌ Помилка створення параметру ${param.parameter_name}:`, error);
         // Продовжуємо створювати інші параметри навіть якщо один не вдалося створити
       }
     }
     
-    console.log(`Successfully imported ${parsedParameters.length} parameters`);
-    return parsedParameters.length;
+    console.log(`🎉 Імпорт завершено!`);
+    console.log(`✅ Успішно створено: ${successCount} параметрів`);
+    console.log(`❌ Помилок: ${errorCount}`);
+    
+    return successCount;
   } catch (error) {
-    console.error('Error importing XML parameters:', error);
+    console.error('💥 Критична помилка імпорту XML параметрів:', error);
     throw error;
   }
 };

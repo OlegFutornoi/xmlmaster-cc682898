@@ -1,142 +1,195 @@
-// Редактор XML-шаблонів в адміністративній панелі з розширеною функціональністю
-import { useState, useEffect } from 'react';
+
+// Сторінка редактора XML-шаблону з правильним парсингом та збереженням даних
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, Upload, Building, FileCode } from 'lucide-react';
-import { useXMLTemplates } from '@/hooks/xml-templates/useXMLTemplates';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { useXMLTemplate } from '@/hooks/xml-templates/useXMLTemplates';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AdminSidebar from '@/components/admin/AdminSidebar';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { toast } from '@/hooks/use-toast';
-import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { importXMLParameters } from '@/utils/xmlParser';
+import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
+import ParsedStructureTable from '@/components/admin/xml-templates/ParsedStructureTable';
+import { ArrowLeft, Upload, FileText, Save } from 'lucide-react';
+import { XMLTemplate, ParsedXMLStructure } from '@/types/xml-template';
 
 const XMLTemplateEditor = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [isXMLImportDialogOpen, setIsXMLImportDialogOpen] = useState(false);
-  const [importMethod, setImportMethod] = useState<'file' | 'url'>('file');
-  const [xmlUrl, setXmlUrl] = useState('');
-  const [xmlFile, setXmlFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState('general-info');
-  const [isImporting, setIsImporting] = useState(false);
-
-  // Форма для редагування шаблону
-  const [templateForm, setTemplateForm] = useState({
-    name: '',
-    shop_name: '',
-    shop_company: '',
-    shop_url: '',
-    is_active: true
-  });
-
-  const { templates, updateTemplate, isUpdating } = useXMLTemplates();
+  const { toast } = useToast();
+  
+  const { data: template, isLoading, updateTemplate } = useXMLTemplate(id);
   const { 
     parameters, 
-    isLoading: isLoadingParameters, 
     createParameterAsync,
-    updateParameter,
-    deleteParameter,
-    isCreating,
-    isUpdating: isUpdatingParameter,
-    isDeleting
+    isLoading: parametersLoading 
   } = useXMLTemplateParameters(id);
 
-  const currentTemplate = templates.find(t => t.id === id);
+  const [xmlFile, setXmlFile] = useState<File | null>(null);
+  const [parsedStructure, setParsedStructure] = useState<ParsedXMLStructure | null>(null);
+  const [isParsingXML, setIsParsingXML] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
-  useEffect(() => {
-    if (currentTemplate) {
+  const [templateForm, setTemplateForm] = useState({
+    name: template?.name || '',
+    shop_name: template?.shop_name || '',
+    shop_company: template?.shop_company || '',
+    shop_url: template?.shop_url || ''
+  });
+
+  React.useEffect(() => {
+    if (template) {
       setTemplateForm({
-        name: currentTemplate.name,
-        shop_name: currentTemplate.shop_name || '',
-        shop_company: currentTemplate.shop_company || '',
-        shop_url: currentTemplate.shop_url || '',
-        is_active: currentTemplate.is_active
+        name: template.name || '',
+        shop_name: template.shop_name || '',
+        shop_company: template.shop_company || '',
+        shop_url: template.shop_url || ''
       });
     }
-  }, [currentTemplate]);
+  }, [template]);
 
-  const handleSaveTemplate = () => {
-    if (!id) return;
-    updateTemplate({
-      id,
-      updates: {
-        name: templateForm.name,
-        shop_name: templateForm.shop_name,
-        shop_company: templateForm.shop_company,
-        shop_url: templateForm.shop_url,
-        is_active: templateForm.is_active
-      }
-    });
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/xml') {
+      console.log('Файл обрано:', file.name);
+      setXmlFile(file);
+      setParsedStructure(null);
+    } else {
+      toast({
+        title: "Помилка",
+        description: "Будь ласка, оберіть XML файл",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleImportXML = async () => {
-    if (!id) return;
-    
-    setIsImporting(true);
+  const parseXMLFile = async () => {
+    if (!xmlFile) return;
+
+    setIsParsingXML(true);
+    console.log('Розширений парсинг XML-контенту...');
+
     try {
-      let xmlContent = '';
+      const xmlContent = await xmlFile.text();
+      console.log('XML контент отримано, довжина:', xmlContent.length);
+
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
       
-      if (importMethod === 'file' && xmlFile) {
-        xmlContent = await xmlFile.text();
-      } else if (importMethod === 'url' && xmlUrl) {
-        const response = await fetch(xmlUrl);
-        if (!response.ok) {
-          throw new Error('Не вдалося завантажити XML за URL');
-        }
-        xmlContent = await response.text();
+      // Перевіряємо на помилки парсингу
+      const parserError = xmlDoc.querySelector('parsererror');
+      if (parserError) {
+        throw new Error('XML файл має неправильний формат');
       }
-      
-      if (!xmlContent) {
-        throw new Error('Не вдалося отримати XML контент');
-      }
-      
-      console.log('Імпорт XML:', { method: importMethod, contentLength: xmlContent.length });
-      
-      // Спочатку видаляємо всі існуючі параметри шаблону
-      console.log('Clearing existing parameters...');
-      for (const param of parameters) {
-        try {
-          await new Promise<void>((resolve, reject) => {
-            deleteParameter(param.id, {
-              onSuccess: () => resolve(),
-              onError: (error: any) => reject(error)
-            });
+
+      console.log('XML документ розпарсено успішно');
+
+      // Розширений парсинг структури
+      const shop = xmlDoc.querySelector('shop');
+      const currencies = Array.from(xmlDoc.querySelectorAll('currencies currency'));
+      const categories = Array.from(xmlDoc.querySelectorAll('categories category'));
+      const offers = Array.from(xmlDoc.querySelectorAll('offers offer'));
+
+      console.log('Знайдено елементів:');
+      console.log('- Магазин:', shop ? 'так' : 'ні');
+      console.log('- Валюти:', currencies.length);
+      console.log('- Категорії:', categories.length);
+      console.log('- Товари:', offers.length);
+
+      const parsedStructure: ParsedXMLStructure = {
+        shop: shop ? {
+          name: shop.querySelector('name')?.textContent || '',
+          company: shop.querySelector('company')?.textContent || '',
+          url: shop.querySelector('url')?.textContent || ''
+        } : undefined,
+        currencies: currencies.map(currency => ({
+          id: currency.getAttribute('id') || '',
+          rate: parseFloat(currency.getAttribute('rate') || '1')
+        })),
+        categories: categories.map(category => ({
+          id: category.getAttribute('id') || '',
+          name: category.textContent || '',
+          rz_id: category.getAttribute('rz_id') || undefined
+        })),
+        offers: offers.slice(0, 5).map(offer => {
+          const offerData: any = {
+            id: offer.getAttribute('id') || '',
+            available: offer.getAttribute('available') === 'true'
+          };
+
+          // Додаємо всі дочірні елементи
+          Array.from(offer.children).forEach(child => {
+            if (child.tagName.toLowerCase() !== 'param') {
+              offerData[child.tagName.toLowerCase()] = child.textContent || '';
+            }
           });
-        } catch (error) {
-          console.error(`Error deleting parameter ${param.id}:`, error);
-        }
-      }
-      
-      // Чекаємо трохи щоб база даних оновилася
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Використовуємо нову функцію парсингу з асинхронним створенням параметрів
-      const importedCount = await importXMLParameters(xmlContent, id, createParameterAsync);
+
+          return offerData;
+        }),
+        parameters: []
+      };
+
+      console.log('Розпарсена структура:', parsedStructure);
+      setParsedStructure(parsedStructure);
       
       toast({
         title: "Успіх",
-        description: `XML структуру імпортовано успішно! Додано ${importedCount} параметрів.`,
+        description: `XML файл розпарсено: ${offers.length} товарів, ${categories.length} категорій, ${currencies.length} валют`,
       });
-      
-      setIsXMLImportDialogOpen(false);
-      setXmlFile(null);
-      setXmlUrl('');
-      
-    } catch (error: any) {
-      console.error('Import XML error:', error);
+
+    } catch (error) {
+      console.error('Помилка парсингу XML:', error);
       toast({
-        title: "Помилка",
-        description: error.message || "Не вдалося імпортувати XML структуру",
+        title: "Помилка парсингу",
+        description: error instanceof Error ? error.message : "Не вдалося розпарсити XML файл",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingXML(false);
+    }
+  };
+
+  const handleImportXML = async () => {
+    if (!xmlFile || !id) return;
+
+    setIsImporting(true);
+    console.log('Початок імпорту XML параметрів...');
+
+    try {
+      const xmlContent = await xmlFile.text();
+      console.log('Виклик функції importXMLParameters...');
+      
+      const importedCount = await importXMLParameters(
+        xmlContent, 
+        id, 
+        createParameterAsync
+      );
+
+      console.log(`Імпорт завершено. Створено параметрів: ${importedCount}`);
+      
+      toast({
+        title: "Успіх",
+        description: `Імпортовано ${importedCount} параметрів з XML файлу`,
+      });
+
+      // Очищаємо стан після успішного імпорту
+      setXmlFile(null);
+      setParsedStructure(null);
+      
+      // Скидаємо input для вибору файлу
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+
+    } catch (error) {
+      console.error('Помилка імпорту XML:', error);
+      toast({
+        title: "Помилка імпорту",
+        description: error instanceof Error ? error.message : "Не вдалося імпортувати параметри",
         variant: "destructive",
       });
     } finally {
@@ -144,252 +197,187 @@ const XMLTemplateEditor = () => {
     }
   };
 
-  const handleCreateParameter = (parameter: any) => {
-    createParameterAsync(parameter);
-  };
+  const handleUpdateTemplate = async () => {
+    if (!id) return;
 
-  const handleUpdateParameter = (id: string, updates: any) => {
-    updateParameter({ id, updates });
-  };
+    try {
+      await updateTemplate({
+        id,
+        name: templateForm.name,
+        shop_name: templateForm.shop_name,
+        shop_company: templateForm.shop_company,
+        shop_url: templateForm.shop_url
+      });
 
-  const handleDeleteParameter = (parameterId: string) => {
-    deleteParameter(parameterId);
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && (file.type === 'text/xml' || file.name.endsWith('.xml'))) {
-      setXmlFile(file);
-    } else {
+      toast({
+        title: "Успіх",
+        description: "Шаблон оновлено успішно",
+      });
+    } catch (error) {
+      console.error('Помилка оновлення шаблону:', error);
       toast({
         title: "Помилка",
-        description: "Будь ласка, виберіть XML файл",
+        description: "Не вдалося оновити шаблон",
         variant: "destructive",
       });
     }
   };
 
-  if (!currentTemplate) {
-    return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <AdminSidebar />
-          <SidebarInset>
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="text-center">
-                <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Шаблон не знайдено</p>
-                <Button onClick={() => navigate('/admin/xml-templates')} className="mt-4" variant="outline">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Повернутися до списку
-                </Button>
-              </div>
-            </div>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
-    );
+  if (isLoading || parametersLoading) {
+    return <div className="flex justify-center items-center h-64">Завантаження...</div>;
+  }
+
+  if (!template) {
+    return <div className="text-center text-red-600">Шаблон не знайдено</div>;
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AdminSidebar />
-        <SidebarInset>
-          {/* Header */}
-          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
-            <SidebarTrigger className="-ml-1" />
-            <div className={`flex ${isMobile ? 'flex-col gap-2' : 'flex-col md:flex-row md:items-center md:justify-between'} flex-1`}>
-              <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-4'}`}>
-                <Button 
-                  onClick={() => navigate('/admin/xml-templates')} 
-                  variant="outline" 
-                  size={isMobile ? "sm" : "sm"} 
-                  id="back-button"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  {isMobile ? '' : 'Назад'}
-                </Button>
-                <div>
-                  <h1 className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-gray-900 md:text-xl`}>
-                    {isMobile ? 'Редагування' : 'Редагування шаблону'}
-                  </h1>
-                </div>
-              </div>
-              <div className={`flex gap-2 ${isMobile ? 'mt-2' : 'mt-4 md:mt-0'}`}>
-                <Button 
-                  onClick={() => setIsXMLImportDialogOpen(true)} 
-                  variant="outline" 
-                  size={isMobile ? "sm" : "default"}
+    <div className="space-y-6 p-6">
+      {/* Заголовок */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin/xml-templates')}
+            id="back-to-templates"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Назад
+          </Button>
+          <h1 className="text-2xl font-semibold">Редагування XML-шаблону</h1>
+        </div>
+      </div>
+
+      {/* Основна інформація шаблону */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Основна інформація
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="template-name">Назва шаблону</Label>
+              <Input
+                id="template-name"
+                value={templateForm.name}
+                onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Назва XML-шаблону"
+              />
+            </div>
+            <div>
+              <Label htmlFor="shop-name">Назва магазину</Label>
+              <Input
+                id="shop-name"
+                value={templateForm.shop_name}
+                onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_name: e.target.value }))}
+                placeholder="Назва магазину"
+              />
+            </div>
+            <div>
+              <Label htmlFor="shop-company">Компанія</Label>
+              <Input
+                id="shop-company"
+                value={templateForm.shop_company}
+                onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_company: e.target.value }))}
+                placeholder="Назва компанії"
+              />
+            </div>
+            <div>
+              <Label htmlFor="shop-url">URL магазину</Label>
+              <Input
+                id="shop-url"
+                value={templateForm.shop_url}
+                onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_url: e.target.value }))}
+                placeholder="https://example.com"
+              />
+            </div>
+          </div>
+          <Button onClick={handleUpdateTemplate} id="update-template-info">
+            <Save className="h-4 w-4 mr-2" />
+            Зберегти інформацію
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Імпорт XML */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Імпорт XML файлу
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="xml-file">Оберіть XML файл</Label>
+            <Input
+              id="xml-file"
+              type="file"
+              accept=".xml"
+              onChange={handleFileChange}
+            />
+          </div>
+          
+          {xmlFile && (
+            <div className="flex gap-2">
+              <Button
+                onClick={parseXMLFile}
+                disabled={isParsingXML}
+                variant="outline"
+                id="parse-xml-button"
+              >
+                {isParsingXML ? 'Парсинг...' : 'Розпарсити XML'}
+              </Button>
+              
+              {parsedStructure && (
+                <Button
+                  onClick={handleImportXML}
+                  disabled={isImporting}
                   id="import-xml-button"
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {isMobile ? 'XML' : 'Імпорт XML'}
+                  {isImporting ? 'Імпорт...' : 'Імпортувати параметри'}
                 </Button>
-                <Button 
-                  onClick={handleSaveTemplate} 
-                  disabled={isUpdating} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white" 
-                  id="save-template-button" 
-                  size={isMobile ? "sm" : "default"}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isUpdating ? 'Збереження...' : 'Зберегти'}
-                </Button>
-              </div>
+              )}
             </div>
-          </header>
+          )}
+        </CardContent>
+      </Card>
 
-          <div className={`flex-1 ${isMobile ? 'p-3' : 'p-4 md:p-8'} space-y-${isMobile ? '4' : '6'}`}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="general-info" id="general-info-tab">Основна інформація</TabsTrigger>
-                <TabsTrigger value="parameters" id="parameters-tab">Параметри шаблону</TabsTrigger>
-              </TabsList>
+      {/* Розпарсена структура */}
+      {parsedStructure && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Розпарсена структура XML</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ParsedStructureTable
+              structure={parsedStructure}
+              onSaveTemplate={() => {}}
+              isSaving={false}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-              <TabsContent value="general-info" className="space-y-6 mt-6">
-                <Card className="border-0 shadow-sm bg-white">
-                  <CardHeader className={isMobile ? 'p-4' : ''}>
-                    <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-base' : ''}`}>
-                      <Building className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
-                      Основна інформація
-                    </CardTitle>
-                    <CardDescription className={isMobile ? 'text-sm' : ''}>
-                      Налаштуйте назву, інформацію про магазин та статус XML-шаблону
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className={`space-y-4 ${isMobile ? 'p-4' : ''}`}>
-                    <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'md:grid-cols-2 gap-4'}`}>
-                      <div>
-                        <Label htmlFor="template-name">Назва шаблону</Label>
-                        <Input 
-                          id="template-name" 
-                          value={templateForm.name} 
-                          onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))} 
-                          placeholder="Введіть назву шаблону" 
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="shop-name">Назва магазину</Label>
-                        <Input 
-                          id="shop-name" 
-                          value={templateForm.shop_name} 
-                          onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_name: e.target.value }))} 
-                          placeholder="Назва магазину з XML" 
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="shop-company">Назва компанії</Label>
-                        <Input 
-                          id="shop-company" 
-                          value={templateForm.shop_company} 
-                          onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_company: e.target.value }))} 
-                          placeholder="Юридична назва компанії" 
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="shop-url">URL магазину</Label>
-                        <Input 
-                          id="shop-url" 
-                          value={templateForm.shop_url} 
-                          onChange={(e) => setTemplateForm(prev => ({ ...prev, shop_url: e.target.value }))} 
-                          placeholder="https://example.com" 
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="template-active" 
-                        checked={templateForm.is_active} 
-                        onCheckedChange={(checked) => setTemplateForm(prev => ({ ...prev, is_active: checked }))} 
-                      />
-                      <Label htmlFor="template-active">Активний шаблон</Label>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="parameters" className="space-y-6 mt-6">
-                <Card className="border-0 shadow-sm bg-white">
-                  <CardContent className="p-6">
-                    {isLoadingParameters ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-600">Завантаження параметрів...</p>
-                      </div>
-                    ) : (
-                      <TemplateParametersTable 
-                        parameters={parameters} 
-                        onUpdateParameter={handleUpdateParameter}
-                        onDeleteParameter={handleDeleteParameter}
-                        onCreateParameter={handleCreateParameter} 
-                        templateId={id || ''} 
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Діалог імпорту XML */}
-          <Dialog open={isXMLImportDialogOpen} onOpenChange={setIsXMLImportDialogOpen}>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Імпорт XML-структури</DialogTitle>
-                <DialogDescription>
-                  Завантажте XML-файл або вкажіть URL для автоматичного створення параметрів шаблону
-                </DialogDescription>
-              </DialogHeader>
-              <Tabs value={importMethod} onValueChange={(value) => setImportMethod(value as 'file' | 'url')}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="file">Завантаження файлу</TabsTrigger>
-                  <TabsTrigger value="url">URL посилання</TabsTrigger>
-                </TabsList>
-                <TabsContent value="file" className="space-y-4">
-                  <div>
-                    <Label htmlFor="xml-file">XML файл</Label>
-                    <Input 
-                      id="xml-file" 
-                      type="file" 
-                      accept=".xml,text/xml" 
-                      onChange={handleFileUpload} 
-                    />
-                    {xmlFile && (
-                      <p className="text-sm text-gray-600 mt-2">
-                        Вибрано файл: {xmlFile.name}
-                      </p>
-                    )}
-                  </div>
-                </TabsContent>
-                <TabsContent value="url" className="space-y-4">
-                  <div>
-                    <Label htmlFor="xml-url">URL посилання</Label>
-                    <Input 
-                      id="xml-url" 
-                      value={xmlUrl} 
-                      onChange={(e) => setXmlUrl(e.target.value)} 
-                      placeholder="https://example.com/catalog.xml" 
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsXMLImportDialogOpen(false)} disabled={isImporting}>
-                  Скасувати
-                </Button>
-                <Button 
-                  onClick={handleImportXML} 
-                  disabled={isImporting || (importMethod === 'file' ? !xmlFile : !xmlUrl)} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {isImporting ? 'Імпорт...' : 'Імпортувати XML'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+      {/* Таблиця параметрів */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Параметри шаблону</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TemplateParametersTable
+            parameters={parameters}
+            onUpdateParameter={() => {}}
+            onDeleteParameter={() => {}}
+            onCreateParameter={() => {}}
+            templateId={id || ''}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

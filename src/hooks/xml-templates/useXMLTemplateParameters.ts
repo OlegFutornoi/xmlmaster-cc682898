@@ -19,8 +19,8 @@ const sortParametersByXMLHierarchy = (params: XMLTemplateParameter[]) => {
       'characteristic': 4 // 5. Характеристики товарів
     };
     
-    const orderA = categoryOrder[categoryA as keyof typeof categoryOrder];
-    const orderB = categoryOrder[categoryB as keyof typeof categoryOrder];
+    const orderA = categoryOrder[categoryA as keyof typeof categoryOrder] ?? 999;
+    const orderB = categoryOrder[categoryB as keyof typeof categoryOrder] ?? 999;
     
     // Спочатку сортуємо по категоріях
     if (orderA !== orderB) {
@@ -41,12 +41,12 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: parameters = [], isLoading, error } = useQuery({
+  const { data: parameters = [], isLoading, error, refetch } = useQuery({
     queryKey: ['template-xml-parameters', templateId],
     queryFn: async (): Promise<XMLTemplateParameter[]> => {
       if (!templateId) return [];
       
-      console.log('Fetching template parameters for:', templateId);
+      console.log('🔍 Завантаження параметрів шаблону:', templateId);
       
       const { data, error } = await supabase
         .from('template_xml_parameters')
@@ -55,22 +55,26 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
         .order('display_order', { ascending: true });
 
       if (error) {
-        console.error('Error fetching template parameters:', error);
+        console.error('❌ Помилка завантаження параметрів шаблону:', error);
         throw error;
       }
       
-      console.log(`Fetched ${data?.length || 0} template parameters`);
+      console.log(`📦 Завантажено ${data?.length || 0} параметрів шаблону`);
       
       // Приводимо TypeScript типи до правильного формату
       const typedData = (data || []).map(item => ({
         ...item,
         parameter_category: item.parameter_category as 'parameter' | 'characteristic' | 'category' | 'offer' | 'currency',
-        nested_values: item.nested_values ? (typeof item.nested_values === 'string' ? JSON.parse(item.nested_values) : item.nested_values) : undefined
+        nested_values: item.nested_values ? 
+          (typeof item.nested_values === 'string' ? 
+            JSON.parse(item.nested_values) : 
+            item.nested_values
+          ) : undefined
       }));
       
       // Застосовуємо правильне сортування
       const sortedData = sortParametersByXMLHierarchy(typedData);
-      console.log('Sorted template parameters:', sortedData);
+      console.log('📋 Параметри відсортовано за ієрархією XML');
       
       return sortedData;
     },
@@ -79,22 +83,27 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   const createParameterMutation = useMutation({
     mutationFn: async (parameterData: any) => {
-      console.log('Creating parameter:', parameterData);
+      console.log('💾 Створення параметру:', parameterData.parameter_name);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('template_xml_parameters')
-        .insert([parameterData]);
+        .insert([parameterData])
+        .select()
+        .single();
 
       if (error) {
-        console.error('Error creating parameter:', error);
+        console.error('❌ Помилка створення параметру:', error);
         throw error;
       }
+      
+      console.log('✅ Параметр створено успішно:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['template-xml-parameters', templateId] });
     },
     onError: (error: any) => {
-      console.error('Create parameter error:', error);
+      console.error('❌ Помилка створення параметру:', error);
       toast({
         title: "Помилка",
         description: error.message || "Не вдалося створити параметр",
@@ -105,7 +114,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   const updateParameterMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      console.log('Updating parameter:', id, updates);
+      console.log('🔄 Оновлення параметру:', id, updates);
       
       const { error } = await supabase
         .from('template_xml_parameters')
@@ -113,7 +122,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
         .eq('id', id);
 
       if (error) {
-        console.error('Error updating parameter:', error);
+        console.error('❌ Помилка оновлення параметру:', error);
         throw error;
       }
     },
@@ -125,7 +134,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
       });
     },
     onError: (error: any) => {
-      console.error('Update parameter error:', error);
+      console.error('❌ Помилка оновлення параметру:', error);
       toast({
         title: "Помилка",
         description: error.message || "Не вдалося оновити параметр",
@@ -136,7 +145,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   const deleteParameterMutation = useMutation({
     mutationFn: async (parameterId: string) => {
-      console.log('Deleting parameter:', parameterId);
+      console.log('🗑️ Видалення параметру:', parameterId);
       
       const { error } = await supabase
         .from('template_xml_parameters')
@@ -144,7 +153,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
         .eq('id', parameterId);
 
       if (error) {
-        console.error('Error deleting parameter:', error);
+        console.error('❌ Помилка видалення параметру:', error);
         throw error;
       }
     },
@@ -156,7 +165,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
       });
     },
     onError: (error: any) => {
-      console.error('Delete parameter error:', error);
+      console.error('❌ Помилка видалення параметру:', error);
       toast({
         title: "Помилка",
         description: error.message || "Не вдалося видалити параметр",
@@ -166,11 +175,17 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
   });
 
   // Створюємо асинхронну функцію для створення параметрів
-  const createParameterAsync = async (parameterData: any) => {
+  const createParameterAsync = async (parameterData: any): Promise<void> => {
     return new Promise<void>((resolve, reject) => {
       createParameterMutation.mutate(parameterData, {
-        onSuccess: () => resolve(),
-        onError: (error) => reject(error)
+        onSuccess: () => {
+          console.log('✅ Параметр створено через async функцію');
+          resolve();
+        },
+        onError: (error) => {
+          console.error('❌ Помилка в async функції:', error);
+          reject(error);
+        }
       });
     });
   };
@@ -179,6 +194,7 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
     parameters,
     isLoading,
     error,
+    refetch,
     createParameter: createParameterMutation.mutate,
     createParameterAsync,
     updateParameter: updateParameterMutation.mutate,
