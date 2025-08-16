@@ -1,26 +1,38 @@
 
-// Компонент з вкладками для відображення всіх даних XML шаблону
+// Компонент з вкладками для відображення всіх даних XML шаблону з деревом параметрів
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Save, Plus, Trash2, Edit } from 'lucide-react';
+import { Save, Plus, Trash2 } from 'lucide-react';
 import { ParsedXMLStructure } from '@/utils/advancedXmlParser';
+import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
+import TemplateParameterTree from './TemplateParameterTree';
 
 interface TemplateDataTabsProps {
   structure: ParsedXMLStructure;
   onSave: (structure: ParsedXMLStructure) => void;
   isEditable?: boolean;
+  templateId?: string;
 }
 
-const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateDataTabsProps) => {
+const TemplateDataTabs = ({ structure, onSave, isEditable = true, templateId }: TemplateDataTabsProps) => {
   const [editableStructure, setEditableStructure] = useState<ParsedXMLStructure>(structure);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Використовуємо хук для параметрів шаблону
+  const {
+    parameters,
+    createParameter,
+    updateParameter,
+    deleteParameter,
+    isCreating,
+    isUpdating,
+    isDeleting
+  } = useXMLTemplateParameters(templateId);
 
   const handleSave = () => {
     onSave(editableStructure);
@@ -98,8 +110,14 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
         </div>
       )}
 
-      <Tabs defaultValue="shop" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs defaultValue="parameters" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="parameters">
+            Параметри 
+            <Badge variant="secondary" className="ml-2">
+              {parameters.length}
+            </Badge>
+          </TabsTrigger>
           <TabsTrigger value="shop">Основна інформація</TabsTrigger>
           <TabsTrigger value="currencies">
             Валюти 
@@ -121,6 +139,34 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
           </TabsTrigger>
           <TabsTrigger value="characteristics">Характеристики</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="parameters" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                📋 Параметри шаблону
+              </CardTitle>
+              <CardDescription>
+                Управління всіма параметрами XML шаблону в деревоподібній структурі
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {templateId ? (
+                <TemplateParameterTree
+                  parameters={parameters}
+                  onUpdateParameter={updateParameter}
+                  onDeleteParameter={deleteParameter}
+                  onCreateParameter={createParameter}
+                  templateId={templateId}
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Параметри будуть доступні після збереження шаблону
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="shop" className="space-y-4">
           <Card>
@@ -318,12 +364,9 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                     <div key={index} className="border rounded-lg p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-lg">
-                          📦 Товар #{offer.id} 
-                          {offer.available === 'false' && (
-                            <Badge variant="destructive" className="ml-2">Недоступний</Badge>
-                          )}
+                          🎁 offer (id="{offer.id}", available="{offer.available}")
                         </h4>
-                        <Badge variant="outline">Офер {index + 1}</Badge>
+                        <Badge variant="outline">Товар {index + 1}</Badge>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
@@ -332,6 +375,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                         <div><strong>🗂️ Категорія:</strong> {offer.categoryId || 'Не вказано'}</div>
                         <div><strong>🏷️ Виробник:</strong> {offer.vendor || 'Не вказано'}</div>
                         <div><strong>🔖 Артикул:</strong> {offer.article || 'Не вказано'}</div>
+                        <div><strong>📦 Код виробника:</strong> {offer.vendorCode || 'Не вказано'}</div>
                         <div><strong>📦 Кількість:</strong> {offer.stock_quantity || 'Не вказано'}</div>
                       </div>
 
@@ -340,6 +384,12 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                       )}
                       {offer.name_ua && (
                         <div><strong>🏷️ Назва (UA):</strong> {offer.name_ua}</div>
+                      )}
+                      {offer.description && (
+                        <div><strong>📝 Опис (RU):</strong> {offer.description}</div>
+                      )}
+                      {offer.description_ua && (
+                        <div><strong>📝 Опис (UA):</strong> {offer.description_ua}</div>
                       )}
 
                       {(offer.pictures || []).length > 0 && (
@@ -358,18 +408,18 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                       {(offer.characteristics || []).length > 0 && (
                         <div>
                           <strong>📏 Характеристики ({(offer.characteristics || []).length}):</strong>
-                          <div className="mt-2 grid gap-2">
+                          <div className="mt-2 space-y-2 pl-4">
                             {(offer.characteristics || []).map((char, charIndex) => (
-                              <div key={charIndex} className="text-sm border-l-2 pl-3">
-                                <div className="font-medium">{char.name}:</div>
-                                <div className="text-gray-600 ml-2">
+                              <div key={charIndex} className="border-l-2 pl-3">
+                                <div className="font-medium">param (name="{char.name}"):</div>
+                                <div className="text-gray-600 ml-2 flex items-center gap-2">
                                   {char.language && (
-                                    <Badge variant="outline" className="mr-2 text-xs">
-                                      {char.language.toUpperCase()}
+                                    <Badge variant="outline" className="text-xs">
+                                      {char.language === 'uk' ? '🇺🇦' : char.language === 'ru' ? '🇷🇺' : '🏳️'} {char.language.toUpperCase()}
                                     </Badge>
                                   )}
-                                  {char.value}
-                                  {char.unit && ` ${char.unit}`}
+                                  value: "{char.value}"
+                                  {char.unit && ` (${char.unit})`}
                                 </div>
                               </div>
                             ))}
@@ -406,7 +456,6 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
             </CardHeader>
             <CardContent>
               {(() => {
-                // Групуємо всі характеристики по назвах
                 const groupedCharacteristics = (editableStructure.offers || [])
                   .flatMap(offer => offer.characteristics || [])
                   .reduce((acc, char) => {
@@ -427,20 +476,20 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                   <div className="space-y-4">
                     {characteristicNames.map((name, index) => (
                       <div key={index} className="border rounded-lg p-4">
-                        <h4 className="font-semibold mb-2">📏 {name}</h4>
-                        <div className="space-y-2">
+                        <h4 className="font-semibold mb-2">📏 param (name="{name}")</h4>
+                        <div className="space-y-2 pl-4">
                           {Array.from(new Set(
                             groupedCharacteristics[name].map(v => `${v.value}|${v.language || ''}|${v.unit || ''}`)
                           )).map((uniqueValue, valueIndex) => {
                             const [value, language, unit] = uniqueValue.split('|');
                             return (
-                              <div key={valueIndex} className="flex items-center gap-2">
+                              <div key={valueIndex} className="flex items-center gap-2 border-l-2 pl-3">
                                 {language && (
                                   <Badge variant="outline" className="text-xs">
-                                    {language.toUpperCase()}
+                                    {language === 'uk' ? '🇺🇦' : language === 'ru' ? '🇷🇺' : '🏳️'} {language.toUpperCase()}
                                   </Badge>
                                 )}
-                                <span className="text-sm">{value}</span>
+                                <span className="text-sm">value: "{value}"</span>
                                 {unit && (
                                   <span className="text-xs text-gray-500">({unit})</span>
                                 )}

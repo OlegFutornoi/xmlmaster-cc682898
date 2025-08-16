@@ -10,7 +10,7 @@ export interface ShopInfo {
 
 export interface CurrencyInfo {
   id: string;
-  rate: string; // Змінено на string для сумісності
+  rate: string;
 }
 
 export interface CategoryInfo {
@@ -35,6 +35,7 @@ export interface OfferInfo {
   pictures: string[];
   vendor?: string;
   article?: string;
+  vendorCode?: string;
   stock_quantity?: number;
   name: string;
   name_ua?: string;
@@ -44,13 +45,14 @@ export interface OfferInfo {
   [key: string]: any;
 }
 
-// Додаємо інтерфейс для параметрів
 export interface TemplateParameter {
   name: string;
   value: string;
   path: string;
   type: string;
   category: string;
+  language?: string;
+  unit?: string;
 }
 
 export interface ParsedXMLStructure {
@@ -58,7 +60,7 @@ export interface ParsedXMLStructure {
   currencies: CurrencyInfo[];
   categories: CategoryInfo[];
   offers: OfferInfo[];
-  parameters: TemplateParameter[]; // Додаємо відсутню властивість
+  parameters: TemplateParameter[];
 }
 
 // Налаштування парсера XML
@@ -99,7 +101,7 @@ export function generateTreeStructure(structure: ParsedXMLStructure): string {
     const isLast = index === categories.length - 1;
     const connector = isLast ? '└──' : '├──';
     const parentInfo = category.parentId ? ` (parent: ${category.parentId})` : '';
-    tree += `│   ${connector} ${category.name} [${category.id}]${parentInfo}\n`;
+    tree += `│   ${connector} ${category.name} [id="${category.id}"]${parentInfo}\n`;
   });
   
   tree += '└── 🎁 Offers\n';
@@ -107,18 +109,53 @@ export function generateTreeStructure(structure: ParsedXMLStructure): string {
   offers.forEach((offer, index) => {
     const isLast = index === offers.length - 1;
     const connector = isLast ? '    └──' : '    ├──';
-    tree += `${connector} ${offer.name} [${offer.id}]\n`;
-    tree += `${isLast ? '        ' : '    │   '}├── Price: ${offer.price} (${offer.currencyId})\n`;
-    tree += `${isLast ? '        ' : '    │   '}├── Category: ${offer.categoryId}\n`;
-    tree += `${isLast ? '        ' : '    │   '}├── Available: ${offer.available}\n`;
+    tree += `${connector} offer (id="${offer.id}", available="${offer.available}")\n`;
     
+    // Основні параметри товару
+    const offerParams = [
+      { name: 'price', value: offer.price },
+      { name: 'currencyId', value: offer.currencyId },
+      { name: 'categoryId', value: offer.categoryId },
+      { name: 'name', value: offer.name },
+      { name: 'name_ua', value: offer.name_ua },
+      { name: 'vendor', value: offer.vendor },
+      { name: 'article', value: offer.article },
+      { name: 'vendorCode', value: offer.vendorCode },
+      { name: 'description', value: offer.description },
+      { name: 'description_ua', value: offer.description_ua }
+    ];
+
+    offerParams.forEach((param, paramIndex) => {
+      if (param.value) {
+        const paramConnector = (isLast ? '        ' : '    │   ') + '├──';
+        tree += `${paramConnector} ${param.name}: ${param.value}\n`;
+      }
+    });
+
+    // Зображення
+    const pictures = offer.pictures || [];
+    if (pictures.length > 0) {
+      const pictureConnector = (isLast ? '        ' : '    │   ') + '├──';
+      tree += `${pictureConnector} pictures (${pictures.length})\n`;
+    }
+    
+    // Характеристики
     const characteristics = offer.characteristics || [];
     if (characteristics.length > 0) {
-      tree += `${isLast ? '        ' : '    │   '}└── Characteristics (${characteristics.length})\n`;
+      const charConnector = (isLast ? '        ' : '    │   ') + '└──';
+      tree += `${charConnector} characteristics (${characteristics.length})\n`;
       characteristics.forEach((char, charIndex) => {
         const isLastChar = charIndex === characteristics.length - 1;
-        const charConnector = isLastChar ? '└──' : '├──';
-        tree += `${isLast ? '        ' : '    │   '}    ${charConnector} ${char.name}: ${char.value}\n`;
+        const charItemConnector = isLastChar ? '└──' : '├──';
+        const prefix = (isLast ? '        ' : '    │   ') + '    ';
+        
+        if (char.language) {
+          tree += `${prefix}├── param (name="${char.name}")\n`;
+          const langFlag = char.language === 'uk' ? '🇺🇦' : char.language === 'ru' ? '🇷🇺' : '🏳️';
+          tree += `${prefix}│   └── ${langFlag} value (lang="${char.language}"): "${char.value}"\n`;
+        } else {
+          tree += `${prefix}${charItemConnector} param (name="${char.name}"): ${char.value}\n`;
+        }
       });
     }
   });
@@ -138,7 +175,6 @@ export function parseXMLToStructure(xmlContent: string): ParsedXMLStructure {
     
     console.log('📊 XML успішно розпарсено в об\'єкт:', parsedData);
     
-    // Знаходимо корневий елемент yml_catalog або shop
     const catalog = parsedData.yml_catalog || parsedData;
     const shop = catalog.shop || {};
     
@@ -153,15 +189,12 @@ export function parseXMLToStructure(xmlContent: string): ParsedXMLStructure {
     
     console.log('✅ Інформація про магазин:', shopInfo);
 
-    // Парсимо валюти
     const currencies = parseCurrencies(shop.currencies || {});
     console.log('💱 Знайдено валют:', currencies.length);
 
-    // Парсимо категорії
     const categories = parseCategories(shop.categories || {});
     console.log('📂 Знайдено категорій:', categories.length);
 
-    // Парсимо товари
     const offers = parseOffers(shop.offers || {});
     console.log('🎁 Знайдено товарів:', offers.length);
 
@@ -170,7 +203,7 @@ export function parseXMLToStructure(xmlContent: string): ParsedXMLStructure {
       currencies,
       categories,
       offers,
-      parameters: [] // Ініціалізуємо порожній масив параметрів
+      parameters: []
     };
     
     console.log('🎯 Фінальна структура готова:', {
@@ -212,7 +245,7 @@ function parseCurrencies(currenciesData: any): CurrencyInfo[] {
       if (currency && currency['@_id']) {
         currencies.push({
           id: String(currency['@_id']),
-          rate: String(currency['@_rate'] || '1') // Конвертуємо в string
+          rate: String(currency['@_rate'] || '1')
         });
       }
     });
@@ -275,9 +308,11 @@ function parseOffers(offersData: any): OfferInfo[] {
           characteristics: parseCharacteristics(offer.param || [])
         };
         
-        // Додаткові поля
+        // Додаткові поля з перевіркою різних варіантів назв
         if (offer.vendor) offerInfo.vendor = extractTextValue(offer.vendor);
         if (offer.article) offerInfo.article = extractTextValue(offer.article);
+        if (offer.vendorCode) offerInfo.vendorCode = extractTextValue(offer.vendorCode);
+        if (offer['vendor-code']) offerInfo.vendorCode = extractTextValue(offer['vendor-code']);
         if (offer.stock_quantity) offerInfo.stock_quantity = parseInt(offer.stock_quantity) || 0;
         if (offer.name_ua) offerInfo.name_ua = extractTextValue(offer.name_ua);
         if (offer.description) offerInfo.description = extractTextValue(offer.description);

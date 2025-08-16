@@ -10,6 +10,7 @@ import TemplateDataTabs from './TemplateDataTabs';
 interface ParsedStructureTableProps {
   structure: ParsedXMLStructure;
   templateName?: string;
+  templateId?: string;
   onSave?: (updatedStructure: ParsedXMLStructure) => void;
   onSaveTemplate?: (templateData: any) => void;
   isSaving?: boolean;
@@ -19,6 +20,7 @@ interface ParsedStructureTableProps {
 const ParsedStructureTable = ({ 
   structure, 
   templateName = "XML Template",
+  templateId,
   onSave,
   onSaveTemplate, 
   isSaving = false,
@@ -28,7 +30,7 @@ const ParsedStructureTable = ({
 
   // Підрахунок загальної кількості характеристик з перевірками на undefined
   const totalCharacteristics = (structure.offers || []).reduce(
-    (total, offer) => total + (offer.characteristics?.length || 0), 
+    (total, offer) => total + ((offer.characteristics || []).length), 
     0
   );
 
@@ -113,6 +115,7 @@ const ParsedStructureTable = ({
         structure={structure} 
         onSave={handleSave}
         isEditable={isEditable}
+        templateId={templateId}
       />
     </div>
   );

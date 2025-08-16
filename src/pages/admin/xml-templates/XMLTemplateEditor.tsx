@@ -1,4 +1,3 @@
-
 // Оновлений редактор XML-шаблону з новою системою парсингу та відображення
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -332,6 +331,7 @@ const XMLTemplateEditor = () => {
               <ParsedStructureTable
                 structure={parsedStructure}
                 templateName={template.name}
+                templateId={id}
                 onSave={handleStructureSave}
                 isEditable={true}
               />
