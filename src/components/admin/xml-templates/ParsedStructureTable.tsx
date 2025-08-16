@@ -26,9 +26,9 @@ const ParsedStructureTable = ({
 }: ParsedStructureTableProps) => {
   const treeStructure = generateTreeStructure(structure);
 
-  // Підрахунок загальної кількості характеристик
-  const totalCharacteristics = structure.offers.reduce(
-    (total, offer) => total + offer.characteristics.length, 
+  // Підрахунок загальної кількості характеристик з перевірками на undefined
+  const totalCharacteristics = (structure.offers || []).reduce(
+    (total, offer) => total + (offer.characteristics?.length || 0), 
     0
   );
 
@@ -82,19 +82,19 @@ const ParsedStructureTable = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {structure.currencies.length}
+                {(structure.currencies || []).length}
               </div>
               <div className="text-sm text-gray-600">💱 Валют</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {structure.categories.length}
+                {(structure.categories || []).length}
               </div>
               <div className="text-sm text-gray-600">📂 Категорій</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {structure.offers.length}
+                {(structure.offers || []).length}
               </div>
               <div className="text-sm text-gray-600">🎁 Товарів</div>
             </div>
