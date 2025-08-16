@@ -1,4 +1,3 @@
-
 // Типи для роботи з XML-шаблонами
 export interface XMLTemplate {
   id: string;
@@ -84,6 +83,15 @@ export interface XMLUploadRequest {
   url?: string;
 }
 
+// Додаємо відсутні інтерфейси для сумісності з advancedXmlParser
+export interface TemplateParameter {
+  name: string;
+  value: string;
+  path: string;
+  type: string;
+  category: string;
+}
+
 // Оновлений тип для сумісності з новим парсером - тепер ідентичний до advancedXmlParser
 export interface ParsedXMLStructure {
   shop: {
@@ -93,7 +101,7 @@ export interface ParsedXMLStructure {
   };
   currencies: Array<{
     id: string;
-    rate: string;
+    rate: string; // Змінено з number на string для сумісності
   }>;
   categories: Array<{
     id: string;
@@ -122,4 +130,5 @@ export interface ParsedXMLStructure {
     }>;
     [key: string]: any;
   }>;
+  parameters: TemplateParameter[]; // Додаємо відсутню властивість
 }

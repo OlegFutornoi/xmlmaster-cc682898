@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, Link, FileCode } from 'lucide-react';
-import { ParsedXMLStructure } from '@/types/xml-template';
+import { ParsedXMLStructure, TemplateParameter } from '@/types/xml-template';
 import ParsedStructureTable from './ParsedStructureTable';
 
 interface CreateTemplateDialogProps {
@@ -46,6 +46,10 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
       }
 
       const structure: ParsedXMLStructure = {
+        shop: { name: '', company: '', url: '' },
+        currencies: [],
+        categories: [],
+        offers: [],
         parameters: []
       };
 
@@ -117,7 +121,7 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
     if (currencies.length > 0) {
       structure.currencies = Array.from(currencies).map(currency => ({
         id: currency.getAttribute('id') || '',
-        rate: parseFloat(currency.getAttribute('rate') || '1')
+        rate: String(currency.getAttribute('rate') || '1') // Конвертуємо в string
       }));
 
       const firstCurrency = currencies[0];
@@ -145,7 +149,7 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
       structure.categories = Array.from(categories).map(category => ({
         id: category.getAttribute('id') || '',
         name: category.textContent || '',
-        rz_id: category.getAttribute('rz_id') || undefined
+        parentId: category.getAttribute('parentId') || undefined
       }));
 
       const firstCategory = categories[0];
@@ -164,11 +168,11 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
           type: 'parameter',
           category: 'category'
         });
-        if (firstCategory.getAttribute('rz_id')) {
+        if (firstCategory.getAttribute('parentId')) {
           structure.parameters.push({
-            name: 'category_rz_id',
-            value: firstCategory.getAttribute('rz_id') || '',
-            path: '/yml_catalog/shop/categories/category[@rz_id]',
+            name: 'category_parent_id',
+            value: firstCategory.getAttribute('parentId') || '',
+            path: '/yml_catalog/shop/categories/category[@parentId]',
             type: 'parameter',
             category: 'category'
           });
@@ -182,22 +186,29 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
       structure.offers = Array.from(offers).map(offer => {
         const offerData: any = {
           id: offer.getAttribute('id') || '',
-          available: offer.getAttribute('available') === 'true'
+          available: offer.getAttribute('available') || 'true',
+          price: parseFloat(offer.querySelector('price')?.textContent || '0'),
+          currencyId: offer.querySelector('currencyId')?.textContent || '',
+          categoryId: offer.querySelector('categoryId')?.textContent || '',
+          pictures: Array.from(offer.querySelectorAll('picture')).map(pic => pic.textContent || ''),
+          name: offer.querySelector('name')?.textContent || '',
+          characteristics: []
         };
 
-        Array.from(offer.children).forEach(child => {
-          if (child.tagName === 'param') {
-            const paramName = child.getAttribute('name');
-            if (paramName && !offerData.params) {
-              offerData.params = {};
-            }
-            if (paramName) {
-              offerData.params[paramName] = child.textContent;
-            }
-          } else {
-            offerData[child.tagName] = child.textContent;
-          }
-        });
+        // Додаємо додаткові поля
+        const vendor = offer.querySelector('vendor');
+        if (vendor) offerData.vendor = vendor.textContent;
+        
+        const description = offer.querySelector('description');
+        if (description) offerData.description = description.textContent;
+
+        // Парсимо характеристики (param elements)
+        const params = offer.querySelectorAll('param');
+        offerData.characteristics = Array.from(params).map(param => ({
+          name: param.getAttribute('name') || '',
+          value: param.textContent || '',
+          unit: param.getAttribute('unit') || undefined
+        }));
 
         return offerData;
       });
@@ -205,7 +216,7 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
       // Додаємо параметри товарів на основі першого товару
       const firstOffer = offers[0];
       if (firstOffer) {
-        const basicFields = ['price', 'price_old', 'price_promo', 'currencyId', 'categoryId', 'picture', 'vendor', 'name', 'description', 'stock_quantity', 'available', 'url'];
+        const basicFields = ['price', 'currencyId', 'categoryId', 'name', 'vendor', 'description'];
         
         basicFields.forEach(field => {
           const element = firstOffer.querySelector(field);
@@ -312,7 +323,7 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
     if (currencies.length > 0) {
       structure.currencies = Array.from(currencies).map(currency => ({
         id: currency.getAttribute('id') || '',
-        rate: parseFloat(currency.getAttribute('rate') || '1')
+        rate: String(currency.getAttribute('rate') || '1')
       }));
 
       const firstCurrency = currencies[0];
@@ -444,7 +455,7 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
         structure.categories = Array.from(categories).map(category => ({
           id: category.getAttribute('id') || '',
           name: category.textContent || '',
-          parent_id: category.getAttribute('parentId') || undefined
+          parentId: category.getAttribute('parentId') || undefined
         }));
 
         const firstCategory = categories[0];
@@ -456,22 +467,6 @@ const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating
             type: 'parameter',
             category: 'category'
           });
-          structure.parameters.push({
-            name: 'category_name',
-            value: firstCategory.textContent || '',
-            path: '/shop/catalog/category',
-            type: 'parameter',
-            category: 'category'
-          });
-          if (firstCategory.getAttribute('parentId')) {
-            structure.parameters.push({
-              name: 'category_parent_id',
-              value: firstCategory.getAttribute('parentId') || '',
-              path: '/shop/catalog/category[@parentId]',
-              type: 'parameter',
-              category: 'category'
-            });
-          }
         }
       }
     }
