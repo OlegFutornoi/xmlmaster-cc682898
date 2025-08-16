@@ -60,9 +60,57 @@ const parserOptions = {
   parseNodeValue: true,
   trimValues: true,
   cdataPropName: '__cdata',
-  parseTrueNumberOnly: false,
-  arrayMode: false
+  parseTrueNumberOnly: false
 };
+
+/**
+ * Генерує текстове представлення структури XML шаблону у вигляді дерева
+ */
+export function generateTreeStructure(structure: ParsedXMLStructure): string {
+  let tree = '';
+  
+  tree += '📋 XML Template Structure\n';
+  tree += '├── 🏪 Shop Information\n';
+  tree += `│   ├── Name: ${structure.shop.name}\n`;
+  tree += `│   ├── Company: ${structure.shop.company}\n`;
+  tree += `│   └── URL: ${structure.shop.url}\n`;
+  
+  tree += '├── 💱 Currencies\n';
+  structure.currencies.forEach((currency, index) => {
+    const isLast = index === structure.currencies.length - 1;
+    const connector = isLast ? '└──' : '├──';
+    tree += `│   ${connector} ${currency.id} (rate: ${currency.rate})\n`;
+  });
+  
+  tree += '├── 📂 Categories\n';
+  structure.categories.forEach((category, index) => {
+    const isLast = index === structure.categories.length - 1;
+    const connector = isLast ? '└──' : '├──';
+    const parentInfo = category.parentId ? ` (parent: ${category.parentId})` : '';
+    tree += `│   ${connector} ${category.name} [${category.id}]${parentInfo}\n`;
+  });
+  
+  tree += '└── 🎁 Offers\n';
+  structure.offers.forEach((offer, index) => {
+    const isLast = index === structure.offers.length - 1;
+    const connector = isLast ? '    └──' : '    ├──';
+    tree += `${connector} ${offer.name} [${offer.id}]\n`;
+    tree += `${isLast ? '        ' : '    │   '}├── Price: ${offer.price} (${offer.currencyId})\n`;
+    tree += `${isLast ? '        ' : '    │   '}├── Category: ${offer.categoryId}\n`;
+    tree += `${isLast ? '        ' : '    │   '}├── Available: ${offer.available}\n`;
+    
+    if (offer.characteristics.length > 0) {
+      tree += `${isLast ? '        ' : '    │   '}└── Characteristics (${offer.characteristics.length})\n`;
+      offer.characteristics.forEach((char, charIndex) => {
+        const isLastChar = charIndex === offer.characteristics.length - 1;
+        const charConnector = isLastChar ? '└──' : '├──';
+        tree += `${isLast ? '        ' : '    │   '}    ${charConnector} ${char.name}: ${char.value}\n`;
+      });
+    }
+  });
+  
+  return tree;
+}
 
 /**
  * Головна функція для парсингу XML в структуру
