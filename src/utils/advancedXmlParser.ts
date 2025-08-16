@@ -1,4 +1,5 @@
 
+// Удосконалений парсер XML для витягування всіх параметрів Rozetka YML
 import { XMLParser } from 'fast-xml-parser';
 
 // Інтерфейси для структури магазину

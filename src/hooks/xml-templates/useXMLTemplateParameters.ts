@@ -100,6 +100,15 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
         nested_values: parameterData.nested_values || null
       };
       
+      // Додаткова перевірка на null values
+      if (!validatedData.parameter_name || validatedData.parameter_name.trim() === '') {
+        throw new Error('Назва параметру не може бути порожньою');
+      }
+      
+      if (!validatedData.xml_path || validatedData.xml_path.trim() === '') {
+        throw new Error('XML шлях не може бути порожнім');
+      }
+      
       console.log('📋 Валідовані дані для створення:', validatedData);
       
       const { data, error } = await supabase
@@ -197,6 +206,15 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   // Створюємо асинхронну функцію для створення параметрів
   const createParameterAsync = async (parameterData: any): Promise<void> => {
+    // Додаткова валідація перед викликом мутації
+    if (!parameterData.parameter_name || parameterData.parameter_name.trim() === '') {
+      parameterData.parameter_name = 'Новий параметр';
+    }
+    
+    if (!parameterData.xml_path || parameterData.xml_path.trim() === '') {
+      parameterData.xml_path = 'shop/';
+    }
+    
     return new Promise<void>((resolve, reject) => {
       createParameterMutation.mutate(parameterData, {
         onSuccess: () => {
