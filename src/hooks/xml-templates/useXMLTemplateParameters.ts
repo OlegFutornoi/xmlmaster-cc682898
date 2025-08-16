@@ -83,11 +83,28 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   const createParameterMutation = useMutation({
     mutationFn: async (parameterData: any) => {
-      console.log('💾 Створення параметру:', parameterData.parameter_name);
+      console.log('💾 Створення параметру:', parameterData);
+      
+      // Валідуємо обов'язкові поля перед відправкою
+      const validatedData = {
+        template_id: parameterData.template_id,
+        parameter_name: parameterData.parameter_name || 'Новий параметр',
+        parameter_value: parameterData.parameter_value || '',
+        xml_path: parameterData.xml_path || '',
+        parameter_type: parameterData.parameter_type || 'text',
+        parameter_category: parameterData.parameter_category || 'parameter',
+        parent_parameter: parameterData.parent_parameter || null,
+        is_active: parameterData.is_active ?? true,
+        is_required: parameterData.is_required ?? false,
+        display_order: parameterData.display_order ?? 0,
+        nested_values: parameterData.nested_values || null
+      };
+      
+      console.log('📋 Валідовані дані для створення:', validatedData);
       
       const { data, error } = await supabase
         .from('template_xml_parameters')
-        .insert([parameterData])
+        .insert([validatedData])
         .select()
         .single();
 
@@ -101,6 +118,10 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['template-xml-parameters', templateId] });
+      toast({
+        title: "Успіх",
+        description: "Параметр створено успішно",
+      });
     },
     onError: (error: any) => {
       console.error('❌ Помилка створення параметру:', error);

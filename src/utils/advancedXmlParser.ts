@@ -17,6 +17,7 @@ export interface CategoryInfo {
   id: string;
   name: string;
   parentId?: string;
+  rz_id?: string;
 }
 
 export interface OfferCharacteristic {
@@ -24,12 +25,16 @@ export interface OfferCharacteristic {
   value: string;
   unit?: string;
   language?: string;
+  paramid?: string;
+  valueid?: string;
 }
 
 export interface OfferInfo {
   id: string;
   available: string;
   price: number;
+  price_old?: number;
+  price_promo?: number;
   currencyId: string;
   categoryId: string;
   pictures: string[];
@@ -37,10 +42,17 @@ export interface OfferInfo {
   article?: string;
   vendorCode?: string;
   stock_quantity?: number;
+  quantity_in_stock?: number;
   name: string;
   name_ua?: string;
+  model?: string;
+  model_ua?: string;
   description?: string;
   description_ua?: string;
+  state?: string;
+  docket?: string;
+  docket_ua?: string;
+  url?: string;
   characteristics: OfferCharacteristic[];
   [key: string]: any;
 }
@@ -101,7 +113,8 @@ export function generateTreeStructure(structure: ParsedXMLStructure): string {
     const isLast = index === categories.length - 1;
     const connector = isLast ? '└──' : '├──';
     const parentInfo = category.parentId ? ` (parent: ${category.parentId})` : '';
-    tree += `│   ${connector} ${category.name} [id="${category.id}"]${parentInfo}\n`;
+    const rzInfo = category.rz_id ? ` [rz_id="${category.rz_id}"]` : '';
+    tree += `│   ${connector} ${category.name} [id="${category.id}"]${parentInfo}${rzInfo}\n`;
   });
   
   tree += '└── 🎁 Offers\n';
@@ -114,19 +127,29 @@ export function generateTreeStructure(structure: ParsedXMLStructure): string {
     // Основні параметри товару
     const offerParams = [
       { name: 'price', value: offer.price },
+      { name: 'price_old', value: offer.price_old },
+      { name: 'price_promo', value: offer.price_promo },
       { name: 'currencyId', value: offer.currencyId },
       { name: 'categoryId', value: offer.categoryId },
       { name: 'name', value: offer.name },
       { name: 'name_ua', value: offer.name_ua },
+      { name: 'model', value: offer.model },
+      { name: 'model_ua', value: offer.model_ua },
       { name: 'vendor', value: offer.vendor },
       { name: 'article', value: offer.article },
       { name: 'vendorCode', value: offer.vendorCode },
-      { name: 'description', value: offer.description },
-      { name: 'description_ua', value: offer.description_ua }
+      { name: 'stock_quantity', value: offer.stock_quantity },
+      { name: 'quantity_in_stock', value: offer.quantity_in_stock },
+      { name: 'state', value: offer.state },
+      { name: 'docket', value: offer.docket },
+      { name: 'docket_ua', value: offer.docket_ua },
+      { name: 'url', value: offer.url },
+      { name: 'description', value: offer.description ? 'HTML content' : undefined },
+      { name: 'description_ua', value: offer.description_ua ? 'HTML content' : undefined }
     ];
 
     offerParams.forEach((param, paramIndex) => {
-      if (param.value) {
+      if (param.value !== undefined && param.value !== null) {
         const paramConnector = (isLast ? '        ' : '    │   ') + '├──';
         tree += `${paramConnector} ${param.name}: ${param.value}\n`;
       }
@@ -135,26 +158,26 @@ export function generateTreeStructure(structure: ParsedXMLStructure): string {
     // Зображення
     const pictures = offer.pictures || [];
     if (pictures.length > 0) {
-      const pictureConnector = (isLast ? '        ' : '    │   ') + '├──';
-      tree += `${pictureConnector} pictures (${pictures.length})\n`;
+      pictures.forEach((picture, picIndex) => {
+        const pictureConnector = (isLast ? '        ' : '    │   ') + '├──';
+        tree += `${pictureConnector} picture: ${picture}\n`;
+      });
     }
     
     // Характеристики
     const characteristics = offer.characteristics || [];
     if (characteristics.length > 0) {
-      const charConnector = (isLast ? '        ' : '    │   ') + '└──';
-      tree += `${charConnector} characteristics (${characteristics.length})\n`;
       characteristics.forEach((char, charIndex) => {
         const isLastChar = charIndex === characteristics.length - 1;
-        const charItemConnector = isLastChar ? '└──' : '├──';
-        const prefix = (isLast ? '        ' : '    │   ') + '    ';
+        const charConnector = (isLast ? '        ' : '    │   ') + (isLastChar ? '└──' : '├──');
         
         if (char.language) {
-          tree += `${prefix}├── param (name="${char.name}")\n`;
           const langFlag = char.language === 'uk' ? '🇺🇦' : char.language === 'ru' ? '🇷🇺' : '🏳️';
-          tree += `${prefix}│   └── ${langFlag} value (lang="${char.language}"): "${char.value}"\n`;
+          tree += `${charConnector} param (name="${char.name}")\n`;
+          const prefix = (isLast ? '        ' : '    │   ') + '    ';
+          tree += `${prefix}└── ${langFlag} value (lang="${char.language}"): "${char.value}"\n`;
         } else {
-          tree += `${prefix}${charItemConnector} param (name="${char.name}"): ${char.value}\n`;
+          tree += `${charConnector} param (name="${char.name}"): ${char.value}\n`;
         }
       });
     }
@@ -226,7 +249,7 @@ export function parseXMLToStructure(xmlContent: string): ParsedXMLStructure {
 function extractTextValue(value: any): string {
   if (typeof value === 'string') return value;
   if (typeof value === 'object' && value !== null) {
-    return value['#text'] || value._text || String(value);
+    return value['#text'] || value._text || value.__cdata || String(value);
   }
   return String(value || '');
 }
@@ -276,6 +299,10 @@ function parseCategories(categoriesData: any): CategoryInfo[] {
           categoryInfo.parentId = String(category['@_parentId']);
         }
         
+        if (category['@_rz_id']) {
+          categoryInfo.rz_id = String(category['@_rz_id']);
+        }
+        
         categories.push(categoryInfo);
       }
     });
@@ -304,19 +331,27 @@ function parseOffers(offersData: any): OfferInfo[] {
           currencyId: String(offer.currencyId || offer.currency_id || ''),
           categoryId: String(offer.categoryId || offer.category_id || ''),
           pictures: parsePictures(offer.picture),
-          name: extractTextValue(offer.name) || '',
+          name: extractTextValue(offer.name || offer.model) || '',
           characteristics: parseCharacteristics(offer.param || [])
         };
         
-        // Додаткові поля з перевіркою різних варіантів назв
+        // Додаткові поля з підтримкою всіх варіантів Rozetka
+        if (offer.price_old || offer.old_price) offerInfo.price_old = parseFloat(offer.price_old || offer.old_price);
+        if (offer.price_promo || offer.promo_price) offerInfo.price_promo = parseFloat(offer.price_promo || offer.promo_price);
         if (offer.vendor) offerInfo.vendor = extractTextValue(offer.vendor);
         if (offer.article) offerInfo.article = extractTextValue(offer.article);
-        if (offer.vendorCode) offerInfo.vendorCode = extractTextValue(offer.vendorCode);
-        if (offer['vendor-code']) offerInfo.vendorCode = extractTextValue(offer['vendor-code']);
+        if (offer.vendorCode || offer['vendor-code']) offerInfo.vendorCode = extractTextValue(offer.vendorCode || offer['vendor-code']);
         if (offer.stock_quantity) offerInfo.stock_quantity = parseInt(offer.stock_quantity) || 0;
-        if (offer.name_ua) offerInfo.name_ua = extractTextValue(offer.name_ua);
+        if (offer.quantity_in_stock) offerInfo.quantity_in_stock = parseInt(offer.quantity_in_stock) || 0;
+        if (offer.name_ua || offer.model_ua) offerInfo.name_ua = extractTextValue(offer.name_ua || offer.model_ua);
+        if (offer.model) offerInfo.model = extractTextValue(offer.model);
+        if (offer.model_ua) offerInfo.model_ua = extractTextValue(offer.model_ua);
         if (offer.description) offerInfo.description = extractTextValue(offer.description);
         if (offer.description_ua) offerInfo.description_ua = extractTextValue(offer.description_ua);
+        if (offer.state) offerInfo.state = extractTextValue(offer.state);
+        if (offer.docket) offerInfo.docket = extractTextValue(offer.docket);
+        if (offer.docket_ua) offerInfo.docket_ua = extractTextValue(offer.docket_ua);
+        if (offer.url) offerInfo.url = extractTextValue(offer.url);
         
         offers.push(offerInfo);
       }
@@ -339,15 +374,44 @@ function parseCharacteristics(paramData: any): OfferCharacteristic[] {
   
   const params = Array.isArray(paramData) ? paramData : [paramData];
   
-  return params.map((param: any) => {
-    const characteristic: OfferCharacteristic = {
-      name: String(param['@_name'] || 'Невідома характеристика'),
-      value: extractTextValue(param)
-    };
+  const characteristics: OfferCharacteristic[] = [];
+  
+  params.forEach((param: any) => {
+    if (!param || !param['@_name']) return;
     
-    if (param['@_unit']) characteristic.unit = String(param['@_unit']);
-    if (param['@_lang']) characteristic.language = String(param['@_lang']);
+    const name = String(param['@_name']);
     
-    return characteristic;
+    // Перевіряємо чи є мультимовні значення
+    if (param.value) {
+      const values = Array.isArray(param.value) ? param.value : [param.value];
+      
+      values.forEach((value: any) => {
+        const characteristic: OfferCharacteristic = {
+          name,
+          value: extractTextValue(value)
+        };
+        
+        if (value['@_lang']) characteristic.language = String(value['@_lang']);
+        if (param['@_paramid']) characteristic.paramid = String(param['@_paramid']);
+        if (param['@_valueid']) characteristic.valueid = String(param['@_valueid']);
+        if (param['@_unit']) characteristic.unit = String(param['@_unit']);
+        
+        characteristics.push(characteristic);
+      });
+    } else {
+      // Звичайне значення параметру
+      const characteristic: OfferCharacteristic = {
+        name,
+        value: extractTextValue(param)
+      };
+      
+      if (param['@_paramid']) characteristic.paramid = String(param['@_paramid']);
+      if (param['@_valueid']) characteristic.valueid = String(param['@_valueid']);
+      if (param['@_unit']) characteristic.unit = String(param['@_unit']);
+      
+      characteristics.push(characteristic);
+    }
   });
+  
+  return characteristics;
 }
