@@ -9,14 +9,20 @@ import TemplateDataTabs from './TemplateDataTabs';
 
 interface ParsedStructureTableProps {
   structure: ParsedXMLStructure;
+  templateName?: string;
+  onSave?: (updatedStructure: ParsedXMLStructure) => void;
   onSaveTemplate?: (templateData: any) => void;
   isSaving?: boolean;
+  isEditable?: boolean;
 }
 
 const ParsedStructureTable = ({ 
   structure, 
+  templateName = "XML Template",
+  onSave,
   onSaveTemplate, 
-  isSaving = false 
+  isSaving = false,
+  isEditable = false
 }: ParsedStructureTableProps) => {
   const treeStructure = generateTreeStructure(structure);
 
@@ -32,6 +38,12 @@ const ParsedStructureTable = ({
         structure,
         parameters: structure.parameters || []
       });
+    }
+  };
+
+  const handleSave = (updatedStructure: ParsedXMLStructure) => {
+    if (onSave) {
+      onSave(updatedStructure);
     }
   };
 
@@ -52,7 +64,7 @@ const ParsedStructureTable = ({
             <div className="flex items-center gap-3">
               <TemplateTreeView 
                 treeStructure={treeStructure} 
-                templateName="XML Template" 
+                templateName={templateName} 
               />
               {onSaveTemplate && (
                 <Button 
@@ -99,8 +111,8 @@ const ParsedStructureTable = ({
       {/* Детальна інформація з вкладками */}
       <TemplateDataTabs 
         structure={structure} 
-        onSave={onSaveTemplate || (() => {})}
-        isEditable={false}
+        onSave={handleSave}
+        isEditable={isEditable}
       />
     </div>
   );
