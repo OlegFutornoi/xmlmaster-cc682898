@@ -741,6 +741,53 @@ export type Database = {
           },
         ]
       }
+      template_offer_parameters: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          parameter_name: string
+          parameter_type: string | null
+          parameter_values: Json
+          template_id: string
+          updated_at: string
+          xml_path: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          parameter_name: string
+          parameter_type?: string | null
+          parameter_values?: Json
+          template_id: string
+          updated_at?: string
+          xml_path: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          parameter_name?: string
+          parameter_type?: string | null
+          parameter_values?: Json
+          template_id?: string
+          updated_at?: string
+          xml_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_offer_parameters_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_xml: {
         Row: {
           created_at: string
@@ -829,6 +876,66 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "template_xml_parameters_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_xml_structure: {
+        Row: {
+          attributes: Json | null
+          created_at: string
+          display_order: number | null
+          element_name: string
+          element_value: string | null
+          id: string
+          is_active: boolean | null
+          parent_id: string | null
+          structure_type: string
+          template_id: string
+          updated_at: string
+          xml_path: string
+        }
+        Insert: {
+          attributes?: Json | null
+          created_at?: string
+          display_order?: number | null
+          element_name: string
+          element_value?: string | null
+          id?: string
+          is_active?: boolean | null
+          parent_id?: string | null
+          structure_type: string
+          template_id: string
+          updated_at?: string
+          xml_path: string
+        }
+        Update: {
+          attributes?: Json | null
+          created_at?: string
+          display_order?: number | null
+          element_name?: string
+          element_value?: string | null
+          id?: string
+          is_active?: boolean | null
+          parent_id?: string | null
+          structure_type?: string
+          template_id?: string
+          updated_at?: string
+          xml_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_xml_structure_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "template_xml_structure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_xml_structure_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "template_xml"
