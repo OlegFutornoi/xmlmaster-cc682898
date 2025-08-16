@@ -38,7 +38,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
   const updateCurrency = (index: number, field: 'id' | 'rate', value: string) => {
     setEditableStructure(prev => ({
       ...prev,
-      currencies: prev.currencies.map((currency, i) => 
+      currencies: (prev.currencies || []).map((currency, i) => 
         i === index ? { ...currency, [field]: value } : currency
       )
     }));
@@ -48,7 +48,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
   const addCurrency = () => {
     setEditableStructure(prev => ({
       ...prev,
-      currencies: [...prev.currencies, { id: '', rate: '1' }]
+      currencies: [...(prev.currencies || []), { id: '', rate: '1' }]
     }));
     setHasChanges(true);
   };
@@ -56,7 +56,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
   const removeCurrency = (index: number) => {
     setEditableStructure(prev => ({
       ...prev,
-      currencies: prev.currencies.filter((_, i) => i !== index)
+      currencies: (prev.currencies || []).filter((_, i) => i !== index)
     }));
     setHasChanges(true);
   };
@@ -64,7 +64,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
   const updateCategory = (index: number, field: 'id' | 'name', value: string) => {
     setEditableStructure(prev => ({
       ...prev,
-      categories: prev.categories.map((category, i) => 
+      categories: (prev.categories || []).map((category, i) => 
         i === index ? { ...category, [field]: value } : category
       )
     }));
@@ -74,7 +74,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
   const addCategory = () => {
     setEditableStructure(prev => ({
       ...prev,
-      categories: [...prev.categories, { id: '', name: '' }]
+      categories: [...(prev.categories || []), { id: '', name: '' }]
     }));
     setHasChanges(true);
   };
@@ -82,7 +82,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
   const removeCategory = (index: number) => {
     setEditableStructure(prev => ({
       ...prev,
-      categories: prev.categories.filter((_, i) => i !== index)
+      categories: (prev.categories || []).filter((_, i) => i !== index)
     }));
     setHasChanges(true);
   };
@@ -104,19 +104,19 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
           <TabsTrigger value="currencies">
             Валюти 
             <Badge variant="secondary" className="ml-2">
-              {editableStructure.currencies.length}
+              {(editableStructure.currencies || []).length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="categories">
             Категорії 
             <Badge variant="secondary" className="ml-2">
-              {editableStructure.categories.length}
+              {(editableStructure.categories || []).length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="offers">
             Товари 
             <Badge variant="secondary" className="ml-2">
-              {editableStructure.offers.length}
+              {(editableStructure.offers || []).length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="characteristics">Характеристики</TabsTrigger>
@@ -138,7 +138,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                   <Label htmlFor="shop-name">Назва магазину</Label>
                   <Input
                     id="shop-name"
-                    value={editableStructure.shop.name || ''}
+                    value={editableStructure.shop?.name || ''}
                     onChange={(e) => updateShopInfo('name', e.target.value)}
                     placeholder="Введіть назву магазину"
                     disabled={!isEditable}
@@ -148,7 +148,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                   <Label htmlFor="shop-company">Назва компанії</Label>
                   <Input
                     id="shop-company"
-                    value={editableStructure.shop.company || ''}
+                    value={editableStructure.shop?.company || ''}
                     onChange={(e) => updateShopInfo('company', e.target.value)}
                     placeholder="Введіть назву компанії"
                     disabled={!isEditable}
@@ -159,7 +159,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                 <Label htmlFor="shop-url">URL магазину</Label>
                 <Input
                   id="shop-url"
-                  value={editableStructure.shop.url || ''}
+                  value={editableStructure.shop?.url || ''}
                   onChange={(e) => updateShopInfo('url', e.target.value)}
                   placeholder="https://www.example.com"
                   disabled={!isEditable}
@@ -190,7 +190,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {editableStructure.currencies.map((currency, index) => (
+              {(editableStructure.currencies || []).map((currency, index) => (
                 <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                   <div className="flex-1 grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -226,7 +226,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                   )}
                 </div>
               ))}
-              {editableStructure.currencies.length === 0 && (
+              {(editableStructure.currencies || []).length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   Валюти не знайдено. Додайте першу валюту.
                 </div>
@@ -256,7 +256,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {editableStructure.categories.map((category, index) => (
+              {(editableStructure.categories || []).map((category, index) => (
                 <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                   <div className="flex-1 grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -292,7 +292,7 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                   )}
                 </div>
               ))}
-              {editableStructure.categories.length === 0 && (
+              {(editableStructure.categories || []).length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   Категорії не знайдено. Додайте першу категорію.
                 </div>
@@ -312,9 +312,9 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {editableStructure.offers.length > 0 ? (
+              {(editableStructure.offers || []).length > 0 ? (
                 <div className="space-y-6">
-                  {editableStructure.offers.slice(0, 3).map((offer, index) => (
+                  {(editableStructure.offers || []).slice(0, 3).map((offer, index) => (
                     <div key={index} className="border rounded-lg p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-lg">
@@ -342,11 +342,11 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                         <div><strong>🏷️ Назва (UA):</strong> {offer.name_ua}</div>
                       )}
 
-                      {offer.pictures.length > 0 && (
+                      {(offer.pictures || []).length > 0 && (
                         <div>
-                          <strong>🖼️ Зображення ({offer.pictures.length}):</strong>
+                          <strong>🖼️ Зображення ({(offer.pictures || []).length}):</strong>
                           <div className="mt-2 space-y-1">
-                            {offer.pictures.map((picture, picIndex) => (
+                            {(offer.pictures || []).map((picture, picIndex) => (
                               <div key={picIndex} className="text-xs text-blue-600 break-all">
                                 {picture}
                               </div>
@@ -355,11 +355,11 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                         </div>
                       )}
 
-                      {offer.characteristics.length > 0 && (
+                      {(offer.characteristics || []).length > 0 && (
                         <div>
-                          <strong>📏 Характеристики ({offer.characteristics.length}):</strong>
+                          <strong>📏 Характеристики ({(offer.characteristics || []).length}):</strong>
                           <div className="mt-2 grid gap-2">
-                            {offer.characteristics.map((char, charIndex) => (
+                            {(offer.characteristics || []).map((char, charIndex) => (
                               <div key={charIndex} className="text-sm border-l-2 pl-3">
                                 <div className="font-medium">{char.name}:</div>
                                 <div className="text-gray-600 ml-2">
@@ -379,9 +379,9 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                     </div>
                   ))}
                   
-                  {editableStructure.offers.length > 3 && (
+                  {(editableStructure.offers || []).length > 3 && (
                     <div className="text-center py-4 text-gray-500">
-                      ... та ще {editableStructure.offers.length - 3} товарів
+                      ... та ще {(editableStructure.offers || []).length - 3} товарів
                     </div>
                   )}
                 </div>
@@ -407,8 +407,8 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
             <CardContent>
               {(() => {
                 // Групуємо всі характеристики по назвах
-                const groupedCharacteristics = editableStructure.offers
-                  .flatMap(offer => offer.characteristics)
+                const groupedCharacteristics = (editableStructure.offers || [])
+                  .flatMap(offer => offer.characteristics || [])
                   .reduce((acc, char) => {
                     if (!acc[char.name]) {
                       acc[char.name] = [];
