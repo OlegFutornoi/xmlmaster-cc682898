@@ -84,7 +84,7 @@ export interface XMLUploadRequest {
   url?: string;
 }
 
-// Оновлений тип для сумісності з новим парсером
+// Оновлений тип для сумісності з новим парсером - тепер ідентичний до advancedXmlParser
 export interface ParsedXMLStructure {
   shop: {
     name: string;
