@@ -99,6 +99,19 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true, templateId }: 
     setHasChanges(true);
   };
 
+  // Функції-обгортки для правильної типізації
+  const handleUpdateParameter = (id: string, updates: any) => {
+    updateParameter({ id, updates });
+  };
+
+  const handleDeleteParameter = (parameterId: string) => {
+    deleteParameter(parameterId);
+  };
+
+  const handleCreateParameter = (parameterData: any) => {
+    createParameter(parameterData);
+  };
+
   return (
     <div className="space-y-4">
       {hasChanges && isEditable && (
@@ -154,9 +167,9 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true, templateId }: 
               {templateId ? (
                 <TemplateParameterTree
                   parameters={parameters}
-                  onUpdateParameter={updateParameter}
-                  onDeleteParameter={deleteParameter}
-                  onCreateParameter={createParameter}
+                  onUpdateParameter={handleUpdateParameter}
+                  onDeleteParameter={handleDeleteParameter}
+                  onCreateParameter={handleCreateParameter}
                   templateId={templateId}
                 />
               ) : (
