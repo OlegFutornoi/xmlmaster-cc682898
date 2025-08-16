@@ -1,4 +1,3 @@
-
 // Сторінка редактора XML-шаблону з правильним парсингом та збереженням даних
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useXMLTemplate } from '@/hooks/xml-templates/useXMLTemplates';
+import { useXMLTemplates } from '@/hooks/xml-templates/useXMLTemplates';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
 import { importXMLParameters } from '@/utils/xmlParser';
 import TemplateParametersTable from '@/components/admin/xml-templates/TemplateParametersTable';
@@ -21,7 +20,8 @@ const XMLTemplateEditor = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const { data: template, isLoading, updateTemplate } = useXMLTemplate(id);
+  const { templates, updateTemplate } = useXMLTemplates();
+  const template = templates.find(t => t.id === id);
   const { 
     parameters, 
     createParameterAsync,
@@ -201,12 +201,14 @@ const XMLTemplateEditor = () => {
     if (!id) return;
 
     try {
-      await updateTemplate({
+      updateTemplate({
         id,
-        name: templateForm.name,
-        shop_name: templateForm.shop_name,
-        shop_company: templateForm.shop_company,
-        shop_url: templateForm.shop_url
+        updates: {
+          name: templateForm.name,
+          shop_name: templateForm.shop_name,
+          shop_company: templateForm.shop_company,
+          shop_url: templateForm.shop_url
+        }
       });
 
       toast({
@@ -223,7 +225,7 @@ const XMLTemplateEditor = () => {
     }
   };
 
-  if (isLoading || parametersLoading) {
+  if (parametersLoading) {
     return <div className="flex justify-center items-center h-64">Завантаження...</div>;
   }
 
