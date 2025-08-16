@@ -1,4 +1,3 @@
-
 // Оновлений компонент вкладок даних шаблону з параметрами та характеристиками
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,13 +9,7 @@ import { ParsedXMLStructure } from '@/utils/advancedXmlParser';
 import { useXMLTemplateParameters } from '@/hooks/xml-templates/useXMLTemplateParameters';
 import CompactTreeNode from './CompactTreeNode';
 import ExpandableText from './ExpandableText';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 interface TemplateDataTabsProps {
   structure: ParsedXMLStructure;
   templateId?: string;
@@ -24,7 +17,6 @@ interface TemplateDataTabsProps {
   onSave?: (updatedStructure: ParsedXMLStructure) => void;
   isEditable?: boolean;
 }
-
 const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
   structure,
   templateId,
@@ -33,26 +25,25 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
   isEditable = false
 }) => {
   const [activeTab, setActiveTab] = useState('shop');
-  
   const {
     parameters,
     createParameterAsync,
     updateParameter: updateParameterMutation,
-    deleteParameter: deleteParameterMutation,
+    deleteParameter: deleteParameterMutation
   } = useXMLTemplateParameters(templateId);
 
   // Wrapper functions for proper parameter passing
   const updateParameter = (id: string, updates: any) => {
-    updateParameterMutation({ id, updates });
+    updateParameterMutation({
+      id,
+      updates
+    });
   };
-
   const deleteParameter = (id: string) => {
     deleteParameterMutation(id);
   };
-
   const handleAddShopParameter = async () => {
     if (!templateId) return;
-    
     try {
       await createParameterAsync({
         template_id: templateId,
@@ -69,16 +60,14 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
       console.error('Помилка створення параметру:', error);
     }
   };
-
   const handleAddCurrencyParameter = async () => {
     if (!templateId) return;
-    
     try {
       await createParameterAsync({
         template_id: templateId,
         parameter_name: 'Нова валюта',
         parameter_value: '',
-        parameter_type: 'text', 
+        parameter_type: 'text',
         parameter_category: 'currency',
         xml_path: 'shop/currencies/currency',
         is_active: true,
@@ -89,17 +78,15 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
       console.error('Помилка створення валюти:', error);
     }
   };
-
   const handleAddCategoryParameter = async () => {
     if (!templateId) return;
-    
     try {
       await createParameterAsync({
         template_id: templateId,
         parameter_name: 'Нова категорія',
         parameter_value: '',
         parameter_type: 'text',
-        parameter_category: 'category', 
+        parameter_category: 'category',
         xml_path: 'shop/categories/category',
         is_active: true,
         is_required: false,
@@ -109,10 +96,8 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
       console.error('Помилка створення категорії:', error);
     }
   };
-
   const handleAddOfferParameter = async () => {
     if (!templateId) return;
-    
     try {
       await createParameterAsync({
         template_id: templateId,
@@ -129,10 +114,8 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
       console.error('Помилка створення параметру товару:', error);
     }
   };
-
   const handleAddCharacteristic = async () => {
     if (!templateId) return;
-    
     try {
       await createParameterAsync({
         template_id: templateId,
@@ -154,16 +137,9 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
   const getParametersByCategory = (category: string) => {
     return parameters.filter(p => p.parameter_category === category);
   };
-
-  return (
-    <div className="space-y-4">
+  return <div className="space-y-4">
       <Card>
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg">Дані шаблону: {templateName}</CardTitle>
-          <CardDescription>
-            Структура XML з можливістю редагування параметрів
-          </CardDescription>
-        </CardHeader>
+        
         <CardContent className="p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-6">
@@ -179,8 +155,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
             <TabsContent value="shop" className="space-y-3 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Основна інформація</h3>
-                {isEditable && (
-                  <DropdownMenu>
+                {isEditable && <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                         <Settings className="h-3 w-3" />
@@ -192,45 +167,18 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                         Додати параметр магазину
                       </DropdownMenuItem>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                  </DropdownMenu>}
               </div>
               
               <div className="border rounded-lg bg-white">
-                <CompactTreeNode
-                  icon="🏪"
-                  label="name"
-                  value={structure.shop.name}
-                  id="shop-name"
-                  onEdit={isEditable ? (newValue) => console.log('Edit shop name:', newValue) : undefined}
-                />
-                <CompactTreeNode
-                  icon="🏢"
-                  label="company"
-                  value={structure.shop.company}
-                  id="shop-company"
-                  onEdit={isEditable ? (newValue) => console.log('Edit shop company:', newValue) : undefined}
-                />
-                <CompactTreeNode
-                  icon="🌐"
-                  label="url"
-                  value={structure.shop.url}
-                  id="shop-url"
-                  onEdit={isEditable ? (newValue) => console.log('Edit shop url:', newValue) : undefined}
-                />
+                <CompactTreeNode icon="🏪" label="name" value={structure.shop.name} id="shop-name" onEdit={isEditable ? newValue => console.log('Edit shop name:', newValue) : undefined} />
+                <CompactTreeNode icon="🏢" label="company" value={structure.shop.company} id="shop-company" onEdit={isEditable ? newValue => console.log('Edit shop company:', newValue) : undefined} />
+                <CompactTreeNode icon="🌐" label="url" value={structure.shop.url} id="shop-url" onEdit={isEditable ? newValue => console.log('Edit shop url:', newValue) : undefined} />
                 
                 {/* Параметри магазину */}
-                {getParametersByCategory('parameter').map((param) => (
-                  <CompactTreeNode
-                    key={param.id}
-                    icon="📋"
-                    label={param.parameter_name}
-                    value={param.parameter_value || ''}
-                    id={`param-${param.id}`}
-                    onEdit={isEditable ? (newValue) => updateParameter(param.id, { parameter_value: newValue }) : undefined}
-                    onDelete={isEditable ? () => deleteParameter(param.id) : undefined}
-                  />
-                ))}
+                {getParametersByCategory('parameter').map(param => <CompactTreeNode key={param.id} icon="📋" label={param.parameter_name} value={param.parameter_value || ''} id={`param-${param.id}`} onEdit={isEditable ? newValue => updateParameter(param.id, {
+                parameter_value: newValue
+              }) : undefined} onDelete={isEditable ? () => deleteParameter(param.id) : undefined} />)}
               </div>
             </TabsContent>
 
@@ -238,8 +186,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
             <TabsContent value="currencies" className="space-y-3 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Валюти ({structure.currencies.length})</h3>
-                {isEditable && (
-                  <DropdownMenu>
+                {isEditable && <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                         <Settings className="h-3 w-3" />
@@ -251,37 +198,16 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                         Додати валюту
                       </DropdownMenuItem>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                  </DropdownMenu>}
               </div>
               
               <div className="border rounded-lg bg-white">
-                {structure.currencies.map((currency) => (
-                  <CompactTreeNode
-                    key={currency.id}
-                    icon="💰"
-                    label="currency"
-                    value={`id="${currency.id}", rate="${currency.rate}"`}
-                    id={`currency-${currency.id}`}
-                    onEdit={isEditable ? (newValue) => console.log('Edit currency:', newValue) : undefined}
-                    onDelete={isEditable ? () => console.log('Delete currency:', currency.id) : undefined}
-                    onAddAbove={isEditable ? handleAddCurrencyParameter : undefined}
-                    onAddBelow={isEditable ? handleAddCurrencyParameter : undefined}
-                  />
-                ))}
+                {structure.currencies.map(currency => <CompactTreeNode key={currency.id} icon="💰" label="currency" value={`id="${currency.id}", rate="${currency.rate}"`} id={`currency-${currency.id}`} onEdit={isEditable ? newValue => console.log('Edit currency:', newValue) : undefined} onDelete={isEditable ? () => console.log('Delete currency:', currency.id) : undefined} onAddAbove={isEditable ? handleAddCurrencyParameter : undefined} onAddBelow={isEditable ? handleAddCurrencyParameter : undefined} />)}
                 
                 {/* Параметри валют */}
-                {getParametersByCategory('currency').map((param) => (
-                  <CompactTreeNode
-                    key={param.id}
-                    icon="💱"
-                    label={param.parameter_name}
-                    value={param.parameter_value || ''}
-                    id={`currency-param-${param.id}`}
-                    onEdit={isEditable ? (newValue) => updateParameter(param.id, { parameter_value: newValue }) : undefined}
-                    onDelete={isEditable ? () => deleteParameter(param.id) : undefined}
-                  />
-                ))}
+                {getParametersByCategory('currency').map(param => <CompactTreeNode key={param.id} icon="💱" label={param.parameter_name} value={param.parameter_value || ''} id={`currency-param-${param.id}`} onEdit={isEditable ? newValue => updateParameter(param.id, {
+                parameter_value: newValue
+              }) : undefined} onDelete={isEditable ? () => deleteParameter(param.id) : undefined} />)}
               </div>
             </TabsContent>
 
@@ -289,8 +215,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
             <TabsContent value="categories" className="space-y-3 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Категорії ({structure.categories.length})</h3>
-                {isEditable && (
-                  <DropdownMenu>
+                {isEditable && <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                         <Settings className="h-3 w-3" />
@@ -302,37 +227,16 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                         Додати категорію
                       </DropdownMenuItem>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                  </DropdownMenu>}
               </div>
               
               <div className="border rounded-lg bg-white">
-                {structure.categories.map((category) => (
-                  <CompactTreeNode
-                    key={category.id}
-                    icon="📁"
-                    label="category"
-                    value={`id="${category.id}": "${category.name}"`}
-                    id={`category-${category.id}`}
-                    onEdit={isEditable ? (newValue) => console.log('Edit category:', newValue) : undefined}
-                    onDelete={isEditable ? () => console.log('Delete category:', category.id) : undefined}
-                    onAddAbove={isEditable ? handleAddCategoryParameter : undefined}
-                    onAddBelow={isEditable ? handleAddCategoryParameter : undefined}
-                  />
-                ))}
+                {structure.categories.map(category => <CompactTreeNode key={category.id} icon="📁" label="category" value={`id="${category.id}": "${category.name}"`} id={`category-${category.id}`} onEdit={isEditable ? newValue => console.log('Edit category:', newValue) : undefined} onDelete={isEditable ? () => console.log('Delete category:', category.id) : undefined} onAddAbove={isEditable ? handleAddCategoryParameter : undefined} onAddBelow={isEditable ? handleAddCategoryParameter : undefined} />)}
                 
                 {/* Параметри категорій */}
-                {getParametersByCategory('category').map((param) => (
-                  <CompactTreeNode
-                    key={param.id}
-                    icon="📂"
-                    label={param.parameter_name}
-                    value={param.parameter_value || ''}
-                    id={`category-param-${param.id}`}
-                    onEdit={isEditable ? (newValue) => updateParameter(param.id, { parameter_value: newValue }) : undefined}
-                    onDelete={isEditable ? () => deleteParameter(param.id) : undefined}
-                  />
-                ))}
+                {getParametersByCategory('category').map(param => <CompactTreeNode key={param.id} icon="📂" label={param.parameter_name} value={param.parameter_value || ''} id={`category-param-${param.id}`} onEdit={isEditable ? newValue => updateParameter(param.id, {
+                parameter_value: newValue
+              }) : undefined} onDelete={isEditable ? () => deleteParameter(param.id) : undefined} />)}
               </div>
             </TabsContent>
 
@@ -340,8 +244,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
             <TabsContent value="offers" className="space-y-3 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Товари ({structure.offers.length})</h3>
-                {isEditable && (
-                  <DropdownMenu>
+                {isEditable && <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                         <Settings className="h-3 w-3" />
@@ -353,20 +256,12 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                         Додати параметр товару
                       </DropdownMenuItem>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                  </DropdownMenu>}
               </div>
               
               <div className="border rounded-lg bg-white max-h-96 overflow-y-auto">
-                {structure.offers.slice(0, 3).map((offer) => (
-                  <div key={offer.id} className="border-b last:border-b-0">
-                    <CompactTreeNode
-                      icon="📦"
-                      label="offer"
-                      value={`id="${offer.id}", available="${offer.available}"`}
-                      id={`offer-${offer.id}`}
-                      level={0}
-                    >
+                {structure.offers.slice(0, 3).map(offer => <div key={offer.id} className="border-b last:border-b-0">
+                    <CompactTreeNode icon="📦" label="offer" value={`id="${offer.id}", available="${offer.available}"`} id={`offer-${offer.id}`} level={0}>
                       {/* Основні поля товару */}
                       <CompactTreeNode icon="💲" label="price" value={String(offer.price)} level={1} />
                       {offer.price_old && <CompactTreeNode icon="💰" label="price_old" value={String(offer.price_old)} level={1} />}
@@ -375,16 +270,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                       <CompactTreeNode icon="🗂️" label="categoryId" value={String(offer.categoryId)} level={1} />
                       
                       {/* Зображення */}
-                      {offer.pictures.map((pic, picIndex) => (
-                        <CompactTreeNode 
-                          key={picIndex} 
-                          icon="🖼️" 
-                          label="picture" 
-                          value={pic} 
-                          level={1}
-                          isExpandable={true}
-                        />
-                      ))}
+                      {offer.pictures.map((pic, picIndex) => <CompactTreeNode key={picIndex} icon="🖼️" label="picture" value={pic} level={1} isExpandable={true} />)}
                       
                       {/* Основна інформація */}
                       {offer.vendor && <CompactTreeNode icon="🏷️" label="vendor" value={offer.vendor} level={1} />}
@@ -399,24 +285,8 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                       {offer.model_ua && <CompactTreeNode icon="📱" label="model_ua" value={offer.model_ua} level={1} />}
                       
                       {/* Описи */}
-                      {offer.description && (
-                        <CompactTreeNode 
-                          icon="📝" 
-                          label="description" 
-                          value={offer.description.replace(/<[^>]*>/g, '')} 
-                          level={1} 
-                          isExpandable={true}
-                        />
-                      )}
-                      {offer.description_ua && (
-                        <CompactTreeNode 
-                          icon="📝" 
-                          label="description_ua" 
-                          value={offer.description_ua.replace(/<[^>]*>/g, '')} 
-                          level={1} 
-                          isExpandable={true}
-                        />
-                      )}
+                      {offer.description && <CompactTreeNode icon="📝" label="description" value={offer.description.replace(/<[^>]*>/g, '')} level={1} isExpandable={true} />}
+                      {offer.description_ua && <CompactTreeNode icon="📝" label="description_ua" value={offer.description_ua.replace(/<[^>]*>/g, '')} level={1} isExpandable={true} />}
                       
                       {/* Інші поля */}
                       {offer.state && <CompactTreeNode icon="📋" label="state" value={offer.state} level={1} />}
@@ -424,21 +294,12 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                       {offer.docket_ua && <CompactTreeNode icon="📄" label="docket_ua" value={offer.docket_ua} level={1} isExpandable={true} />}
                       {offer.url && <CompactTreeNode icon="🌐" label="url" value={offer.url} level={1} isExpandable={true} />}
                     </CompactTreeNode>
-                  </div>
-                ))}
+                  </div>)}
                 
                 {/* Параметри товарів */}
-                {getParametersByCategory('offer').map((param) => (
-                  <CompactTreeNode
-                    key={param.id}
-                    icon="📋"
-                    label={param.parameter_name}
-                    value={param.parameter_value || ''}
-                    id={`offer-param-${param.id}`}
-                    onEdit={isEditable ? (newValue) => updateParameter(param.id, { parameter_value: newValue }) : undefined}
-                    onDelete={isEditable ? () => deleteParameter(param.id) : undefined}
-                  />
-                ))}
+                {getParametersByCategory('offer').map(param => <CompactTreeNode key={param.id} icon="📋" label={param.parameter_name} value={param.parameter_value || ''} id={`offer-param-${param.id}`} onEdit={isEditable ? newValue => updateParameter(param.id, {
+                parameter_value: newValue
+              }) : undefined} onDelete={isEditable ? () => deleteParameter(param.id) : undefined} />)}
               </div>
             </TabsContent>
 
@@ -448,34 +309,20 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                 <h3 className="text-sm font-medium">
                   Параметри товарів ({getParametersByCategory('offer').length})
                 </h3>
-                {isEditable && (
-                  <Button onClick={handleAddOfferParameter} size="sm" className="gap-1 h-6">
+                {isEditable && <Button onClick={handleAddOfferParameter} size="sm" className="gap-1 h-6">
                     <Plus className="h-3 w-3" />
                     Додати параметр
-                  </Button>
-                )}
+                  </Button>}
               </div>
               
               <div className="border rounded-lg bg-white">
-                {getParametersByCategory('offer').map((param) => (
-                  <CompactTreeNode
-                    key={param.id}
-                    icon="📋"
-                    label={param.parameter_name}
-                    value={param.parameter_value || ''}
-                    id={`param-${param.id}`}
-                    onEdit={isEditable ? (newValue) => updateParameter(param.id, { parameter_value: newValue }) : undefined}
-                    onDelete={isEditable ? () => deleteParameter(param.id) : undefined}
-                    onAddAbove={isEditable ? handleAddOfferParameter : undefined}
-                    onAddBelow={isEditable ? handleAddOfferParameter : undefined}
-                  />
-                ))}
+                {getParametersByCategory('offer').map(param => <CompactTreeNode key={param.id} icon="📋" label={param.parameter_name} value={param.parameter_value || ''} id={`param-${param.id}`} onEdit={isEditable ? newValue => updateParameter(param.id, {
+                parameter_value: newValue
+              }) : undefined} onDelete={isEditable ? () => deleteParameter(param.id) : undefined} onAddAbove={isEditable ? handleAddOfferParameter : undefined} onAddBelow={isEditable ? handleAddOfferParameter : undefined} />)}
                 
-                {getParametersByCategory('offer').length === 0 && (
-                  <div className="p-4 text-center text-gray-500 text-sm">
+                {getParametersByCategory('offer').length === 0 && <div className="p-4 text-center text-gray-500 text-sm">
                     Параметри товарів відсутні
-                  </div>
-                )}
+                  </div>}
               </div>
             </TabsContent>
 
@@ -485,63 +332,31 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                 <h3 className="text-sm font-medium">
                   Характеристики ({getParametersByCategory('characteristic').length})
                 </h3>
-                {isEditable && (
-                  <Button onClick={handleAddCharacteristic} size="sm" className="gap-1 h-6">
+                {isEditable && <Button onClick={handleAddCharacteristic} size="sm" className="gap-1 h-6">
                     <Plus className="h-3 w-3" />
                     Додати характеристику
-                  </Button>
-                )}
+                  </Button>}
               </div>
               
               <div className="border rounded-lg bg-white">
                 {/* Характеристики з XML */}
-                {structure.offers.length > 0 && structure.offers[0].characteristics.map((char, index) => (
-                  <CompactTreeNode
-                    key={index}
-                    icon="📏"
-                    label={char.name}
-                    value={char.value}
-                    id={`char-${index}`}
-                    level={0}
-                  >
-                    {char.language && (
-                      <CompactTreeNode
-                        icon={char.language === 'uk' ? '🇺🇦' : char.language === 'ru' ? '🇷🇺' : '🏳️'}
-                        label={`value (lang="${char.language}")`}
-                        value={char.value}
-                        level={1}
-                      />
-                    )}
-                  </CompactTreeNode>
-                ))}
+                {structure.offers.length > 0 && structure.offers[0].characteristics.map((char, index) => <CompactTreeNode key={index} icon="📏" label={char.name} value={char.value} id={`char-${index}`} level={0}>
+                    {char.language && <CompactTreeNode icon={char.language === 'uk' ? '🇺🇦' : char.language === 'ru' ? '🇷🇺' : '🏳️'} label={`value (lang="${char.language}")`} value={char.value} level={1} />}
+                  </CompactTreeNode>)}
                 
                 {/* Користувацькі характеристики */}
-                {getParametersByCategory('characteristic').map((param) => (
-                  <CompactTreeNode
-                    key={param.id}
-                    icon="📏"
-                    label={param.parameter_name}
-                    value={param.parameter_value || ''}
-                    id={`characteristic-${param.id}`}
-                    onEdit={isEditable ? (newValue) => updateParameter(param.id, { parameter_value: newValue }) : undefined}
-                    onDelete={isEditable ? () => deleteParameter(param.id) : undefined}
-                    onAddAbove={isEditable ? handleAddCharacteristic : undefined}
-                    onAddBelow={isEditable ? handleAddCharacteristic : undefined}
-                  />
-                ))}
+                {getParametersByCategory('characteristic').map(param => <CompactTreeNode key={param.id} icon="📏" label={param.parameter_name} value={param.parameter_value || ''} id={`characteristic-${param.id}`} onEdit={isEditable ? newValue => updateParameter(param.id, {
+                parameter_value: newValue
+              }) : undefined} onDelete={isEditable ? () => deleteParameter(param.id) : undefined} onAddAbove={isEditable ? handleAddCharacteristic : undefined} onAddBelow={isEditable ? handleAddCharacteristic : undefined} />)}
                 
-                {structure.offers.length === 0 && getParametersByCategory('characteristic').length === 0 && (
-                  <div className="p-4 text-center text-gray-500 text-sm">
+                {structure.offers.length === 0 && getParametersByCategory('characteristic').length === 0 && <div className="p-4 text-center text-gray-500 text-sm">
                     Характеристики відсутні
-                  </div>
-                )}
+                  </div>}
               </div>
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default TemplateDataTabs;
