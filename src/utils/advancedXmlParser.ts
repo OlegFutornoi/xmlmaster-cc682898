@@ -1,248 +1,245 @@
+// Покращений парсер XML для детального аналізу структури YML/XML файлів
+import { XMLParser } from 'fast-xml-parser';
 
-// Розширений XML парсер для повного аналізу структури та збереження всіх даних
-export interface ParsedXMLStructure {
-  shop: ShopData;
-  currencies: CurrencyData[];
-  categories: CategoryData[];
-  offers: OfferData[];
+export interface ShopInfo {
+  name: string;
+  company: string;
+  url: string;
 }
 
-export interface ShopData {
-  name?: string;
-  company?: string;
-  url?: string;
-}
-
-export interface CurrencyData {
+export interface Currency {
   id: string;
   rate: string;
-  attributes?: Record<string, string>;
 }
 
-export interface CategoryData {
+export interface Category {
   id: string;
   name: string;
   parentId?: string;
-  attributes?: Record<string, string>;
 }
 
-export interface OfferData {
+export interface OfferCharacteristic {
+  name: string;
+  value: string;
+  unit?: string;
+  language?: string;
+}
+
+export interface Offer {
   id: string;
-  available?: string;
-  price?: string;
-  currencyId?: string;
-  categoryId?: string;
+  available: string;
+  price: number;
+  currencyId: string;
+  categoryId: string;
   pictures: string[];
   vendor?: string;
   article?: string;
-  stock_quantity?: string;
-  name?: string;
+  stock_quantity?: number;
+  name: string;
   name_ua?: string;
   description?: string;
   description_ua?: string;
-  characteristics: CharacteristicData[];
-  attributes?: Record<string, string>;
+  characteristics: OfferCharacteristic[];
+  [key: string]: any; // Для додаткових полів
 }
 
-export interface CharacteristicData {
-  name: string;
-  values: Array<{
-    value: string;
-    lang?: string;
-  }>;
-  xmlPath: string;
+export interface ParsedXMLStructure {
+  shop: ShopInfo; // Тепер обов'язкове поле
+  currencies: Currency[];
+  categories: Category[];
+  offers: Offer[];
 }
 
 export const parseXMLToStructure = (xmlContent: string): ParsedXMLStructure => {
-  console.log('🔍 Розпочинаємо розширений парсинг XML...');
+  console.log('🔄 Початок парсингу XML контенту...');
   
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
-  
-  if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
-    throw new Error('Помилка парсингу XML файлу');
-  }
-
-  const result: ParsedXMLStructure = {
-    shop: {},
-    currencies: [],
-    categories: [],
-    offers: []
-  };
-
-  // Парсинг основної інформації магазину
-  const shopElement = xmlDoc.querySelector('shop');
-  if (shopElement) {
-    result.shop = {
-      name: shopElement.querySelector('name')?.textContent || '',
-      company: shopElement.querySelector('company')?.textContent || '',
-      url: shopElement.querySelector('url')?.textContent || ''
-    };
-    console.log('🏪 Shop info parsed:', result.shop);
-  }
-
-  // Парсинг всіх валют
-  const currencyElements = xmlDoc.querySelectorAll('currencies currency');
-  currencyElements.forEach((currency) => {
-    const currencyData: CurrencyData = {
-      id: currency.getAttribute('id') || '',
-      rate: currency.getAttribute('rate') || '1'
-    };
-    
-    // Зберігаємо всі додаткові атрибути
-    const attributes: Record<string, string> = {};
-    Array.from(currency.attributes).forEach(attr => {
-      if (attr.name !== 'id' && attr.name !== 'rate') {
-        attributes[attr.name] = attr.value;
-      }
-    });
-    if (Object.keys(attributes).length > 0) {
-      currencyData.attributes = attributes;
-    }
-    
-    result.currencies.push(currencyData);
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    parseAttributeValue: true,
+    trimValues: true,
+    parseTrueNumberOnly: false,
+    allowBooleanAttributes: true
   });
-  console.log(`💱 Parsed ${result.currencies.length} currencies:`, result.currencies);
 
-  // Парсинг всіх категорій
-  const categoryElements = xmlDoc.querySelectorAll('categories category');
-  categoryElements.forEach((category) => {
-    const categoryData: CategoryData = {
-      id: category.getAttribute('id') || '',
-      name: category.textContent?.trim() || '',
-      parentId: category.getAttribute('parentId') || undefined
-    };
+  try {
+    const parsed = parser.parse(xmlContent);
+    console.log('📋 Розпарсений XML об\'єкт:', parsed);
+
+    let rootData;
     
-    // Зберігаємо всі додаткові атрибути
-    const attributes: Record<string, string> = {};
-    Array.from(category.attributes).forEach(attr => {
-      if (!['id', 'parentId'].includes(attr.name)) {
-        attributes[attr.name] = attr.value;
-      }
-    });
-    if (Object.keys(attributes).length > 0) {
-      categoryData.attributes = attributes;
+    // Знаходимо корінь документа (може бути yml_catalog або shop)
+    if (parsed.yml_catalog) {
+      rootData = parsed.yml_catalog;
+    } else if (parsed.shop) {
+      rootData = parsed.shop;
+    } else {
+      throw new Error('Не знайдено корінь XML документа (yml_catalog або shop)');
     }
-    
-    result.categories.push(categoryData);
-  });
-  console.log(`📂 Parsed ${result.categories.length} categories:`, result.categories);
 
-  // Парсинг всіх офферів з повною інформацією
-  const offerElements = xmlDoc.querySelectorAll('offers offer');
-  offerElements.forEach((offer) => {
-    const offerData: OfferData = {
-      id: offer.getAttribute('id') || '',
-      available: offer.getAttribute('available') || 'true',
-      pictures: [],
-      characteristics: []
+    console.log('🏗️ Корінь документа знайдено:', rootData);
+
+    // Парсимо інформацію про магазин (обов'язково)
+    const shopInfo: ShopInfo = {
+      name: rootData.name || rootData['@_name'] || 'Невідомий магазин',
+      company: rootData.company || rootData['@_company'] || 'Невідома компанія',
+      url: rootData.url || rootData['@_url'] || ''
     };
 
-    // Зберігаємо всі атрибути оффера
-    const attributes: Record<string, string> = {};
-    Array.from(offer.attributes).forEach(attr => {
-      if (!['id', 'available'].includes(attr.name)) {
-        attributes[attr.name] = attr.value;
-      }
-    });
-    if (Object.keys(attributes).length > 0) {
-      offerData.attributes = attributes;
+    console.log('🏪 Інформація про магазин:', shopInfo);
+
+    // Парсимо валюти
+    const currencies: Currency[] = [];
+    if (rootData.currencies && rootData.currencies.currency) {
+      const currencyData = Array.isArray(rootData.currencies.currency) 
+        ? rootData.currencies.currency 
+        : [rootData.currencies.currency];
+      
+      currencyData.forEach((currency: any, index: number) => {
+        console.log(`💱 Обробка валюти ${index + 1}:`, currency);
+        currencies.push({
+          id: currency['@_id'] || currency.id || `CURRENCY_${index + 1}`,
+          rate: currency['@_rate']?.toString() || currency.rate?.toString() || '1'
+        });
+      });
     }
 
-    // Парсинг основних полів оффера
-    offerData.price = offer.querySelector('price')?.textContent || undefined;
-    offerData.currencyId = offer.querySelector('currencyId')?.textContent || undefined;
-    offerData.categoryId = offer.querySelector('categoryId')?.textContent || undefined;
-    offerData.vendor = offer.querySelector('vendor')?.textContent || undefined;
-    offerData.article = offer.querySelector('article')?.textContent || undefined;
-    offerData.stock_quantity = offer.querySelector('stock_quantity')?.textContent || undefined;
-    offerData.name = offer.querySelector('name')?.textContent || undefined;
-    offerData.name_ua = offer.querySelector('name_ua')?.textContent || undefined;
-    
-    // Парсинг описів (можуть містити CDATA)
-    const descriptionElement = offer.querySelector('description');
-    if (descriptionElement) {
-      offerData.description = descriptionElement.textContent || undefined;
-    }
-    
-    const descriptionUaElement = offer.querySelector('description_ua');
-    if (descriptionUaElement) {
-      offerData.description_ua = descriptionUaElement.textContent || undefined;
+    console.log(`💰 Знайдено ${currencies.length} валют:`, currencies);
+
+    // Парсимо категорії
+    const categories: Category[] = [];
+    if (rootData.categories && rootData.categories.category) {
+      const categoryData = Array.isArray(rootData.categories.category) 
+        ? rootData.categories.category 
+        : [rootData.categories.category];
+      
+      categoryData.forEach((category: any, index: number) => {
+        console.log(`📂 Обробка категорії ${index + 1}:`, category);
+        categories.push({
+          id: category['@_id']?.toString() || category.id?.toString() || `CAT_${index + 1}`,
+          name: category['#text'] || category.name || `Категорія ${index + 1}`,
+          parentId: category['@_parentId']?.toString() || category.parentId?.toString()
+        });
+      });
     }
 
-    // Парсинг всіх зображень
-    const pictureElements = offer.querySelectorAll('picture');
-    pictureElements.forEach((picture) => {
-      const url = picture.textContent?.trim();
-      if (url) {
-        offerData.pictures.push(url);
-      }
-    });
+    console.log(`📁 Знайдено ${categories.length} категорій:`, categories);
 
-    // Парсинг всіх характеристик (param елементів)
-    const paramElements = offer.querySelectorAll('param');
-    paramElements.forEach((param, index) => {
-      const paramName = param.getAttribute('name');
-      if (paramName) {
-        const characteristic: CharacteristicData = {
-          name: paramName,
-          values: [],
-          xmlPath: `/yml_catalog/shop/offers/offer/param[${index + 1}]`
-        };
-
-        // Перевіряємо чи є вкладені значення з мовами
-        const valueElements = param.querySelectorAll('value');
-        if (valueElements.length > 0) {
-          valueElements.forEach((valueEl) => {
-            const lang = valueEl.getAttribute('lang');
-            const value = valueEl.textContent?.trim() || '';
-            if (value) {
-              characteristic.values.push({ value, lang: lang || undefined });
-            }
+    // Парсимо товари (офери)
+    const offers: Offer[] = [];
+    if (rootData.offers && rootData.offers.offer) {
+      const offerData = Array.isArray(rootData.offers.offer) 
+        ? rootData.offers.offer 
+        : [rootData.offers.offer];
+      
+      offerData.forEach((offer: any, index: number) => {
+        console.log(`🎁 Обробка товару ${index + 1}:`, offer);
+        
+        // Збираємо картинки
+        const pictures: string[] = [];
+        if (offer.picture) {
+          const pictureData = Array.isArray(offer.picture) ? offer.picture : [offer.picture];
+          pictureData.forEach((pic: any) => {
+            const url = typeof pic === 'string' ? pic : pic['#text'] || pic.url;
+            if (url) pictures.push(url);
           });
-        } else {
-          // Просте текстове значення
-          const value = param.textContent?.trim() || '';
-          if (value) {
-            characteristic.values.push({ value });
-          }
         }
 
-        offerData.characteristics.push(characteristic);
-      }
-    });
+        // Збираємо характеристики (param елементи)
+        const characteristics: OfferCharacteristic[] = [];
+        if (offer.param) {
+          const paramData = Array.isArray(offer.param) ? offer.param : [offer.param];
+          
+          paramData.forEach((param: any) => {
+            console.log('📏 Обробка характеристики:', param);
+            
+            const paramName = param['@_name'] || param.name || 'Невідома характеристика';
+            
+            // Якщо є вкладені значення з мовами
+            if (param.value && Array.isArray(param.value)) {
+              param.value.forEach((value: any) => {
+                characteristics.push({
+                  name: paramName,
+                  value: value['#text'] || value.toString(),
+                  language: value['@_lang'] || 'uk'
+                });
+              });
+            } else if (param.value) {
+              // Одне значення
+              characteristics.push({
+                name: paramName,
+                value: param.value['#text'] || param.value.toString(),
+                language: param.value['@_lang'] || 'uk'
+              });
+            } else {
+              // Значення безпосередньо в param
+              const value = param['#text'] || param.toString();
+              if (value && value !== paramName) {
+                characteristics.push({
+                  name: paramName,
+                  value: value,
+                  unit: param['@_unit'],
+                  language: 'uk'
+                });
+              }
+            }
+          });
+        }
 
-    result.offers.push(offerData);
-  });
+        const processedOffer: Offer = {
+          id: offer['@_id']?.toString() || offer.id?.toString() || `OFFER_${index + 1}`,
+          available: offer['@_available']?.toString() || offer.available?.toString() || 'true',
+          price: parseFloat(offer.price?.toString() || '0'),
+          currencyId: offer.currencyId || offer.currency_id || 'UAH',
+          categoryId: offer.categoryId?.toString() || offer.category_id?.toString() || '1',
+          pictures,
+          vendor: offer.vendor || offer.brand,
+          article: offer.article?.toString() || offer.sku?.toString(),
+          stock_quantity: parseInt(offer.stock_quantity?.toString() || offer.quantity?.toString() || '0'),
+          name: offer.name || `Товар ${index + 1}`,
+          name_ua: offer.name_ua || offer.name_uk,
+          description: offer.description,
+          description_ua: offer.description_ua || offer.description_uk,
+          characteristics
+        };
 
-  console.log(`🎁 Parsed ${result.offers.length} offers with full data`);
-  console.log('✅ XML parsing completed successfully');
-  
-  return result;
+        offers.push(processedOffer);
+        console.log(`✅ Товар ${index + 1} оброблено:`, processedOffer);
+      });
+    }
+
+    console.log(`🛍️ Знайдено ${offers.length} товарів`);
+
+    const result: ParsedXMLStructure = {
+      shop: shopInfo,
+      currencies,
+      categories,
+      offers
+    };
+
+    console.log('🎉 Парсинг завершено успішно:', result);
+    return result;
+
+  } catch (error: any) {
+    console.error('❌ Помилка парсингу XML:', error);
+    throw new Error(`Помилка парсингу XML: ${error.message}`);
+  }
 };
 
-// Функція для генерації візуального дерева структури
 export const generateTreeStructure = (structure: ParsedXMLStructure): string => {
   let tree = '🛍️ shop\n';
-  
-  // Основна інформація магазину
-  if (structure.shop.name) {
-    tree += ` ├── 🏪 name: "${structure.shop.name}"\n`;
-  }
-  if (structure.shop.company) {
-    tree += ` ├── 🏢 company: "${structure.shop.company}"\n`;
-  }
-  if (structure.shop.url) {
-    tree += ` ├── 🌐 url: "${structure.shop.url}"\n`;
-  }
+  tree += ` ├── 🏪 name: "${structure.shop.name}"\n`;
+  tree += ` ├── 🏢 company: "${structure.shop.company}"\n`;
+  tree += ` ├── 🌐 url: "${structure.shop.url}"\n`;
   
   // Валюти
   if (structure.currencies.length > 0) {
     tree += ` ├── 💱 currencies\n`;
     structure.currencies.forEach((currency, index) => {
-      const isLast = index === structure.currencies.length - 1 && structure.categories.length === 0 && structure.offers.length === 0;
-      const prefix = isLast ? ' └──' : ' ├──';
-      tree += ` │    ${prefix} 💰 currency (id="${currency.id}", rate="${currency.rate}")\n`;
+      const isLast = index === structure.currencies.length - 1;
+      const prefix = isLast ? '     └── ' : '     ├── ';
+      tree += `${prefix}💰 currency (id="${currency.id}", rate="${currency.rate}")\n`;
     });
   }
   
@@ -250,71 +247,60 @@ export const generateTreeStructure = (structure: ParsedXMLStructure): string => 
   if (structure.categories.length > 0) {
     tree += ` ├── 📂 categories\n`;
     structure.categories.forEach((category, index) => {
-      const isLast = index === structure.categories.length - 1 && structure.offers.length === 0;
-      const prefix = isLast ? ' └──' : ' ├──';
-      tree += ` │    ${prefix} 📁 category (id="${category.id}"): "${category.name}"\n`;
+      const isLast = index === structure.categories.length - 1;
+      const prefix = isLast ? '     └── ' : '     ├── ';
+      tree += `${prefix}📁 category (id="${category.id}"): "${category.name}"\n`;
     });
   }
   
-  // Оффери (показуємо тільки перший для прикладу)
+  // Товари
   if (structure.offers.length > 0) {
     tree += ` └── 🎁 offers\n`;
-    const firstOffer = structure.offers[0];
-    tree += `      └── 📦 offer (id="${firstOffer.id}", available="${firstOffer.available || 'true'}")\n`;
-    
-    if (firstOffer.price) {
-      tree += `           ├── 💲 price: ${firstOffer.price}\n`;
-    }
-    if (firstOffer.currencyId) {
-      tree += `           ├── 💱 currencyId: "${firstOffer.currencyId}"\n`;
-    }
-    if (firstOffer.categoryId) {
-      tree += `           ├── 🗂️ categoryId: ${firstOffer.categoryId}\n`;
-    }
-    
-    // Зображення
-    firstOffer.pictures.forEach((picture) => {
-      tree += `           ├── 🖼️ picture: "${picture}"\n`;
-    });
-    
-    if (firstOffer.vendor) {
-      tree += `           ├── 🏷️ vendor: "${firstOffer.vendor}"\n`;
-    }
-    if (firstOffer.article) {
-      tree += `           ├── 🔖 article: ${firstOffer.article}\n`;
-    }
-    if (firstOffer.stock_quantity) {
-      tree += `           ├── 📦 stock_quantity: ${firstOffer.stock_quantity}\n`;
-    }
-    if (firstOffer.name) {
-      tree += `           ├── 🏷️ name: "${firstOffer.name}"\n`;
-    }
-    if (firstOffer.name_ua) {
-      tree += `           ├── 🏷️ name_ua: "${firstOffer.name_ua}"\n`;
-    }
-    if (firstOffer.description) {
-      tree += `           ├── 📝 description: <![CDATA[...]]> (RU HTML)\n`;
-    }
-    if (firstOffer.description_ua) {
-      tree += `           ├── 📝 description_ua: <![CDATA[...]]> (UA HTML)\n`;
-    }
-    
-    // Характеристики
-    firstOffer.characteristics.forEach((char, index) => {
-      const isLastChar = index === firstOffer.characteristics.length - 1;
-      const prefix = isLastChar ? '└──' : '├──';
+    structure.offers.forEach((offer, offerIndex) => {
+      const isLastOffer = offerIndex === structure.offers.length - 1;
+      const offerPrefix = isLastOffer ? '     └── ' : '     ├── ';
+      tree += `${offerPrefix}📦 offer (id="${offer.id}", available="${offer.available}")\n`;
       
-      if (char.values.length === 1) {
-        tree += `           ${prefix} 📏 param (name="${char.name}"): "${char.values[0].value}"\n`;
-      } else if (char.values.length > 1) {
-        tree += `           ${prefix} 🧺 param (name="${char.name}")\n`;
-        char.values.forEach((val, valIndex) => {
-          const isLastVal = valIndex === char.values.length - 1;
-          const valPrefix = isLastVal ? '└──' : '├──';
-          const flag = val.lang === 'uk' ? '🇺🇦' : val.lang === 'ru' ? '🇷🇺' : '🌍';
-          tree += `           │    ${valPrefix} ${flag} value${val.lang ? ` (lang="${val.lang}")` : ''}: "${val.value}"\n`;
-        });
-      }
+      const baseIndent = isLastOffer ? '          ' : '     │    ';
+      
+      // Основні поля товару
+      tree += `${baseIndent}├── 💲 price: ${offer.price}\n`;
+      tree += `${baseIndent}├── 💱 currencyId: "${offer.currencyId}"\n`;
+      tree += `${baseIndent}├── 🗂️ categoryId: ${offer.categoryId}\n`;
+      
+      // Картинки
+      offer.pictures.forEach((picture, picIndex) => {
+        tree += `${baseIndent}├── 🖼️ picture: "${picture}"\n`;
+      });
+      
+      // Інші поля
+      if (offer.vendor) tree += `${baseIndent}├── 🏷️ vendor: "${offer.vendor}"\n`;
+      if (offer.article) tree += `${baseIndent}├── 🔖 article: ${offer.article}\n`;
+      if (offer.stock_quantity) tree += `${baseIndent}├── 📦 stock_quantity: ${offer.stock_quantity}\n`;
+      
+      tree += `${baseIndent}├── 🏷️ name: "${offer.name}"\n`;
+      if (offer.name_ua) tree += `${baseIndent}├── 🏷️ name_ua: "${offer.name_ua}"\n`;
+      if (offer.description) tree += `${baseIndent}├── 📝 description: <![CDATA[...]]> (RU HTML)\n`;
+      if (offer.description_ua) tree += `${baseIndent}├── 📝 description_ua: <![CDATA[...]]> (UA HTML)\n`;
+      
+      // Характеристики
+      offer.characteristics.forEach((char, charIndex) => {
+        const isLastChar = charIndex === offer.characteristics.length - 1;
+        const charPrefix = isLastChar ? '└── ' : '├── ';
+        
+        let emoji = '📏'; // За замовчуванням
+        if (char.name.toLowerCase().includes('колір') || char.name.toLowerCase().includes('цвет')) emoji = '🎨';
+        else if (char.name.toLowerCase().includes('сезон')) emoji = '🍂';
+        else if (char.name.toLowerCase().includes('склад') || char.name.toLowerCase().includes('состав')) emoji = '🧵';
+        else if (char.name.toLowerCase().includes('догляд') || char.name.toLowerCase().includes('уход')) emoji = '🧺';
+        else if (char.name.toLowerCase().includes('країна') || char.name.toLowerCase().includes('страна')) emoji = '🌍';
+        else if (char.name.toLowerCase().includes('особливості') || char.name.toLowerCase().includes('особенности')) emoji = '👕';
+        
+        tree += `${baseIndent}${charPrefix}${emoji} param (name="${char.name}")`;
+        if (char.language) tree += `: "${char.value}" (${char.language.toUpperCase()})`;
+        else tree += `: "${char.value}"`;
+        tree += '\n';
+      });
     });
   }
   

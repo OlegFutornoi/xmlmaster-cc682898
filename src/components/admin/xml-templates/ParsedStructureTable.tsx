@@ -2,7 +2,6 @@
 // Оновлений компонент для відображення розпарсеної XML структури з вкладками
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ParsedXMLStructure, generateTreeStructure } from '@/utils/advancedXmlParser';
 import TemplateTreeView from './TemplateTreeView';
 import TemplateDataTabs from './TemplateDataTabs';

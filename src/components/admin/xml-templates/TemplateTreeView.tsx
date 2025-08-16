@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tree, Copy } from 'lucide-react';
+import { TreePine, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TemplateTreeViewProps {
@@ -42,14 +42,14 @@ const TemplateTreeView = ({ treeStructure, templateName }: TemplateTreeViewProps
           className="gap-2"
           id="view-template-structure"
         >
-          <Tree className="h-4 w-4" />
+          <TreePine className="h-4 w-4" />
           Структура шаблону
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Tree className="h-5 w-5" />
+            <TreePine className="h-5 w-5" />
             Структура шаблону: {templateName}
           </DialogTitle>
         </DialogHeader>
