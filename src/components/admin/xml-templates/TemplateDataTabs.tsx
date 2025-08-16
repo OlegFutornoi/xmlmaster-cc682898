@@ -362,16 +362,15 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                             {offer.characteristics.map((char, charIndex) => (
                               <div key={charIndex} className="text-sm border-l-2 pl-3">
                                 <div className="font-medium">{char.name}:</div>
-                                {char.values.map((val, valIndex) => (
-                                  <div key={valIndex} className="text-gray-600 ml-2">
-                                    {val.lang && (
-                                      <Badge variant="outline" className="mr-2 text-xs">
-                                        {val.lang.toUpperCase()}
-                                      </Badge>
-                                    )}
-                                    {val.value}
-                                  </div>
-                                ))}
+                                <div className="text-gray-600 ml-2">
+                                  {char.language && (
+                                    <Badge variant="outline" className="mr-2 text-xs">
+                                      {char.language.toUpperCase()}
+                                    </Badge>
+                                  )}
+                                  {char.value}
+                                  {char.unit && ` ${char.unit}`}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -414,9 +413,13 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                     if (!acc[char.name]) {
                       acc[char.name] = [];
                     }
-                    acc[char.name].push(...char.values);
+                    acc[char.name].push({
+                      value: char.value,
+                      language: char.language,
+                      unit: char.unit
+                    });
                     return acc;
-                  }, {} as Record<string, Array<{ value: string; lang?: string }>>);
+                  }, {} as Record<string, Array<{ value: string; language?: string; unit?: string }>>);
 
                 const characteristicNames = Object.keys(groupedCharacteristics);
 
@@ -427,17 +430,20 @@ const TemplateDataTabs = ({ structure, onSave, isEditable = true }: TemplateData
                         <h4 className="font-semibold mb-2">📏 {name}</h4>
                         <div className="space-y-2">
                           {Array.from(new Set(
-                            groupedCharacteristics[name].map(v => `${v.value}|${v.lang || ''}`)
+                            groupedCharacteristics[name].map(v => `${v.value}|${v.language || ''}|${v.unit || ''}`)
                           )).map((uniqueValue, valueIndex) => {
-                            const [value, lang] = uniqueValue.split('|');
+                            const [value, language, unit] = uniqueValue.split('|');
                             return (
                               <div key={valueIndex} className="flex items-center gap-2">
-                                {lang && (
+                                {language && (
                                   <Badge variant="outline" className="text-xs">
-                                    {lang.toUpperCase()}
+                                    {language.toUpperCase()}
                                   </Badge>
                                 )}
                                 <span className="text-sm">{value}</span>
+                                {unit && (
+                                  <span className="text-xs text-gray-500">({unit})</span>
+                                )}
                               </div>
                             );
                           })}

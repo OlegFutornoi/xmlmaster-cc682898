@@ -1,3 +1,4 @@
+
 // Типи для роботи з XML-шаблонами
 export interface XMLTemplate {
   id: string;
@@ -83,31 +84,42 @@ export interface XMLUploadRequest {
   url?: string;
 }
 
+// Оновлений тип для сумісності з новим парсером
 export interface ParsedXMLStructure {
-  shop?: {
-    name?: string;
-    company?: string;
-    url?: string;
+  shop: {
+    name: string;
+    company: string;
+    url: string;
   };
-  currencies?: Array<{
+  currencies: Array<{
     id: string;
-    rate: number;
+    rate: string;
   }>;
-  categories?: Array<{
+  categories: Array<{
     id: string;
     name: string;
-    rz_id?: string;
+    parentId?: string;
   }>;
-  offers?: Array<{
+  offers: Array<{
     id: string;
-    available?: boolean;
+    available: string;
+    price: number;
+    currencyId: string;
+    categoryId: string;
+    pictures: string[];
+    vendor?: string;
+    article?: string;
+    stock_quantity?: number;
+    name: string;
+    name_ua?: string;
+    description?: string;
+    description_ua?: string;
+    characteristics: Array<{
+      name: string;
+      value: string;
+      unit?: string;
+      language?: string;
+    }>;
     [key: string]: any;
-  }>;
-  parameters: Array<{
-    name: string;
-    value: any;
-    path: string;
-    type: 'parameter' | 'characteristic';
-    category: 'shop' | 'currency' | 'category' | 'offer';
   }>;
 }
