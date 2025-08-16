@@ -10,7 +10,7 @@ export interface ShopInfo {
 
 export interface CurrencyInfo {
   id: string;
-  rate: string;
+  rate: string; // Змінено на string для сумісності
 }
 
 export interface CategoryInfo {
@@ -44,11 +44,21 @@ export interface OfferInfo {
   [key: string]: any;
 }
 
+// Додаємо інтерфейс для параметрів
+export interface TemplateParameter {
+  name: string;
+  value: string;
+  path: string;
+  type: string;
+  category: string;
+}
+
 export interface ParsedXMLStructure {
   shop: ShopInfo;
   currencies: CurrencyInfo[];
   categories: CategoryInfo[];
   offers: OfferInfo[];
+  parameters: TemplateParameter[]; // Додаємо відсутню властивість
 }
 
 // Налаштування парсера XML
@@ -155,7 +165,8 @@ export function parseXMLToStructure(xmlContent: string): ParsedXMLStructure {
       shop: shopInfo,
       currencies,
       categories,
-      offers
+      offers,
+      parameters: [] // Ініціалізуємо порожній масив параметрів
     };
     
     console.log('🎯 Фінальна структура готова:', {
@@ -197,7 +208,7 @@ function parseCurrencies(currenciesData: any): CurrencyInfo[] {
       if (currency && currency['@_id']) {
         currencies.push({
           id: String(currency['@_id']),
-          rate: String(currency['@_rate'] || '1')
+          rate: String(currency['@_rate'] || '1') // Конвертуємо в string
         });
       }
     });

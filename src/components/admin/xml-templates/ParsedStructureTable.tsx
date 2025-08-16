@@ -2,22 +2,21 @@
 // Оновлений компонент для відображення розпарсеної XML структури з вкладками
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ParsedXMLStructure, generateTreeStructure } from '@/utils/advancedXmlParser';
 import TemplateTreeView from './TemplateTreeView';
 import TemplateDataTabs from './TemplateDataTabs';
 
 interface ParsedStructureTableProps {
   structure: ParsedXMLStructure;
-  templateName: string;
-  onSave?: (structure: ParsedXMLStructure) => void;
-  isEditable?: boolean;
+  onSaveTemplate?: (templateData: any) => void;
+  isSaving?: boolean;
 }
 
 const ParsedStructureTable = ({ 
   structure, 
-  templateName, 
-  onSave, 
-  isEditable = false 
+  onSaveTemplate, 
+  isSaving = false 
 }: ParsedStructureTableProps) => {
   const treeStructure = generateTreeStructure(structure);
 
@@ -26,6 +25,15 @@ const ParsedStructureTable = ({
     (total, offer) => total + offer.characteristics.length, 
     0
   );
+
+  const handleSaveTemplate = () => {
+    if (onSaveTemplate) {
+      onSaveTemplate({
+        structure,
+        parameters: structure.parameters || []
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -41,10 +49,21 @@ const ParsedStructureTable = ({
                 Повний аналіз та редагування XML структури
               </CardDescription>
             </div>
-            <TemplateTreeView 
-              treeStructure={treeStructure} 
-              templateName={templateName} 
-            />
+            <div className="flex items-center gap-3">
+              <TemplateTreeView 
+                treeStructure={treeStructure} 
+                templateName="XML Template" 
+              />
+              {onSaveTemplate && (
+                <Button 
+                  onClick={handleSaveTemplate}
+                  disabled={isSaving}
+                  id="save-template-button"
+                >
+                  {isSaving ? 'Збереження...' : 'Зберегти шаблон'}
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -80,8 +99,8 @@ const ParsedStructureTable = ({
       {/* Детальна інформація з вкладками */}
       <TemplateDataTabs 
         structure={structure} 
-        onSave={onSave || (() => {})}
-        isEditable={isEditable}
+        onSave={onSaveTemplate || (() => {})}
+        isEditable={false}
       />
     </div>
   );
