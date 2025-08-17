@@ -49,7 +49,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
 
   // Фільтруємо параметри за категоріями
   const getParametersByCategory = (category: string) => {
-    return parameters.filter(p => p.parameter_category === category);
+    return (parameters || []).filter(p => p.parameter_category === category);
   };
 
   // Захищаємо від undefined values
@@ -302,6 +302,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
                 {safeCategories.map((category) => (
                   <CompactTreeNode
                     key={category.id}
+                    icon="📂"
                     label="category"
                     value={`id="${category.id}": "${category.name}"`}
                     id={`category-${category.id}`}
