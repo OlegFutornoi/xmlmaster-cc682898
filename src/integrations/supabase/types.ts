@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
+  // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -375,12 +375,10 @@ export type Database = {
           id: string
           is_active: boolean
           is_required: boolean
-          nested_values: Json | null
           parameter_category: string
           parameter_name: string
           parameter_type: string
           parameter_value: string | null
-          parent_parameter: string | null
           store_id: string
           template_id: string
           updated_at: string
@@ -392,12 +390,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
-          nested_values?: Json | null
           parameter_category?: string
           parameter_name: string
           parameter_type?: string
           parameter_value?: string | null
-          parent_parameter?: string | null
           store_id: string
           template_id: string
           updated_at?: string
@@ -409,12 +405,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
-          nested_values?: Json | null
           parameter_category?: string
           parameter_name?: string
           parameter_type?: string
           parameter_value?: string | null
-          parent_parameter?: string | null
           store_id?: string
           template_id?: string
           updated_at?: string
@@ -741,53 +735,6 @@ export type Database = {
           },
         ]
       }
-      template_offer_parameters: {
-        Row: {
-          created_at: string
-          display_order: number | null
-          id: string
-          is_active: boolean | null
-          parameter_name: string
-          parameter_type: string | null
-          parameter_values: Json
-          template_id: string
-          updated_at: string
-          xml_path: string
-        }
-        Insert: {
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          is_active?: boolean | null
-          parameter_name: string
-          parameter_type?: string | null
-          parameter_values?: Json
-          template_id: string
-          updated_at?: string
-          xml_path: string
-        }
-        Update: {
-          created_at?: string
-          display_order?: number | null
-          id?: string
-          is_active?: boolean | null
-          parameter_name?: string
-          parameter_type?: string | null
-          parameter_values?: Json
-          template_id?: string
-          updated_at?: string
-          xml_path?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "template_offer_parameters_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "template_xml"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       template_xml: {
         Row: {
           created_at: string
@@ -831,12 +778,10 @@ export type Database = {
           id: string
           is_active: boolean
           is_required: boolean
-          nested_values: Json | null
           parameter_category: string
           parameter_name: string
           parameter_type: string
           parameter_value: string | null
-          parent_parameter: string | null
           template_id: string
           updated_at: string
           xml_path: string
@@ -847,12 +792,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
-          nested_values?: Json | null
           parameter_category?: string
           parameter_name: string
           parameter_type?: string
           parameter_value?: string | null
-          parent_parameter?: string | null
           template_id: string
           updated_at?: string
           xml_path: string
@@ -863,12 +806,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_required?: boolean
-          nested_values?: Json | null
           parameter_category?: string
           parameter_name?: string
           parameter_type?: string
           parameter_value?: string | null
-          parent_parameter?: string | null
           template_id?: string
           updated_at?: string
           xml_path?: string
@@ -876,66 +817,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "template_xml_parameters_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "template_xml"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      template_xml_structure: {
-        Row: {
-          attributes: Json | null
-          created_at: string
-          display_order: number | null
-          element_name: string
-          element_value: string | null
-          id: string
-          is_active: boolean | null
-          parent_id: string | null
-          structure_type: string
-          template_id: string
-          updated_at: string
-          xml_path: string
-        }
-        Insert: {
-          attributes?: Json | null
-          created_at?: string
-          display_order?: number | null
-          element_name: string
-          element_value?: string | null
-          id?: string
-          is_active?: boolean | null
-          parent_id?: string | null
-          structure_type: string
-          template_id: string
-          updated_at?: string
-          xml_path: string
-        }
-        Update: {
-          attributes?: Json | null
-          created_at?: string
-          display_order?: number | null
-          element_name?: string
-          element_value?: string | null
-          id?: string
-          is_active?: boolean | null
-          parent_id?: string | null
-          structure_type?: string
-          template_id?: string
-          updated_at?: string
-          xml_path?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "template_xml_structure_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "template_xml_structure"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "template_xml_structure_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "template_xml"

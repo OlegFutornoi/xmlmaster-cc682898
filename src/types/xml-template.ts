@@ -28,8 +28,6 @@ export interface XMLTemplateParameter {
   display_order: number;
   created_at: string;
   updated_at: string;
-  parent_parameter?: string;
-  nested_values?: Array<{ lang?: string; value: string }>;
 }
 
 export interface TemplateCurrency {
@@ -83,52 +81,31 @@ export interface XMLUploadRequest {
   url?: string;
 }
 
-// Додаємо відсутні інтерфейси для сумісності з advancedXmlParser
-export interface TemplateParameter {
-  name: string;
-  value: string;
-  path: string;
-  type: string;
-  category: string;
-}
-
-// Оновлений тип для сумісності з новим парсером - тепер ідентичний до advancedXmlParser
 export interface ParsedXMLStructure {
-  shop: {
-    name: string;
-    company: string;
-    url: string;
+  shop?: {
+    name?: string;
+    company?: string;
+    url?: string;
   };
-  currencies: Array<{
+  currencies?: Array<{
     id: string;
-    rate: string; // Змінено з number на string для сумісності
+    rate: number;
   }>;
-  categories: Array<{
+  categories?: Array<{
     id: string;
     name: string;
-    parentId?: string;
+    rz_id?: string;
   }>;
-  offers: Array<{
+  offers?: Array<{
     id: string;
-    available: string;
-    price: number;
-    currencyId: string;
-    categoryId: string;
-    pictures: string[];
-    vendor?: string;
-    article?: string;
-    stock_quantity?: number;
-    name: string;
-    name_ua?: string;
-    description?: string;
-    description_ua?: string;
-    characteristics: Array<{
-      name: string;
-      value: string;
-      unit?: string;
-      language?: string;
-    }>;
+    available?: boolean;
     [key: string]: any;
   }>;
-  parameters: TemplateParameter[]; // Додаємо відсутню властивість
+  parameters: Array<{
+    name: string;
+    value: any;
+    path: string;
+    type: 'parameter' | 'characteristic';
+    category: 'shop' | 'currency' | 'category' | 'offer';
+  }>;
 }

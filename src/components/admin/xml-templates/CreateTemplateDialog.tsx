@@ -7,26 +7,24 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, Link, FileCode } from 'lucide-react';
-import { ParsedXMLStructure, TemplateParameter } from '@/types/xml-template';
+import { ParsedXMLStructure } from '@/types/xml-template';
 import ParsedStructureTable from './ParsedStructureTable';
+
 interface CreateTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateTemplate: (data: any) => void;
   isCreating: boolean;
 }
-const CreateTemplateDialog = ({
-  open,
-  onOpenChange,
-  onCreateTemplate,
-  isCreating
-}: CreateTemplateDialogProps) => {
+
+const CreateTemplateDialog = ({ open, onOpenChange, onCreateTemplate, isCreating }: CreateTemplateDialogProps) => {
   const [templateName, setTemplateName] = useState('');
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [xmlUrl, setXmlUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedStructure, setParsedStructure] = useState<ParsedXMLStructure | null>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === 'text/xml') {
@@ -36,23 +34,18 @@ const CreateTemplateDialog = ({
       alert('Будь ласка, оберіть XML-файл');
     }
   };
+
   const parseXMLToStructure = async (xmlContent: string): Promise<ParsedXMLStructure> => {
     try {
       console.log('Розширений парсинг XML-контенту...');
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+      
       if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
         throw new Error('Невірний XML-формат');
       }
+
       const structure: ParsedXMLStructure = {
-        shop: {
-          name: '',
-          company: '',
-          url: ''
-        },
-        currencies: [],
-        categories: [],
-        offers: [],
         parameters: []
       };
 
@@ -60,6 +53,7 @@ const CreateTemplateDialog = ({
       const isYmlFormat = xmlDoc.querySelector('yml_catalog') !== null;
       const isPriceFormat = xmlDoc.querySelector('price') !== null;
       const isShopFormat = xmlDoc.querySelector('shop') !== null;
+
       if (isYmlFormat) {
         // Парсинг YML формату
         return parseYmlFormat(xmlDoc, structure);
@@ -77,6 +71,7 @@ const CreateTemplateDialog = ({
       throw error;
     }
   };
+
   const parseYmlFormat = (xmlDoc: Document, structure: ParsedXMLStructure): ParsedXMLStructure => {
     // Парсинг інформації про магазин
     const shopElement = xmlDoc.querySelector('shop');
@@ -122,8 +117,9 @@ const CreateTemplateDialog = ({
     if (currencies.length > 0) {
       structure.currencies = Array.from(currencies).map(currency => ({
         id: currency.getAttribute('id') || '',
-        rate: String(currency.getAttribute('rate') || '1') // Конвертуємо в string
+        rate: parseFloat(currency.getAttribute('rate') || '1')
       }));
+
       const firstCurrency = currencies[0];
       if (firstCurrency) {
         structure.parameters.push({
@@ -149,8 +145,9 @@ const CreateTemplateDialog = ({
       structure.categories = Array.from(categories).map(category => ({
         id: category.getAttribute('id') || '',
         name: category.textContent || '',
-        parentId: category.getAttribute('parentId') || undefined
+        rz_id: category.getAttribute('rz_id') || undefined
       }));
+
       const firstCategory = categories[0];
       if (firstCategory) {
         structure.parameters.push({
@@ -167,11 +164,11 @@ const CreateTemplateDialog = ({
           type: 'parameter',
           category: 'category'
         });
-        if (firstCategory.getAttribute('parentId')) {
+        if (firstCategory.getAttribute('rz_id')) {
           structure.parameters.push({
-            name: 'category_parent_id',
-            value: firstCategory.getAttribute('parentId') || '',
-            path: '/yml_catalog/shop/categories/category[@parentId]',
+            name: 'category_rz_id',
+            value: firstCategory.getAttribute('rz_id') || '',
+            path: '/yml_catalog/shop/categories/category[@rz_id]',
             type: 'parameter',
             category: 'category'
           });
@@ -185,35 +182,31 @@ const CreateTemplateDialog = ({
       structure.offers = Array.from(offers).map(offer => {
         const offerData: any = {
           id: offer.getAttribute('id') || '',
-          available: offer.getAttribute('available') || 'true',
-          price: parseFloat(offer.querySelector('price')?.textContent || '0'),
-          currencyId: offer.querySelector('currencyId')?.textContent || '',
-          categoryId: offer.querySelector('categoryId')?.textContent || '',
-          pictures: Array.from(offer.querySelectorAll('picture')).map(pic => pic.textContent || ''),
-          name: offer.querySelector('name')?.textContent || '',
-          characteristics: []
+          available: offer.getAttribute('available') === 'true'
         };
 
-        // Додаємо додаткові поля
-        const vendor = offer.querySelector('vendor');
-        if (vendor) offerData.vendor = vendor.textContent;
-        const description = offer.querySelector('description');
-        if (description) offerData.description = description.textContent;
+        Array.from(offer.children).forEach(child => {
+          if (child.tagName === 'param') {
+            const paramName = child.getAttribute('name');
+            if (paramName && !offerData.params) {
+              offerData.params = {};
+            }
+            if (paramName) {
+              offerData.params[paramName] = child.textContent;
+            }
+          } else {
+            offerData[child.tagName] = child.textContent;
+          }
+        });
 
-        // Парсимо характеристики (param elements)
-        const params = offer.querySelectorAll('param');
-        offerData.characteristics = Array.from(params).map(param => ({
-          name: param.getAttribute('name') || '',
-          value: param.textContent || '',
-          unit: param.getAttribute('unit') || undefined
-        }));
         return offerData;
       });
 
       // Додаємо параметри товарів на основі першого товару
       const firstOffer = offers[0];
       if (firstOffer) {
-        const basicFields = ['price', 'currencyId', 'categoryId', 'name', 'vendor', 'description'];
+        const basicFields = ['price', 'price_old', 'price_promo', 'currencyId', 'categoryId', 'picture', 'vendor', 'name', 'description', 'stock_quantity', 'available', 'url'];
+        
         basicFields.forEach(field => {
           const element = firstOffer.querySelector(field);
           if (element) {
@@ -267,8 +260,10 @@ const CreateTemplateDialog = ({
         });
       }
     }
+
     return structure;
   };
+
   const parsePriceFormat = (xmlDoc: Document, structure: ParsedXMLStructure): ParsedXMLStructure => {
     const priceElement = xmlDoc.querySelector('price');
     if (!priceElement) {
@@ -279,12 +274,10 @@ const CreateTemplateDialog = ({
     const name = priceElement.querySelector('name')?.textContent || '';
     const company = priceElement.querySelector('company')?.textContent || '';
     const date = priceElement.querySelector('date')?.textContent || '';
+
     if (name || company) {
-      structure.shop = {
-        name,
-        company,
-        url: ''
-      };
+      structure.shop = { name, company, url: '' };
+
       if (name) {
         structure.parameters.push({
           name: 'name',
@@ -319,8 +312,9 @@ const CreateTemplateDialog = ({
     if (currencies.length > 0) {
       structure.currencies = Array.from(currencies).map(currency => ({
         id: currency.getAttribute('id') || '',
-        rate: String(currency.getAttribute('rate') || '1')
+        rate: parseFloat(currency.getAttribute('rate') || '1')
       }));
+
       const firstCurrency = currencies[0];
       if (firstCurrency) {
         structure.parameters.push({
@@ -347,6 +341,7 @@ const CreateTemplateDialog = ({
         id: category.getAttribute('id') || '',
         name: category.textContent || ''
       }));
+
       const firstCategory = categories[0];
       if (firstCategory) {
         structure.parameters.push({
@@ -371,6 +366,7 @@ const CreateTemplateDialog = ({
     if (items.length > 0) {
       structure.offers = Array.from(items).map(item => {
         const itemData: any = {};
+
         Array.from(item.children).forEach(child => {
           if (child.tagName === 'param') {
             const paramName = child.getAttribute('name');
@@ -384,6 +380,7 @@ const CreateTemplateDialog = ({
             itemData[child.tagName] = child.textContent;
           }
         });
+
         return itemData;
       });
 
@@ -391,6 +388,7 @@ const CreateTemplateDialog = ({
       const firstItem = items[0];
       if (firstItem) {
         const basicFields = ['id', 'name', 'categoryId', 'price', 'price_old', 'currencyId', 'vendor', 'stock_quantity', 'description', 'image', 'url'];
+        
         basicFields.forEach(field => {
           const element = firstItem.querySelector(field);
           if (element) {
@@ -428,8 +426,10 @@ const CreateTemplateDialog = ({
         }
       }
     }
+
     return structure;
   };
+
   const parseShopFormat = (xmlDoc: Document, structure: ParsedXMLStructure): ParsedXMLStructure => {
     const shopElement = xmlDoc.querySelector('shop');
     if (!shopElement) {
@@ -444,8 +444,9 @@ const CreateTemplateDialog = ({
         structure.categories = Array.from(categories).map(category => ({
           id: category.getAttribute('id') || '',
           name: category.textContent || '',
-          parentId: category.getAttribute('parentId') || undefined
+          parent_id: category.getAttribute('parentId') || undefined
         }));
+
         const firstCategory = categories[0];
         if (firstCategory) {
           structure.parameters.push({
@@ -455,6 +456,22 @@ const CreateTemplateDialog = ({
             type: 'parameter',
             category: 'category'
           });
+          structure.parameters.push({
+            name: 'category_name',
+            value: firstCategory.textContent || '',
+            path: '/shop/catalog/category',
+            type: 'parameter',
+            category: 'category'
+          });
+          if (firstCategory.getAttribute('parentId')) {
+            structure.parameters.push({
+              name: 'category_parent_id',
+              value: firstCategory.getAttribute('parentId') || '',
+              path: '/shop/catalog/category[@parentId]',
+              type: 'parameter',
+              category: 'category'
+            });
+          }
         }
       }
     }
@@ -469,6 +486,7 @@ const CreateTemplateDialog = ({
             id: item.getAttribute('id') || '',
             selling_type: item.getAttribute('selling_type') || ''
           };
+
           Array.from(item.children).forEach(child => {
             if (child.tagName === 'param') {
               const paramName = child.getAttribute('name');
@@ -487,6 +505,7 @@ const CreateTemplateDialog = ({
               itemData[child.tagName] = child.textContent;
             }
           });
+
           return itemData;
         });
 
@@ -513,6 +532,7 @@ const CreateTemplateDialog = ({
 
           // Основні поля товару
           const basicFields = ['name', 'categoryId', 'priceuah', 'priceusd', 'available', 'in_stock', 'url', 'vendor', 'description'];
+          
           basicFields.forEach(field => {
             const element = firstItem.querySelector(field);
             if (element) {
@@ -563,16 +583,21 @@ const CreateTemplateDialog = ({
         }
       }
     }
+
     return structure;
   };
+
   const handleParseXML = async () => {
     if (!templateName.trim()) {
       alert('Будь ласка, введіть назву шаблону');
       return;
     }
+
     setIsProcessing(true);
+    
     try {
       let xmlContent = '';
+
       if (uploadMethod === 'file' && selectedFile) {
         xmlContent = await selectedFile.text();
       } else if (uploadMethod === 'url' && xmlUrl.trim()) {
@@ -586,8 +611,10 @@ const CreateTemplateDialog = ({
         alert('Будь ласка, оберіть файл або введіть URL');
         return;
       }
+
       const structure = await parseXMLToStructure(xmlContent);
       setParsedStructure(structure);
+      
     } catch (error) {
       console.error('Помилка парсингу XML:', error);
       alert('Помилка парсингу XML: ' + (error as Error).message);
@@ -595,6 +622,7 @@ const CreateTemplateDialog = ({
       setIsProcessing(false);
     }
   };
+
   const handleCreateTemplate = (templateData: any) => {
     const finalTemplateData = {
       name: templateName.trim(),
@@ -605,9 +633,10 @@ const CreateTemplateDialog = ({
       is_active: true,
       parameters: templateData.parameters
     };
+
     console.log('Створення шаблону:', finalTemplateData);
     onCreateTemplate(finalTemplateData);
-
+    
     // Очищуємо форму
     setTemplateName('');
     setSelectedFile(null);
@@ -615,23 +644,34 @@ const CreateTemplateDialog = ({
     setParsedStructure(null);
     onOpenChange(false);
   };
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileCode className="h-5 w-5" />
             Створити новий XML-шаблон
           </DialogTitle>
-          
+          <DialogDescription>
+            Завантажте XML-файл або вкажіть URL для створення шаблону. Підтримуються формати YML, Price та Shop.
+          </DialogDescription>
         </DialogHeader>
 
-        {!parsedStructure ? <div className="space-y-6">
+        {!parsedStructure ? (
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="template-name">Назва шаблону</Label>
-              <Input id="template-name" value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Введіть назву шаблону" required />
+              <Input
+                id="template-name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Введіть назву шаблону"
+                required
+              />
             </div>
 
-            <Tabs value={uploadMethod} onValueChange={value => setUploadMethod(value as 'file' | 'url')}>
+            <Tabs value={uploadMethod} onValueChange={(value) => setUploadMethod(value as 'file' | 'url')}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="file" className="flex items-center gap-2">
                   <Upload className="h-4 w-4" />
@@ -648,10 +688,18 @@ const CreateTemplateDialog = ({
                   <CardContent className="pt-6">
                     <div className="space-y-2">
                       <Label htmlFor="xml-file">XML-файл</Label>
-                      <Input id="xml-file" type="file" accept=".xml,text/xml" onChange={handleFileChange} required={uploadMethod === 'file'} />
-                      {selectedFile && <p className="text-sm text-green-600">
+                      <Input
+                        id="xml-file"
+                        type="file"
+                        accept=".xml,text/xml"
+                        onChange={handleFileChange}
+                        required={uploadMethod === 'file'}
+                      />
+                      {selectedFile && (
+                        <p className="text-sm text-green-600">
                           Обрано файл: {selectedFile.name}
-                        </p>}
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -662,7 +710,14 @@ const CreateTemplateDialog = ({
                   <CardContent className="pt-6">
                     <div className="space-y-2">
                       <Label htmlFor="xml-url">URL до XML-файлу</Label>
-                      <Input id="xml-url" type="url" value={xmlUrl} onChange={e => setXmlUrl(e.target.value)} placeholder="https://example.com/catalog.xml" required={uploadMethod === 'url'} />
+                      <Input
+                        id="xml-url"
+                        type="url"
+                        value={xmlUrl}
+                        onChange={(e) => setXmlUrl(e.target.value)}
+                        placeholder="https://example.com/catalog.xml"
+                        required={uploadMethod === 'url'}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -670,15 +725,33 @@ const CreateTemplateDialog = ({
             </Tabs>
 
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isProcessing}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isProcessing}
+              >
                 Скасувати
               </Button>
-              <Button onClick={handleParseXML} disabled={isProcessing} id="parse-xml-button">
+              <Button
+                onClick={handleParseXML}
+                disabled={isProcessing}
+                id="parse-xml-button"
+              >
                 {isProcessing ? 'Парсинг...' : 'Парсувати XML'}
               </Button>
             </div>
-          </div> : <ParsedStructureTable structure={parsedStructure} onSaveTemplate={handleCreateTemplate} isSaving={isCreating} />}
+          </div>
+        ) : (
+          <ParsedStructureTable 
+            structure={parsedStructure}
+            onSaveTemplate={handleCreateTemplate}
+            isSaving={isCreating}
+          />
+        )}
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+  );
 };
+
 export default CreateTemplateDialog;

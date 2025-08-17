@@ -1,3 +1,4 @@
+
 // Файл App.tsx - Головний компонент додатку
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -13,12 +14,7 @@ import NotFound from "./pages/NotFound";
 // User pages
 import UserLogin from "./pages/user/UserLogin";
 import UserRegister from "./pages/user/UserRegister";
-import UserDashboardLayout from "./components/user/UserDashboardLayout";
-import UserDashboardHome from "./pages/user/UserDashboardHome";
-import UserTariffs from "./pages/user/UserTariffs";
-import UserStores from "./pages/user/UserStores";
-import UserSuppliers from "./pages/user/UserSuppliers";
-import UserSettings from "./pages/user/UserSettings";
+import UserDashboard from "./pages/user/UserDashboard";
 import UserRoute from "./components/auth/UserRoute";
 
 // Admin pages
@@ -52,19 +48,13 @@ const App = () => (
             <Route path="/user/login" element={<UserLogin />} />
             <Route path="/user/register" element={<UserRegister />} />
             <Route 
-              path="/user/dashboard" 
+              path="/user/dashboard/*" 
               element={
                 <UserRoute>
-                  <UserDashboardLayout />
+                  <UserDashboard />
                 </UserRoute>
-              }
-            >
-              <Route index element={<UserDashboardHome />} />
-              <Route path="tariffs" element={<UserTariffs />} />
-              <Route path="stores" element={<UserStores />} />
-              <Route path="suppliers" element={<UserSuppliers />} />
-              <Route path="settings" element={<UserSettings />} />
-            </Route>
+              } 
+            />
             
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
