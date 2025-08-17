@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, Copy } from 'lucide-react';
-import { ParsedXMLStructure } from '@/types/xml-template';
+import { ParsedXMLStructure } from '@/utils/advancedXmlParser';
 import { toast } from '@/hooks/use-toast';
 
 interface ParsedStructureTableProps {
@@ -60,6 +60,11 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
   };
 
   const handleSaveTemplate = () => {
+    console.log('Збереження шаблону з даними:', {
+      structure: structure,
+      parameters: parameters
+    });
+
     const templateData = {
       structure: {
         shop: structure.shop,
@@ -67,18 +72,20 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
         categories: structure.categories,
         offers: structure.offers?.slice(0, 1) // Зберігаємо тільки один offer як приклад структури
       },
-      parameters: parameters.map(param => ({
-        parameter_name: param.name,
-        parameter_value: param.value,
-        xml_path: param.path,
+      parameters: parameters.map((param, index) => ({
+        parameter_name: param.name || `Параметр ${index + 1}`,
+        parameter_value: typeof param.value === 'object' ? JSON.stringify(param.value) : (param.value || ''),
+        xml_path: param.path || `/default/path/${index}`,
         parameter_type: 'text',
-        parameter_category: param.type,
+        parameter_category: param.type || 'parameter',
         is_active: true,
-        is_required: false
+        is_required: false,
+        display_order: index
       })),
       shop_info: structure.shop
     };
 
+    console.log('Підготовлені дані для збереження:', templateData);
     onSaveTemplate(templateData);
   };
 
@@ -110,6 +117,13 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
       description: 'Повний XML-шлях скопійовано в буфер обміну',
       duration: 2000
     });
+  };
+
+  const formatValue = (value: any) => {
+    if (typeof value === 'object') {
+      return JSON.stringify(value, null, 2);
+    }
+    return String(value || '');
   };
 
   return (
@@ -154,6 +168,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
             {structure.categories.map((category, index) => (
               <Badge key={index} variant="outline" className="bg-white">
                 {category.name} (ID: {category.id})
+                {category.rz_id && ` RZ: ${category.rz_id}`}
               </Badge>
             ))}
           </div>
@@ -167,7 +182,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
             Знайдено товарів: {structure.offers.length}
           </h3>
           <p className="text-sm text-orange-700">
-            Перший товар буде використаний як шаблон структури
+            Знайдено параметрів: {parameters.length}
           </p>
         </div>
       )}
@@ -175,7 +190,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
       {/* Таблиця параметрів */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-lg font-semibold">Структура параметрів</h3>
+          <h3 className="text-lg font-semibold">Структура параметрів ({parameters.length})</h3>
           <div className="flex gap-2">
             <Button
               onClick={() => setIsAddingParameter(true)}
@@ -202,8 +217,8 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[150px]">Назва параметру</TableHead>
-                <TableHead className="min-w-[120px] hidden md:table-cell">Значення</TableHead>
+                <TableHead className="min-w-[200px]">Назва параметру</TableHead>
+                <TableHead className="min-w-[200px] hidden md:table-cell">Значення</TableHead>
                 <TableHead className="min-w-[200px]">XML шлях</TableHead>
                 <TableHead className="min-w-[100px] hidden sm:table-cell">Тип</TableHead>
                 <TableHead className="min-w-[100px] hidden lg:table-cell">Категорія</TableHead>
@@ -214,7 +229,11 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
               {parameters.map((param, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{param.name}</TableCell>
-                  <TableCell className="hidden md:table-cell">{param.value || '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <div className="max-w-xs truncate" title={formatValue(param.value)}>
+                      {formatValue(param.value) || '-'}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-mono text-sm truncate" title={param.path}>
@@ -263,7 +282,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                       onChange={(e) => setNewParameter(prev => ({...prev, name: e.target.value}))}
                       placeholder="Назва параметру"
                       id="new-param-name"
-                      className="min-w-0"
+                      className="min-w-[180px]"
                     />
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -272,16 +291,16 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                       onChange={(e) => setNewParameter(prev => ({...prev, value: e.target.value}))}
                       placeholder="Значення"
                       id="new-param-value"
-                      className="min-w-0"
+                      className="min-w-[180px]"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
                       value={newParameter.path}
                       onChange={(e) => setNewParameter(prev => ({...prev, path: e.target.value}))}
-                      placeholder="/price/items/item/name"
+                      placeholder="/shop/offers/offer/name"
                       id="new-param-path"
-                      className="min-w-0"
+                      className="min-w-[180px]"
                     />
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
