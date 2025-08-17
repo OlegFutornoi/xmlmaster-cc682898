@@ -85,35 +85,35 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
     mutationFn: async (parameterData: any) => {
       console.log('💾 Створення параметру:', parameterData);
       
-      // Валідуємо обов'язкові поля перед відправкою
-      const validatedData = {
+      // Валідуємо та очищуємо дані перед відправкою
+      const cleanedData = {
         template_id: parameterData.template_id,
-        parameter_name: parameterData.parameter_name || 'Новий параметр',
-        parameter_value: parameterData.parameter_value || '',
-        xml_path: parameterData.xml_path || '',
-        parameter_type: parameterData.parameter_type || 'text',
-        parameter_category: parameterData.parameter_category || 'parameter',
+        parameter_name: String(parameterData.parameter_name || 'Новий параметр').trim(),
+        parameter_value: String(parameterData.parameter_value || '').trim(),
+        xml_path: String(parameterData.xml_path || 'shop/').trim(),
+        parameter_type: String(parameterData.parameter_type || 'text').trim(),
+        parameter_category: String(parameterData.parameter_category || 'parameter').trim(),
         parent_parameter: parameterData.parent_parameter || null,
-        is_active: parameterData.is_active ?? true,
-        is_required: parameterData.is_required ?? false,
-        display_order: parameterData.display_order ?? 0,
+        is_active: Boolean(parameterData.is_active ?? true),
+        is_required: Boolean(parameterData.is_required ?? false),
+        display_order: Number(parameterData.display_order ?? 0),
         nested_values: parameterData.nested_values || null
       };
       
-      // Додаткова перевірка на null values
-      if (!validatedData.parameter_name || validatedData.parameter_name.trim() === '') {
+      // Додаткова валідація
+      if (!cleanedData.template_id) {
+        throw new Error('ID шаблону є обов\'язковим');
+      }
+      
+      if (!cleanedData.parameter_name || cleanedData.parameter_name === '') {
         throw new Error('Назва параметру не може бути порожньою');
       }
       
-      if (!validatedData.xml_path || validatedData.xml_path.trim() === '') {
-        throw new Error('XML шлях не може бути порожнім');
-      }
-      
-      console.log('📋 Валідовані дані для створення:', validatedData);
+      console.log('📋 Очищені дані для створення:', cleanedData);
       
       const { data, error } = await supabase
         .from('template_xml_parameters')
-        .insert([validatedData])
+        .insert([cleanedData])
         .select()
         .single();
 
@@ -146,9 +146,14 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
       console.log('🔄 Оновлення параметру:', id, updates);
       
+      // Очищуємо updates від undefined значень
+      const cleanedUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => value !== undefined)
+      );
+      
       const { error } = await supabase
         .from('template_xml_parameters')
-        .update(updates)
+        .update(cleanedUpdates)
         .eq('id', id);
 
       if (error) {
@@ -206,12 +211,16 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   // Створюємо асинхронну функцію для створення параметрів
   const createParameterAsync = async (parameterData: any): Promise<void> => {
-    // Додаткова валідація перед викликом мутації
-    if (!parameterData.parameter_name || parameterData.parameter_name.trim() === '') {
+    // Валідація перед викликом мутації
+    if (!parameterData.template_id) {
+      throw new Error('ID шаблону є обов\'язковим');
+    }
+    
+    if (!parameterData.parameter_name?.trim()) {
       parameterData.parameter_name = 'Новий параметр';
     }
     
-    if (!parameterData.xml_path || parameterData.xml_path.trim() === '') {
+    if (!parameterData.xml_path?.trim()) {
       parameterData.xml_path = 'shop/';
     }
     

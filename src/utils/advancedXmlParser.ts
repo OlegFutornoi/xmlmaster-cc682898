@@ -340,15 +340,27 @@ function parseOffers(offersData: any): OfferInfo[] {
         if (offer.price_old || offer.old_price) offerInfo.price_old = parseFloat(offer.price_old || offer.old_price);
         if (offer.price_promo || offer.promo_price) offerInfo.price_promo = parseFloat(offer.price_promo || offer.promo_price);
         if (offer.vendor) offerInfo.vendor = extractTextValue(offer.vendor);
+        
+        // ВАЖЛИВО: Додаємо article поле
         if (offer.article) offerInfo.article = extractTextValue(offer.article);
+        
         if (offer.vendorCode || offer['vendor-code']) offerInfo.vendorCode = extractTextValue(offer.vendorCode || offer['vendor-code']);
         if (offer.stock_quantity) offerInfo.stock_quantity = parseInt(offer.stock_quantity) || 0;
         if (offer.quantity_in_stock) offerInfo.quantity_in_stock = parseInt(offer.quantity_in_stock) || 0;
-        if (offer.name_ua || offer.model_ua) offerInfo.name_ua = extractTextValue(offer.name_ua || offer.model_ua);
+        
+        // ВАЖЛИВО: Додаємо name_ua поле
+        if (offer.name_ua) offerInfo.name_ua = extractTextValue(offer.name_ua);
+        
         if (offer.model) offerInfo.model = extractTextValue(offer.model);
         if (offer.model_ua) offerInfo.model_ua = extractTextValue(offer.model_ua);
         if (offer.description) offerInfo.description = extractTextValue(offer.description);
-        if (offer.description_ua) offerInfo.description_ua = extractTextValue(offer.description_ua);
+        
+        // ВАЖЛИВО: Додаємо description_ua поле з підтримкою CDATA
+        if (offer.description_ua) {
+          const descUa = extractTextValue(offer.description_ua);
+          offerInfo.description_ua = descUa;
+        }
+        
         if (offer.state) offerInfo.state = extractTextValue(offer.state);
         if (offer.docket) offerInfo.docket = extractTextValue(offer.docket);
         if (offer.docket_ua) offerInfo.docket_ua = extractTextValue(offer.docket_ua);
