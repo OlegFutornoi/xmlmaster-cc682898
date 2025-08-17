@@ -88,8 +88,8 @@ const CompactParameterItem: React.FC<CompactParameterItemProps> = ({
         <IconComponent className="h-4 w-4" />
       </div>
 
-      {/* Назва параметру */}
-      <div className="min-w-0 w-32 flex-shrink-0">
+      {/* Назва параметру - розширено поле */}
+      <div className="min-w-0 w-48 flex-shrink-0">
         <span className="text-sm font-medium text-gray-700 truncate block">
           {label}
         </span>
@@ -141,7 +141,7 @@ const CompactParameterItem: React.FC<CompactParameterItemProps> = ({
         )}
       </div>
 
-      {/* Меню дій */}
+      {/* Меню дій з шестерінкою */}
       <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -153,7 +153,7 @@ const CompactParameterItem: React.FC<CompactParameterItemProps> = ({
               <Settings className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-white shadow-lg border">
+          <DropdownMenuContent align="end" className="w-48 bg-white shadow-lg border z-50">
             {onEdit && (
               <DropdownMenuItem onClick={() => setIsEditMode(true)}>
                 <Edit2 className="h-4 w-4 mr-2" />

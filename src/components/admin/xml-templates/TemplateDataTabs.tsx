@@ -52,6 +52,9 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
   const safeCategories = structure.categories || [];
   const safeOffers = structure.offers || [];
 
+  // Підраховуємо кількість параметрів кожної категорії
+  const offerParametersCount = (parameters || []).filter(p => p.parameter_category === 'offer').length;
+
   // Handler functions for adding parameters
   const handleAddShopParameter = async () => {
     if (!templateId) return;
@@ -157,7 +160,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
               <TabsTrigger value="shop" className="text-sm">🏪 Магазин</TabsTrigger>
               <TabsTrigger value="currencies" className="text-sm">💱 Валюти</TabsTrigger>
               <TabsTrigger value="categories" className="text-sm">📂 Категорії</TabsTrigger>
-              <TabsTrigger value="offers" className="text-sm">📦 Параметри</TabsTrigger>
+              <TabsTrigger value="offers" className="text-sm">⚙️ Параметри</TabsTrigger>
               <TabsTrigger value="characteristics" className="text-sm">📏 Характеристики</TabsTrigger>
             </TabsList>
 
@@ -283,7 +286,7 @@ const TemplateDataTabs: React.FC<TemplateDataTabsProps> = ({
               </div>
             </TabsContent>
 
-            {/* Вкладка товарів */}
+            {/* Вкладка параметрів товарів (переіменовано з "товари" на "параметри") */}
             <TabsContent value="offers" className="mt-6">
               <OffersTab 
                 structure={structure}

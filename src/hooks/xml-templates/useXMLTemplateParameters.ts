@@ -85,14 +85,19 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
     mutationFn: async (parameterData: any) => {
       console.log('💾 Створення параметру:', parameterData);
       
+      // КРИТИЧНО ВАЖЛИВО: переконуємося що parameter_name НЕ null
+      if (!parameterData.parameter_name || parameterData.parameter_name.trim() === '') {
+        parameterData.parameter_name = 'Новий параметр';
+      }
+      
       // Валідуємо та очищуємо дані перед відправкою
       const cleanedData = {
         template_id: parameterData.template_id,
-        parameter_name: String(parameterData.parameter_name || 'Новий параметр').trim(),
-        parameter_value: String(parameterData.parameter_value || '').trim(),
-        xml_path: String(parameterData.xml_path || 'shop/').trim(),
-        parameter_type: String(parameterData.parameter_type || 'text').trim(),
-        parameter_category: String(parameterData.parameter_category || 'parameter').trim(),
+        parameter_name: String(parameterData.parameter_name).trim(),
+        parameter_value: String(parameterData.parameter_value || ''),
+        xml_path: String(parameterData.xml_path || 'shop/'),
+        parameter_type: String(parameterData.parameter_type || 'text'),
+        parameter_category: String(parameterData.parameter_category || 'parameter'),
         parent_parameter: parameterData.parent_parameter || null,
         is_active: Boolean(parameterData.is_active ?? true),
         is_required: Boolean(parameterData.is_required ?? false),
@@ -103,10 +108,6 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
       // Додаткова валідація
       if (!cleanedData.template_id) {
         throw new Error('ID шаблону є обов\'язковим');
-      }
-      
-      if (!cleanedData.parameter_name || cleanedData.parameter_name === '') {
-        throw new Error('Назва параметру не може бути порожньою');
       }
       
       console.log('📋 Очищені дані для створення:', cleanedData);
@@ -211,13 +212,13 @@ export const useXMLTemplateParameters = (templateId: string | undefined) => {
 
   // Створюємо асинхронну функцію для створення параметрів
   const createParameterAsync = async (parameterData: any): Promise<void> => {
-    // Валідація перед викликом мутації
-    if (!parameterData.template_id) {
-      throw new Error('ID шаблону є обов\'язковим');
-    }
-    
+    // КРИТИЧНО ВАЖЛИВО: валідація parameter_name
     if (!parameterData.parameter_name?.trim()) {
       parameterData.parameter_name = 'Новий параметр';
+    }
+    
+    if (!parameterData.template_id) {
+      throw new Error('ID шаблону є обов\'язковим');
     }
     
     if (!parameterData.xml_path?.trim()) {
