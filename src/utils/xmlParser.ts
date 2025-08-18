@@ -1,5 +1,5 @@
 
-// Повноцінний XML-парсер для YML-файлів з підтримкою всіх полів
+// Повноцінний XML-парсер для YML-файлів з підтримкою всіх полів згідно специфікації
 export interface ParsedXMLStructure {
   shop?: {
     name?: string;
@@ -32,6 +32,25 @@ export interface ParsedXMLStructure {
   }>;
 }
 
+// Структура для відображення в модальному вікні
+export interface ParsedTreeStructure {
+  type: 'shop' | 'currencies' | 'categories' | 'offers';
+  name: string;
+  icon: string;
+  children: ParsedTreeNode[];
+}
+
+export interface ParsedTreeNode {
+  type: string;
+  name: string;
+  value?: string;
+  icon: string;
+  attributes?: Record<string, string>;
+  cdata?: boolean;
+  multilingual?: Record<string, string>;
+  children?: ParsedTreeNode[];
+}
+
 // Очищення CDATA секцій
 const cleanCDATA = (text: string): string => {
   if (!text) return '';
@@ -45,7 +64,6 @@ const cleanCDATA = (text: string): string => {
 const getElementText = (element: Element): string => {
   if (!element) return '';
   
-  // Спочатку перевіряємо чи є CDATA секції
   const cdataNodes = Array.from(element.childNodes).filter(
     node => node.nodeType === Node.CDATA_SECTION_NODE
   );
@@ -54,7 +72,6 @@ const getElementText = (element: Element): string => {
     return cdataNodes.map(node => cleanCDATA(node.textContent || '')).join('');
   }
   
-  // Якщо немає CDATA, повертаємо звичайний текст
   return element.textContent?.trim() || '';
 };
 
@@ -66,7 +83,6 @@ const buildXMLPath = (element: Element): string => {
   while (current && current.nodeType === Node.ELEMENT_NODE) {
     let nodeName = current.nodeName.toLowerCase();
     
-    // Додаємо атрибути до шляху для унікальності
     if (current.hasAttribute('id')) {
       nodeName += `[@id="${current.getAttribute('id')}"]`;
     } else if (current.hasAttribute('name')) {
@@ -96,6 +112,13 @@ const getElementAttributes = (element: Element): Record<string, string> => {
   return attributes;
 };
 
+// Перевірка чи містить елемент CDATA
+const hasCDATA = (element: Element): boolean => {
+  return Array.from(element.childNodes).some(
+    node => node.nodeType === Node.CDATA_SECTION_NODE
+  );
+};
+
 // Парсинг багатомовних параметрів
 const parseMultilingualParam = (paramElement: Element): {
   name: string;
@@ -106,7 +129,6 @@ const parseMultilingualParam = (paramElement: Element): {
   const path = buildXMLPath(paramElement);
   const multilingual_values: Record<string, string> = {};
   
-  // Шукаємо value елементи з lang атрибутами
   const valueElements = paramElement.querySelectorAll('value[lang]');
   valueElements.forEach(valueElement => {
     const lang = valueElement.getAttribute('lang');
@@ -117,6 +139,279 @@ const parseMultilingualParam = (paramElement: Element): {
   });
   
   return { name: paramName, multilingual_values, path };
+};
+
+// Створення структури дерева для відображення
+const createTreeStructure = (xmlDoc: Document): ParsedTreeStructure[] => {
+  const result: ParsedTreeStructure[] = [];
+
+  // 1. SHOP
+  const shopElement = xmlDoc.querySelector('shop');
+  if (shopElement) {
+    const shopChildren: ParsedTreeNode[] = [];
+    
+    const shopName = shopElement.querySelector('name');
+    const shopCompany = shopElement.querySelector('company');
+    const shopUrl = shopElement.querySelector('url');
+    
+    if (shopName) {
+      shopChildren.push({
+        type: 'name',
+        name: 'name',
+        value: getElementText(shopName),
+        icon: '🏪'
+      });
+    }
+    
+    if (shopCompany) {
+      shopChildren.push({
+        type: 'company',
+        name: 'company',
+        value: getElementText(shopCompany),
+        icon: '🏢'
+      });
+    }
+    
+    if (shopUrl) {
+      shopChildren.push({
+        type: 'url',
+        name: 'url',
+        value: getElementText(shopUrl),
+        icon: '🌐'
+      });
+    }
+
+    result.push({
+      type: 'shop',
+      name: 'shop',
+      icon: '🛍️',
+      children: shopChildren
+    });
+  }
+
+  // 2. CURRENCIES
+  const currenciesElement = xmlDoc.querySelector('currencies');
+  if (currenciesElement) {
+    const currencyChildren: ParsedTreeNode[] = [];
+    const currencyElements = currenciesElement.querySelectorAll('currency');
+    
+    currencyElements.forEach(currency => {
+      const id = currency.getAttribute('id');
+      const rate = currency.getAttribute('rate');
+      
+      if (id) {
+        currencyChildren.push({
+          type: 'currency',
+          name: 'currency',
+          value: `(id="${id}", rate="${rate}")`,
+          icon: id === 'UAH' ? '💰' : id === 'USD' ? '💵' : '💶',
+          attributes: { id, rate: rate || '1' }
+        });
+      }
+    });
+
+    if (currencyChildren.length > 0) {
+      result.push({
+        type: 'currencies',
+        name: 'currencies',
+        icon: '💱',
+        children: currencyChildren
+      });
+    }
+  }
+
+  // 3. CATEGORIES
+  const categoriesElement = xmlDoc.querySelector('categories');
+  if (categoriesElement) {
+    const categoryChildren: ParsedTreeNode[] = [];
+    const categoryElements = categoriesElement.querySelectorAll('category');
+    
+    categoryElements.forEach(category => {
+      const id = category.getAttribute('id');
+      const name = getElementText(category);
+      const rz_id = category.getAttribute('rz_id');
+      
+      if (id && name) {
+        const attributes: Record<string, string> = { id };
+        if (rz_id) attributes.rz_id = rz_id;
+        
+        categoryChildren.push({
+          type: 'category',
+          name: 'category',
+          value: `(id="${id}")${rz_id ? `, rz_id="${rz_id}"` : ''}: "${name}"`,
+          icon: '📁',
+          attributes
+        });
+      }
+    });
+
+    if (categoryChildren.length > 0) {
+      result.push({
+        type: 'categories',
+        name: 'categories',
+        icon: '📂',
+        children: categoryChildren
+      });
+    }
+  }
+
+  // 4. OFFERS
+  const offersElement = xmlDoc.querySelector('offers');
+  if (offersElement) {
+    const offerChildren: ParsedTreeNode[] = [];
+    const offerElements = offersElement.querySelectorAll('offer');
+    
+    // Обробляємо тільки перший оффер для демонстрації
+    const firstOffer = offerElements[0];
+    if (firstOffer) {
+      const id = firstOffer.getAttribute('id');
+      const available = firstOffer.getAttribute('available');
+      
+      const offerNode: ParsedTreeNode = {
+        type: 'offer',
+        name: 'offer',
+        value: `(id="${id}", available="${available}")`,
+        icon: '📦',
+        attributes: { id: id || '', available: available || 'true' },
+        children: []
+      };
+
+      // Основні поля оффера
+      const offerFields = [
+        { tag: 'price', icon: '💲' },
+        { tag: 'price_old', icon: '💲' },
+        { tag: 'old_price', icon: '💲' },
+        { tag: 'price_promo', icon: '💲' },
+        { tag: 'promo_price', icon: '💲' },
+        { tag: 'currencyid', icon: '💱' },
+        { tag: 'categoryid', icon: '🗂️' },
+        { tag: 'vendor', icon: '🏷️' },
+        { tag: 'article', icon: '🔖' },
+        { tag: 'stock_quantity', icon: '📦' },
+        { tag: 'quantity_in_stock', icon: '📦' },
+        { tag: 'url', icon: '🔗' },
+        { tag: 'name', icon: '🏷️' },
+        { tag: 'model', icon: '🏷️' },
+        { tag: 'name_ua', icon: '🏷️' },
+        { tag: 'model_ua', icon: '🏷️' },
+        { tag: 'description', icon: '📝' },
+        { tag: 'description_ua', icon: '📝' },
+        { tag: 'state', icon: '📊' },
+        { tag: 'docket', icon: '📋' },
+        { tag: 'docket_ua', icon: '📋' }
+      ];
+
+      offerFields.forEach(field => {
+        const element = firstOffer.querySelector(field.tag);
+        if (element) {
+          const value = getElementText(element);
+          const isCDATA = hasCDATA(element);
+          
+          offerNode.children!.push({
+            type: field.tag,
+            name: field.tag,
+            value: isCDATA ? '<![CDATA[...]]>' + (field.tag.includes('_ua') ? ' (UA HTML)' : ' (RU HTML)') : value,
+            icon: field.icon,
+            cdata: isCDATA
+          });
+        }
+      });
+
+      // Картинки
+      const pictureElements = firstOffer.querySelectorAll('picture');
+      pictureElements.forEach(picture => {
+        const imageUrl = getElementText(picture);
+        if (imageUrl) {
+          offerNode.children!.push({
+            type: 'picture',
+            name: 'picture',
+            value: imageUrl,
+            icon: '🖼️'
+          });
+        }
+      });
+
+      // Параметри (характеристики)
+      const paramElements = firstOffer.querySelectorAll('param');
+      paramElements.forEach(paramElement => {
+        const paramName = paramElement.getAttribute('name') || 'Невідомий параметр';
+        const paramid = paramElement.getAttribute('paramid');
+        const valueid = paramElement.getAttribute('valueid');
+        
+        // Перевіряємо багатомовні значення
+        const valueElements = paramElement.querySelectorAll('value[lang]');
+        
+        if (valueElements.length > 0) {
+          // Багатомовний параметр
+          const paramNode: ParsedTreeNode = {
+            type: 'param',
+            name: 'param',
+            value: `(name="${paramName}")`,
+            icon: getParamIcon(paramName),
+            children: []
+          };
+
+          const multilingual: Record<string, string> = {};
+          valueElements.forEach(valueElement => {
+            const lang = valueElement.getAttribute('lang');
+            const value = getElementText(valueElement);
+            if (lang && value) {
+              multilingual[lang] = value;
+              paramNode.children!.push({
+                type: 'value',
+                name: 'value',
+                value: `(lang="${lang}"): "${value}"`,
+                icon: lang === 'uk' ? '🇺🇦' : '🇷🇺'
+              });
+            }
+          });
+
+          paramNode.multilingual = multilingual;
+          offerNode.children!.push(paramNode);
+        } else {
+          // Звичайний параметр
+          const value = getElementText(paramElement);
+          const attributes: Record<string, string> = { name: paramName };
+          if (paramid) attributes.paramid = paramid;
+          if (valueid) attributes.valueid = valueid;
+          
+          offerNode.children!.push({
+            type: 'param',
+            name: 'param',
+            value: `(name="${paramName}"): "${value}"`,
+            icon: getParamIcon(paramName),
+            attributes
+          });
+        }
+      });
+
+      offerChildren.push(offerNode);
+    }
+
+    if (offerChildren.length > 0) {
+      result.push({
+        type: 'offers',
+        name: 'offers',
+        icon: '🎁',
+        children: offerChildren
+      });
+    }
+  }
+
+  return result;
+};
+
+// Отримати іконку для параметра
+const getParamIcon = (paramName: string): string => {
+  const name = paramName.toLowerCase();
+  if (name.includes('зріст') || name.includes('розмір')) return '📏';
+  if (name.includes('сезон')) return '🍂';
+  if (name.includes('колір')) return '🎨';
+  if (name.includes('модел') || name.includes('особлив')) return '👕';
+  if (name.includes('склад') || name.includes('матеріал')) return '🧵';
+  if (name.includes('догляд') || name.includes('прання')) return '🧺';
+  if (name.includes('країна') || name.includes('виробник')) return '🌍';
+  return '📋';
 };
 
 export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
@@ -275,7 +570,7 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
       
       const offerObj: {id: string; available?: boolean; [key: string]: any} = { id, available };
       
-      // Парсинг всіх основних полів товару
+      // Парсинг всіх основних полів товару згідно специфікації YML
       const offerFields = [
         'url', 'price', 'price_old', 'old_price', 'price_promo', 'promo_price',
         'currencyid', 'categoryid', 'picture', 'vendor', 'article', 
@@ -290,7 +585,7 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
           let value = getElementText(fieldElement);
           let displayName = fieldName;
           
-          // Зіставлення назв полів
+          // Зіставлення назв полів згідно специфікації
           const fieldMapping: {[key: string]: string} = {
             'url': 'URL товару',
             'price': 'Ціна',
@@ -301,19 +596,19 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
             'currencyid': 'Валюта',
             'categoryid': 'ID категорії',
             'picture': 'Зображення',
-            'vendor': 'Виробник',
+            'vendor': 'Виробник/Бренд',
             'article': 'Артикул',
-            'name': 'Назва',
+            'name': 'Назва товару',
             'model': 'Модель',
-            'name_ua': 'Назва (UA)',
+            'name_ua': 'Назва товару (UA)',
             'model_ua': 'Модель (UA)',
-            'description': 'Опис',
-            'description_ua': 'Опис (UA)',
+            'description': 'Опис товару',
+            'description_ua': 'Опис товару (UA)',
             'state': 'Стан товару',
             'docket': 'Короткий опис',
             'docket_ua': 'Короткий опис (UA)',
             'stock_quantity': 'Кількість на складі',
-            'quantity_in_stock': 'Залишки'
+            'quantity_in_stock': 'Залишки товару'
           };
           
           displayName = fieldMapping[fieldName] || fieldName;
@@ -330,8 +625,8 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
           
           console.log(`  ${displayName}: ${value}`);
           
-          // Додаємо як параметр з перевіркою на CDATA
-          const cdataContent = fieldElement.querySelector('*') ? getElementText(fieldElement) : undefined;
+          // Перевірка на CDATA контент
+          const cdataContent = hasCDATA(fieldElement) ? getElementText(fieldElement) : undefined;
           
           result.parameters.push({
             name: displayName,
@@ -339,12 +634,12 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
             path: `${buildXMLPath(offer)}/${fieldName}`,
             type: 'parameter',
             category: 'offer',
-            cdata_content: cdataContent && cdataContent !== value ? cdataContent : undefined
+            cdata_content: cdataContent
           });
         }
       });
 
-      // Парсинг всіх зображень
+      // Парсинг всіх зображень (до 15 згідно специфікації)
       const pictureElements = offer.querySelectorAll('picture');
       console.log(`  Знайдено зображень: ${pictureElements.length}`);
       pictureElements.forEach((picture, pictureIndex) => {
@@ -360,18 +655,20 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
         }
       });
 
-      // Парсинг характеристик (param елементів)
+      // Парсинг характеристик (param елементів) згідно специфікації
       const paramElements = offer.querySelectorAll('param');
       console.log(`  Знайдено характеристик: ${paramElements.length}`);
       
       paramElements.forEach((paramElement, paramIndex) => {
         const paramName = paramElement.getAttribute('name') || `Характеристика ${paramIndex + 1}`;
+        const paramid = paramElement.getAttribute('paramid');
+        const valueid = paramElement.getAttribute('valueid');
         
-        // Перевіряємо багатомовні значення
+        // Перевіряємо багатомовні значення (value lang)
         const valueElements = paramElement.querySelectorAll('value[lang]');
         
         if (valueElements.length > 0) {
-          // Багатомовний параметр
+          // Багатомовний параметр згідно специфікації
           const multilingual = parseMultilingualParam(paramElement);
           console.log(`    Багатомовна характеристика "${paramName}":`, multilingual.multilingual_values);
           
@@ -382,13 +679,19 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
             type: 'characteristic',
             category: 'offer',
             multilingual_values: multilingual.multilingual_values,
-            attributes: getElementAttributes(paramElement)
+            attributes: {
+              name: paramName,
+              ...(paramid && { paramid }),
+              ...(valueid && { valueid })
+            }
           });
         } else {
           // Звичайний параметр
           const value = getElementText(paramElement);
+          const isCDATA = hasCDATA(paramElement);
+          
           if (value) {
-            console.log(`    Характеристика "${paramName}": ${value}`);
+            console.log(`    Характеристика "${paramName}": ${value}${isCDATA ? ' (CDATA)' : ''}`);
             
             result.parameters.push({
               name: paramName,
@@ -396,7 +699,12 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
               path: buildXMLPath(paramElement),
               type: 'characteristic',
               category: 'offer',
-              attributes: getElementAttributes(paramElement)
+              cdata_content: isCDATA ? value : undefined,
+              attributes: {
+                name: paramName,
+                ...(paramid && { paramid }),
+                ...(valueid && { valueid })
+              }
             });
           }
         }
@@ -424,4 +732,17 @@ export const parseAdvancedXML = (xmlString: string): ParsedXMLStructure => {
   });
 
   return result;
+};
+
+// Функція для створення структури дерeva (експорт для використання в компонентах)
+export const createXMLTreeStructure = (xmlString: string): ParsedTreeStructure[] => {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+  
+  const parseErrors = xmlDoc.getElementsByTagName('parsererror');
+  if (parseErrors.length > 0) {
+    throw new Error('Невірний формат XML файлу');
+  }
+  
+  return createTreeStructure(xmlDoc);
 };

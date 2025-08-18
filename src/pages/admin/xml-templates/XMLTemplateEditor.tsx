@@ -3,18 +3,20 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, FileText, Download } from 'lucide-react';
+import { Upload, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { parseAdvancedXML } from '@/utils/xmlParser';
+import { parseAdvancedXML, createXMLTreeStructure, ParsedTreeStructure } from '@/utils/xmlParser';
 import ParsedStructureTable from '@/components/admin/xml-templates/ParsedStructureTable';
+import XMLStructurePreviewModal from '@/components/admin/xml-templates/XMLStructurePreviewModal';
 import { extendedSupabase } from '@/integrations/supabase/extended-client';
 
 const XMLTemplateEditor = () => {
   const [templateName, setTemplateName] = useState('');
   const [xmlContent, setXMLContent] = useState('');
   const [parsedStructure, setParsedStructure] = useState<any>(null);
+  const [treeStructure, setTreeStructure] = useState<ParsedTreeStructure[]>([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isParsingFile, setIsParsingFile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -29,13 +31,43 @@ const XMLTemplateEditor = () => {
       setXMLContent(text);
       setTemplateName(file.name.replace(/\.[^/.]+$/, ''));
       
-      console.log('Файл завантажено, розпочинаємо парсинг...');
-      const structure = parseAdvancedXML(text);
-      setParsedStructure(structure);
+      console.log('Файл завантажено, створюємо структуру дерева...');
+      
+      // Створюємо структуру дерева для відображення в модальному вікні
+      const tree = createXMLTreeStructure(text);
+      setTreeStructure(tree);
+      
+      // Показуємо модальне вікно з структурою
+      setShowPreviewModal(true);
       
       toast({
         title: 'Успіх',
-        description: `XML файл розпарсено. Знайдено ${structure.parameters.length} параметрів.`,
+        description: `XML файл завантажено. Структура готова для перегляду.`,
+      });
+    } catch (error: any) {
+      console.error('Помилка завантаження XML:', error);
+      toast({
+        title: 'Помилка',
+        description: `Не вдалося завантажити XML: ${error.message}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  const handleContinueFromPreview = async () => {
+    if (!xmlContent) return;
+
+    try {
+      console.log('Парсинг XML для створення шаблону...');
+      const structure = parseAdvancedXML(xmlContent);
+      setParsedStructure(structure);
+      setShowPreviewModal(false);
+      
+      toast({
+        title: 'Успіх',
+        description: `XML розпарсено. Знайдено ${structure.parameters.length} параметрів.`,
       });
     } catch (error: any) {
       console.error('Помилка парсингу XML:', error);
@@ -44,8 +76,6 @@ const XMLTemplateEditor = () => {
         description: `Не вдалося розпарсити XML: ${error.message}`,
         variant: 'destructive',
       });
-    } finally {
-      setIsParsingFile(false);
     }
   };
 
@@ -62,6 +92,8 @@ const XMLTemplateEditor = () => {
     setIsSaving(true);
 
     try {
+      console.log('Збереження шаблону з даними:', templateData);
+
       // Зберігаємо основну інформацію про шаблон
       const { data: template, error: templateError } = await extendedSupabase
         .from('template_xml')
@@ -78,11 +110,23 @@ const XMLTemplateEditor = () => {
 
       if (templateError) throw templateError;
 
-      // Зберігаємо параметри
+      // Зберігаємо параметри з усіма новими полями
       if (templateData.parameters && templateData.parameters.length > 0) {
         const parametersWithTemplateId = templateData.parameters.map((param: any) => ({
-          ...param,
-          template_id: template.id
+          template_id: template.id,
+          parameter_name: param.parameter_name,
+          parameter_value: param.parameter_value,
+          xml_path: param.xml_path,
+          parameter_type: param.parameter_type || 'text',
+          parameter_category: param.parameter_category,
+          multilingual_values: param.multilingual_values,
+          cdata_content: param.cdata_content,
+          element_attributes: param.element_attributes,
+          param_id: param.param_id,
+          value_id: param.value_id,
+          is_active: param.is_active !== false,
+          is_required: param.is_required === true,
+          display_order: param.display_order || 0
         }));
 
         const { error: parametersError } = await extendedSupabase
@@ -101,6 +145,7 @@ const XMLTemplateEditor = () => {
       setTemplateName('');
       setXMLContent('');
       setParsedStructure(null);
+      setTreeStructure([]);
 
     } catch (error: any) {
       console.error('Помилка збереження шаблону:', error);
@@ -159,7 +204,7 @@ const XMLTemplateEditor = () => {
             {isParsingFile && (
               <div className="flex items-center gap-2 text-blue-600">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                Парсинг файлу...
+                Завантаження та аналіз файлу...
               </div>
             )}
           </CardContent>
@@ -171,10 +216,10 @@ const XMLTemplateEditor = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Результати парсингу
+                Шаблон параметрів
               </CardTitle>
               <CardDescription>
-                Перегляньте та налаштуйте знайдені параметри
+                Перегляньте та налаштуйте знайдені параметри перед створенням шаблону
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -187,6 +232,15 @@ const XMLTemplateEditor = () => {
           </Card>
         )}
       </div>
+
+      {/* Модальне вікно перегляду структури */}
+      <XMLStructurePreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        onContinue={handleContinueFromPreview}
+        treeStructure={treeStructure}
+        isProcessing={false}
+      />
     </div>
   );
 };

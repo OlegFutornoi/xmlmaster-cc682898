@@ -835,6 +835,7 @@ export type Database = {
           is_required: boolean
           multilingual_values: Json | null
           nested_values: Json | null
+          param_id: string | null
           parameter_category: string
           parameter_name: string
           parameter_type: string
@@ -842,6 +843,7 @@ export type Database = {
           parent_parameter: string | null
           template_id: string
           updated_at: string
+          value_id: string | null
           xml_path: string
         }
         Insert: {
@@ -854,6 +856,7 @@ export type Database = {
           is_required?: boolean
           multilingual_values?: Json | null
           nested_values?: Json | null
+          param_id?: string | null
           parameter_category?: string
           parameter_name: string
           parameter_type?: string
@@ -861,6 +864,7 @@ export type Database = {
           parent_parameter?: string | null
           template_id: string
           updated_at?: string
+          value_id?: string | null
           xml_path: string
         }
         Update: {
@@ -873,6 +877,7 @@ export type Database = {
           is_required?: boolean
           multilingual_values?: Json | null
           nested_values?: Json | null
+          param_id?: string | null
           parameter_category?: string
           parameter_name?: string
           parameter_type?: string
@@ -880,6 +885,7 @@ export type Database = {
           parent_parameter?: string | null
           template_id?: string
           updated_at?: string
+          value_id?: string | null
           xml_path?: string
         }
         Relationships: [
@@ -1072,59 +1078,62 @@ export type Database = {
         }
         Relationships: []
       }
-      xml_parsed_elements: {
+      xml_parsed_structure: {
         Row: {
+          attributes: Json | null
           cdata_content: string | null
           created_at: string
-          element_attributes: Json | null
+          display_order: number | null
           element_name: string
-          element_order: number | null
           element_path: string
+          element_type: string
           element_value: string | null
           id: string
           multilingual_values: Json | null
-          parent_element_id: string | null
+          parent_id: string | null
           template_id: string | null
           updated_at: string
         }
         Insert: {
+          attributes?: Json | null
           cdata_content?: string | null
           created_at?: string
-          element_attributes?: Json | null
+          display_order?: number | null
           element_name: string
-          element_order?: number | null
           element_path: string
+          element_type: string
           element_value?: string | null
           id?: string
           multilingual_values?: Json | null
-          parent_element_id?: string | null
+          parent_id?: string | null
           template_id?: string | null
           updated_at?: string
         }
         Update: {
+          attributes?: Json | null
           cdata_content?: string | null
           created_at?: string
-          element_attributes?: Json | null
+          display_order?: number | null
           element_name?: string
-          element_order?: number | null
           element_path?: string
+          element_type?: string
           element_value?: string | null
           id?: string
           multilingual_values?: Json | null
-          parent_element_id?: string | null
+          parent_id?: string | null
           template_id?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "xml_parsed_elements_parent_element_id_fkey"
-            columns: ["parent_element_id"]
+            foreignKeyName: "xml_parsed_structure_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
-            referencedRelation: "xml_parsed_elements"
+            referencedRelation: "xml_parsed_structure"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "xml_parsed_elements_template_id_fkey"
+            foreignKeyName: "xml_parsed_structure_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "template_xml"
