@@ -1,14 +1,15 @@
 
-// Компонент таблиці розпарсеної структури XML з покращеним відображенням та адаптивністю
+// Компонент таблиці розпарсеної структури XML з повною підтримкою всіх полів
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, Copy } from 'lucide-react';
-import { ParsedXMLStructure } from '@/utils/advancedXmlParser';
+import { Plus, Trash2, Save, Copy, Eye } from 'lucide-react';
+import { ParsedXMLStructure } from '@/utils/xmlParser';
 import { toast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ParsedStructureTableProps {
   structure: ParsedXMLStructure;
@@ -34,6 +35,8 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
     category: 'offer'
   });
   const [isAddingParameter, setIsAddingParameter] = useState(false);
+  const [selectedParameter, setSelectedParameter] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const handleAddParameter = () => {
     if (!newParameter.name || !newParameter.path) return;
@@ -70,14 +73,17 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
         shop: structure.shop,
         currencies: structure.currencies,
         categories: structure.categories,
-        offers: structure.offers?.slice(0, 1) // Зберігаємо тільки один offer як приклад структури
+        offers: structure.offers?.slice(0, 1)
       },
       parameters: parameters.map((param, index) => ({
         parameter_name: param.name || `Параметр ${index + 1}`,
         parameter_value: typeof param.value === 'object' ? JSON.stringify(param.value) : (param.value || ''),
         xml_path: param.path || `/default/path/${index}`,
         parameter_type: 'text',
-        parameter_category: param.type || 'parameter',
+        parameter_category: param.category || 'parameter',
+        multilingual_values: param.multilingual_values || null,
+        cdata_content: param.cdata_content || null,
+        element_attributes: param.attributes || null,
         is_active: true,
         is_required: false,
         display_order: index
@@ -105,11 +111,6 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
       : 'bg-pink-100 text-pink-700';
   };
 
-  const getShortPath = (fullPath: string) => {
-    const parts = fullPath.split('/');
-    return parts[parts.length - 1] || fullPath;
-  };
-
   const copyFullPath = (fullPath: string) => {
     navigator.clipboard.writeText(fullPath);
     toast({
@@ -126,8 +127,46 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
     return String(value || '');
   };
 
+  const getShortPath = (fullPath: string) => {
+    const parts = fullPath.split('/');
+    return parts[parts.length - 1] || fullPath;
+  };
+
+  const showParameterDetails = (param: any) => {
+    setSelectedParameter(param);
+    setShowDetailsDialog(true);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" id="parsed-structure-table">
+      {/* Статистика парсингу */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h3 className="font-semibold text-blue-900">Магазин</h3>
+          <p className="text-2xl font-bold text-blue-700">
+            {structure.shop ? '1' : '0'}
+          </p>
+        </div>
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h3 className="font-semibold text-green-900">Валюти</h3>
+          <p className="text-2xl font-bold text-green-700">
+            {structure.currencies?.length || 0}
+          </p>
+        </div>
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <h3 className="font-semibold text-purple-900">Категорії</h3>
+          <p className="text-2xl font-bold text-purple-700">
+            {structure.categories?.length || 0}
+          </p>
+        </div>
+        <div className="bg-orange-50 p-4 rounded-lg">
+          <h3 className="font-semibold text-orange-900">Товари</h3>
+          <p className="text-2xl font-bold text-orange-700">
+            {structure.offers?.length || 0}
+          </p>
+        </div>
+      </div>
+
       {/* Інформація про магазин */}
       {structure.shop && (
         <div className="bg-blue-50 p-4 rounded-lg">
@@ -175,22 +214,16 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
         </div>
       )}
 
-      {/* Товари */}
-      {structure.offers && structure.offers.length > 0 && (
-        <div className="bg-orange-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-orange-900 mb-2">
-            Знайдено товарів: {structure.offers.length}
-          </h3>
-          <p className="text-sm text-orange-700">
-            Знайдено параметрів: {parameters.length}
-          </p>
-        </div>
-      )}
-
       {/* Таблиця параметрів */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-lg font-semibold">Структура параметрів ({parameters.length})</h3>
+          <h3 className="text-lg font-semibold">
+            Знайдено параметрів: {parameters.length}
+            <span className="text-sm text-gray-500 ml-2">
+              (Параметри: {parameters.filter(p => p.type === 'parameter').length}, 
+              Характеристики: {parameters.filter(p => p.type === 'characteristic').length})
+            </span>
+          </h3>
           <div className="flex gap-2">
             <Button
               onClick={() => setIsAddingParameter(true)}
@@ -222,13 +255,25 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                 <TableHead className="min-w-[200px]">XML шлях</TableHead>
                 <TableHead className="min-w-[100px] hidden sm:table-cell">Тип</TableHead>
                 <TableHead className="min-w-[100px] hidden lg:table-cell">Категорія</TableHead>
-                <TableHead className="w-[80px]">Дії</TableHead>
+                <TableHead className="w-[120px]">Дії</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {parameters.map((param, index) => (
                 <TableRow key={index}>
-                  <TableCell className="font-medium">{param.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {param.name}
+                    {param.multilingual_values && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        Багатомовний
+                      </Badge>
+                    )}
+                    {param.cdata_content && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        CDATA
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="max-w-xs truncate" title={formatValue(param.value)}>
                       {formatValue(param.value) || '-'}
@@ -261,15 +306,26 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveParameter(index)}
-                      className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
-                      id={`remove-parameter-${index}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => showParameterDetails(param)}
+                        className="h-8 w-8 p-0"
+                        id={`view-parameter-${index}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveParameter(index)}
+                        className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                        id={`remove-parameter-${index}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -365,6 +421,59 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
           </Table>
         </div>
       </div>
+
+      {/* Діалог деталей параметру */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" id="parameter-details-dialog">
+          <DialogHeader>
+            <DialogTitle>Деталі параметру</DialogTitle>
+          </DialogHeader>
+          {selectedParameter && (
+            <div className="space-y-4">
+              <div>
+                <label className="font-semibold">Назва:</label>
+                <p className="mt-1">{selectedParameter.name}</p>
+              </div>
+              <div>
+                <label className="font-semibold">Значення:</label>
+                <pre className="mt-1 bg-gray-100 p-2 rounded text-sm overflow-x-auto">
+                  {formatValue(selectedParameter.value)}
+                </pre>
+              </div>
+              <div>
+                <label className="font-semibold">XML шлях:</label>
+                <p className="mt-1 font-mono text-sm bg-gray-100 p-2 rounded">
+                  {selectedParameter.path}
+                </p>
+              </div>
+              {selectedParameter.multilingual_values && (
+                <div>
+                  <label className="font-semibold">Багатомовні значення:</label>
+                  <pre className="mt-1 bg-gray-100 p-2 rounded text-sm">
+                    {JSON.stringify(selectedParameter.multilingual_values, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {selectedParameter.cdata_content && (
+                <div>
+                  <label className="font-semibold">CDATA контент:</label>
+                  <pre className="mt-1 bg-gray-100 p-2 rounded text-sm overflow-x-auto">
+                    {selectedParameter.cdata_content}
+                  </pre>
+                </div>
+              )}
+              {selectedParameter.attributes && Object.keys(selectedParameter.attributes).length > 0 && (
+                <div>
+                  <label className="font-semibold">Атрибути:</label>
+                  <pre className="mt-1 bg-gray-100 p-2 rounded text-sm">
+                    {JSON.stringify(selectedParameter.attributes, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
