@@ -23,13 +23,19 @@ const XMLStructurePreviewModal = ({
   isProcessing = false 
 }: XMLStructurePreviewModalProps) => {
   
+  console.log('XMLStructurePreviewModal рендер:', {
+    isOpen,
+    treeStructureLength: treeStructure.length,
+    isProcessing
+  });
+  
   const renderTreeNode = (node: ParsedTreeNode, depth: number = 0): JSX.Element => {
-    const indent = '│    '.repeat(depth);
+    const indent = '    '.repeat(depth);
     const connector = depth > 0 ? '├── ' : '';
     
     return (
       <div key={`${node.type}-${node.name}-${depth}`} className="font-mono text-sm">
-        <div className="flex items-start gap-2 py-1">
+        <div className="flex items-start gap-1 py-1">
           <span className="text-gray-400 whitespace-pre">{indent}{connector}</span>
           <span className="text-lg">{node.icon}</span>
           <span className="font-semibold text-blue-600">{node.name}</span>

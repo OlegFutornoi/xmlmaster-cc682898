@@ -24,20 +24,28 @@ const XMLTemplateEditor = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('=== ПОЧАТОК ЗАВАНТАЖЕННЯ ФАЙЛУ ===');
+    console.log('Обрано файл:', file.name);
+
     setIsParsingFile(true);
 
     try {
       const text = await file.text();
+      console.log('Файл прочитано, розмір:', text.length, 'символів');
+      console.log('Перші 500 символів:', text.substring(0, 500));
+      
       setXMLContent(text);
       setTemplateName(file.name.replace(/\.[^/.]+$/, ''));
       
-      console.log('Файл завантажено, створюємо структуру дерева...');
+      console.log('Створюємо структуру дерева...');
       
       // Створюємо структуру дерева для відображення в модальному вікні
       const tree = createXMLTreeStructure(text);
+      console.log('Структура дерева створена:', tree);
       setTreeStructure(tree);
       
       // Показуємо модальне вікно з структурою
+      console.log('Показуємо модальне вікно...');
       setShowPreviewModal(true);
       
       toast({
@@ -59,9 +67,12 @@ const XMLTemplateEditor = () => {
   const handleContinueFromPreview = async () => {
     if (!xmlContent) return;
 
+    console.log('=== ПРОДОВЖЕННЯ З ПОПЕРЕДНЬОГО ПЕРЕГЛЯДУ ===');
+
     try {
       console.log('Парсинг XML для створення шаблону...');
       const structure = parseAdvancedXML(xmlContent);
+      console.log('Структура створена:', structure);
       setParsedStructure(structure);
       setShowPreviewModal(false);
       
@@ -159,6 +170,13 @@ const XMLTemplateEditor = () => {
     }
   };
 
+  console.log('Поточний стан компонента:', {
+    showPreviewModal,
+    treeStructureLength: treeStructure.length,
+    hasXMLContent: !!xmlContent,
+    hasParsedStructure: !!parsedStructure
+  });
+
   return (
     <div className="container mx-auto py-6 space-y-6" id="xml-template-editor">
       <div className="flex items-center justify-between">
@@ -236,7 +254,10 @@ const XMLTemplateEditor = () => {
       {/* Модальне вікно перегляду структури */}
       <XMLStructurePreviewModal
         isOpen={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
+        onClose={() => {
+          console.log('Закриття модального вікна');
+          setShowPreviewModal(false);
+        }}
         onContinue={handleContinueFromPreview}
         treeStructure={treeStructure}
         isProcessing={false}
