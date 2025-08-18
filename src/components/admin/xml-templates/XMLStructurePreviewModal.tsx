@@ -26,7 +26,8 @@ const XMLStructurePreviewModal = ({
   console.log('XMLStructurePreviewModal рендер:', {
     isOpen,
     treeStructureLength: treeStructure.length,
-    isProcessing
+    isProcessing,
+    treeStructure
   });
   
   const renderTreeNode = (node: ParsedTreeNode, depth: number = 0): JSX.Element => {
@@ -34,7 +35,7 @@ const XMLStructurePreviewModal = ({
     const connector = depth > 0 ? '├── ' : '';
     
     return (
-      <div key={`${node.type}-${node.name}-${depth}`} className="font-mono text-sm">
+      <div key={`${node.name}-${node.type}-${depth}-${Math.random()}`} className="font-mono text-sm">
         <div className="flex items-start gap-1 py-1">
           <span className="text-gray-400 whitespace-pre">{indent}{connector}</span>
           <span className="text-lg">{node.icon}</span>
@@ -42,7 +43,7 @@ const XMLStructurePreviewModal = ({
           {node.value && (
             <>
               <span className="text-gray-500">:</span>
-              <span className="text-green-700 break-all">{node.value}</span>
+              <span className="text-green-700 break-all ml-1">{node.value}</span>
             </>
           )}
           {node.cdata && (
@@ -54,7 +55,7 @@ const XMLStructurePreviewModal = ({
         </div>
         
         {node.children && node.children.map((child, index) => (
-          <div key={`${child.type}-${index}`}>
+          <div key={`${child.name}-${child.type}-${index}`}>
             {renderTreeNode(child, depth + 1)}
           </div>
         ))}
@@ -71,7 +72,7 @@ const XMLStructurePreviewModal = ({
         </div>
         
         {section.children.map((child, index) => (
-          <div key={`${child.type}-${index}`} className="ml-4">
+          <div key={`${child.name}-${child.type}-section-${index}`} className="ml-4">
             {renderTreeNode(child, 1)}
           </div>
         ))}
@@ -96,7 +97,7 @@ const XMLStructurePreviewModal = ({
     };
 
     treeStructure.forEach(section => {
-      totalElements++; // Рахуємо саму секцію
+      totalElements++;
       countElements(section.children);
     });
 
@@ -104,6 +105,13 @@ const XMLStructurePreviewModal = ({
   };
 
   const stats = getTotalStats();
+
+  if (!isOpen) {
+    console.log('Модальне вікно закрите');
+    return null;
+  }
+
+  console.log('Рендеринг модального вікна з даними:', { stats, treeStructure });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -135,20 +143,21 @@ const XMLStructurePreviewModal = ({
         </div>
 
         {/* Структура XML */}
-        <ScrollArea className="flex-1 border rounded-md p-4 bg-gray-50">
+        <ScrollArea className="flex-1 border rounded-md p-4 bg-gray-50 min-h-[400px]">
           <div className="space-y-4">
             {treeStructure.length > 0 ? (
               treeStructure.map(section => renderSection(section))
             ) : (
               <div className="text-center text-gray-500 py-8">
                 <div className="text-4xl mb-2">📄</div>
-                <p>Структура XML не знайдена</p>
+                <p>Структура XML не знайдена або пуста</p>
+                <p className="text-sm mt-2">Перевірте, чи правильний формат файлу</p>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex justify-between mt-4">
           <Button 
             variant="outline" 
             onClick={onClose}
@@ -163,7 +172,7 @@ const XMLStructurePreviewModal = ({
             className="bg-blue-600 hover:bg-blue-700 text-white"
             id="continue-with-structure"
           >
-            {isProcessing ? 'Обробка...' : 'Продовжити'}
+            {isProcessing ? 'Обробка...' : 'Продовжити зі створенням шаблону'}
           </Button>
         </DialogFooter>
       </DialogContent>

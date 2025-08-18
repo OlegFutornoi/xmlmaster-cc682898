@@ -25,66 +25,93 @@ const XMLTemplateEditor = () => {
     if (!file) return;
 
     console.log('=== ПОЧАТОК ЗАВАНТАЖЕННЯ ФАЙЛУ ===');
-    console.log('Обрано файл:', file.name);
+    console.log('Обрано файл:', file.name, 'розмір:', file.size);
 
     setIsParsingFile(true);
 
     try {
       const text = await file.text();
       console.log('Файл прочитано, розмір:', text.length, 'символів');
-      console.log('Перші 500 символів:', text.substring(0, 500));
+      console.log('Перші 1000 символів файлу:', text.substring(0, 1000));
+      
+      if (!text.trim()) {
+        throw new Error('Файл порожній');
+      }
+
+      // Перевіряємо базову структуру XML
+      if (!text.includes('<shop') && !text.includes('<yml_catalog')) {
+        throw new Error('Файл не містить очікувану XML структуру (shop або yml_catalog)');
+      }
       
       setXMLContent(text);
       setTemplateName(file.name.replace(/\.[^/.]+$/, ''));
       
-      console.log('Створюємо структуру дерева...');
+      console.log('Створюємо структуру дерева для модального вікна...');
       
       // Створюємо структуру дерева для відображення в модальному вікні
       const tree = createXMLTreeStructure(text);
       console.log('Структура дерева створена:', tree);
+      
+      if (!tree || tree.length === 0) {
+        throw new Error('Не вдалося створити структуру дерева з XML файлу');
+      }
+      
       setTreeStructure(tree);
       
-      // Показуємо модальне вікно з структурою
-      console.log('Показуємо модальне вікно...');
+      console.log('Відкриваємо модальне вікно з структурою...');
       setShowPreviewModal(true);
       
       toast({
         title: 'Успіх',
-        description: `XML файл завантажено. Структура готова для перегляду.`,
+        description: `XML файл завантажено та розпарсено. Показую структуру для перегляду.`,
       });
     } catch (error: any) {
-      console.error('Помилка завантаження XML:', error);
+      console.error('Помилка завантаження/парсингу XML:', error);
       toast({
-        title: 'Помилка',
-        description: `Не вдалося завантажити XML: ${error.message}`,
+        title: 'Помилка парсингу',
+        description: `Не вдалося обробити XML файл: ${error.message}`,
         variant: 'destructive',
       });
+      
+      // Очищаємо стан при помилці
+      setXMLContent('');
+      setTreeStructure([]);
+      setParsedStructure(null);
     } finally {
       setIsParsingFile(false);
     }
   };
 
   const handleContinueFromPreview = async () => {
-    if (!xmlContent) return;
+    if (!xmlContent) {
+      console.error('Немає XML контенту для парсингу');
+      return;
+    }
 
     console.log('=== ПРОДОВЖЕННЯ З ПОПЕРЕДНЬОГО ПЕРЕГЛЯДУ ===');
+    console.log('Розмір XML контенту:', xmlContent.length);
 
     try {
-      console.log('Парсинг XML для створення шаблону...');
+      console.log('Створюємо повну структуру шаблону...');
       const structure = parseAdvancedXML(xmlContent);
-      console.log('Структура створена:', structure);
+      console.log('Структура шаблону створена:', structure);
+      
+      if (!structure || !structure.parameters || structure.parameters.length === 0) {
+        throw new Error('Не вдалося створити структуру параметрів з XML');
+      }
+      
       setParsedStructure(structure);
       setShowPreviewModal(false);
       
       toast({
         title: 'Успіх',
-        description: `XML розпарсено. Знайдено ${structure.parameters.length} параметрів.`,
+        description: `XML розпарсено успішно. Знайдено ${structure.parameters.length} параметрів для створення шаблону.`,
       });
     } catch (error: any) {
-      console.error('Помилка парсингу XML:', error);
+      console.error('Помилка створення структури шаблону:', error);
       toast({
         title: 'Помилка',
-        description: `Не вдалося розпарсити XML: ${error.message}`,
+        description: `Не вдалося створити структуру шаблону: ${error.message}`,
         variant: 'destructive',
       });
     }
@@ -100,17 +127,18 @@ const XMLTemplateEditor = () => {
       return;
     }
 
+    console.log('=== ЗБЕРЕЖЕННЯ ШАБЛОНУ ===');
+    console.log('Дані шаблону для збереження:', templateData);
+
     setIsSaving(true);
 
     try {
-      console.log('Збереження шаблону з даними:', templateData);
-
       // Зберігаємо основну інформацію про шаблон
       const { data: template, error: templateError } = await extendedSupabase
         .from('template_xml')
         .insert([{
           name: templateName,
-          structure: templateData.structure,
+          structure: templateData.structure || {},
           shop_name: templateData.shop_info?.name,
           shop_company: templateData.shop_info?.company,
           shop_url: templateData.shop_info?.url,
@@ -119,22 +147,29 @@ const XMLTemplateEditor = () => {
         .select()
         .single();
 
-      if (templateError) throw templateError;
+      if (templateError) {
+        console.error('Помилка збереження основного шаблону:', templateError);
+        throw templateError;
+      }
 
-      // Зберігаємо параметри з усіма новими полями
+      console.log('Основний шаблон збережено:', template);
+
+      // Зберігаємо параметри
       if (templateData.parameters && templateData.parameters.length > 0) {
+        console.log(`Зберігаємо ${templateData.parameters.length} параметрів...`);
+        
         const parametersWithTemplateId = templateData.parameters.map((param: any) => ({
           template_id: template.id,
           parameter_name: param.parameter_name,
           parameter_value: param.parameter_value,
           xml_path: param.xml_path,
           parameter_type: param.parameter_type || 'text',
-          parameter_category: param.parameter_category,
-          multilingual_values: param.multilingual_values,
-          cdata_content: param.cdata_content,
-          element_attributes: param.element_attributes,
-          param_id: param.param_id,
-          value_id: param.value_id,
+          parameter_category: param.parameter_category || 'parameter',
+          multilingual_values: param.multilingual_values || null,
+          cdata_content: param.cdata_content || null,
+          element_attributes: param.element_attributes || null,
+          param_id: param.param_id || null,
+          value_id: param.value_id || null,
           is_active: param.is_active !== false,
           is_required: param.is_required === true,
           display_order: param.display_order || 0
@@ -144,7 +179,12 @@ const XMLTemplateEditor = () => {
           .from('template_xml_parameters')
           .insert(parametersWithTemplateId);
 
-        if (parametersError) throw parametersError;
+        if (parametersError) {
+          console.error('Помилка збереження параметрів:', parametersError);
+          throw parametersError;
+        }
+
+        console.log('Параметри збережено успішно');
       }
 
       toast({
@@ -152,7 +192,7 @@ const XMLTemplateEditor = () => {
         description: `Шаблон "${templateName}" створено з ${templateData.parameters?.length || 0} параметрами`,
       });
 
-      // Очищаємо форму
+      // Очищаємо форму після успішного збереження
       setTemplateName('');
       setXMLContent('');
       setParsedStructure(null);
@@ -161,7 +201,7 @@ const XMLTemplateEditor = () => {
     } catch (error: any) {
       console.error('Помилка збереження шаблону:', error);
       toast({
-        title: 'Помилка',
+        title: 'Помилка збереження',
         description: `Не вдалося зберегти шаблон: ${error.message}`,
         variant: 'destructive',
       });
@@ -170,11 +210,17 @@ const XMLTemplateEditor = () => {
     }
   };
 
-  console.log('Поточний стан компонента:', {
+  const handleCloseModal = () => {
+    console.log('Закриття модального вікна користувачем');
+    setShowPreviewModal(false);
+  };
+
+  console.log('Поточний стан XMLTemplateEditor:', {
     showPreviewModal,
     treeStructureLength: treeStructure.length,
     hasXMLContent: !!xmlContent,
-    hasParsedStructure: !!parsedStructure
+    hasParsedStructure: !!parsedStructure,
+    isParsingFile
   });
 
   return (
@@ -192,7 +238,7 @@ const XMLTemplateEditor = () => {
               Завантаження XML файлу
             </CardTitle>
             <CardDescription>
-              Завантажте YML файл для створення шаблону
+              Завантажте YML файл для створення шаблону. Після завантаження з'явиться вікно попереднього перегляду структури.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -220,9 +266,23 @@ const XMLTemplateEditor = () => {
             </div>
 
             {isParsingFile && (
-              <div className="flex items-center gap-2 text-blue-600">
+              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                Завантаження та аналіз файлу...
+                <span>Завантаження та аналіз XML файлу...</span>
+              </div>
+            )}
+
+            {treeStructure.length > 0 && !showPreviewModal && !parsedStructure && (
+              <div className="bg-green-50 p-3 rounded-lg">
+                <p className="text-green-800">✅ XML файл розпарсено. Структура готова до перегляду.</p>
+                <Button 
+                  onClick={() => setShowPreviewModal(true)}
+                  className="mt-2"
+                  variant="outline"
+                  size="sm"
+                >
+                  Показати структуру знову
+                </Button>
               </div>
             )}
           </CardContent>
@@ -254,10 +314,7 @@ const XMLTemplateEditor = () => {
       {/* Модальне вікно перегляду структури */}
       <XMLStructurePreviewModal
         isOpen={showPreviewModal}
-        onClose={() => {
-          console.log('Закриття модального вікна');
-          setShowPreviewModal(false);
-        }}
+        onClose={handleCloseModal}
         onContinue={handleContinueFromPreview}
         treeStructure={treeStructure}
         isProcessing={false}
