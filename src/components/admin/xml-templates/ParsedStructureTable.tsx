@@ -18,41 +18,44 @@ interface ParsedStructureTableProps {
 }
 
 interface NewParameter {
-  name: string;
-  value: string;
-  path: string;
-  type: 'parameter' | 'characteristic';
-  category: 'shop' | 'currency' | 'category' | 'offer';
+  parameter_name: string;
+  parameter_value: string;
+  xml_path: string;
+  parameter_type: 'parameter' | 'characteristic';
+  parameter_category: 'shop' | 'currency' | 'category' | 'offer';
 }
 
 const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStructureTableProps) => {
   const [parameters, setParameters] = useState(structure.parameters || []);
   const [newParameter, setNewParameter] = useState<NewParameter>({
-    name: '',
-    value: '',
-    path: '',
-    type: 'parameter',
-    category: 'offer'
+    parameter_name: '',
+    parameter_value: '',
+    xml_path: '',
+    parameter_type: 'parameter',
+    parameter_category: 'offer'
   });
   const [isAddingParameter, setIsAddingParameter] = useState(false);
   const [selectedParameter, setSelectedParameter] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const handleAddParameter = () => {
-    if (!newParameter.name || !newParameter.path) return;
+    if (!newParameter.parameter_name || !newParameter.xml_path) return;
 
     const updatedParameters = [...parameters, {
       ...newParameter,
-      id: `temp_${Date.now()}`
+      id: `temp_${Date.now()}`,
+      is_active: true,
+      is_required: false,
+      display_order: parameters.length
     }];
     
     setParameters(updatedParameters);
     setNewParameter({
-      name: '',
-      value: '',
-      path: '',
-      type: 'parameter',
-      category: 'offer'
+      parameter_name: '',
+      parameter_value: '',
+      xml_path: '',
+      parameter_type: 'parameter',
+      parameter_category: 'offer'
     });
     setIsAddingParameter(false);
   };
@@ -76,14 +79,14 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
         offers: structure.offers?.slice(0, 1)
       },
       parameters: parameters.map((param, index) => ({
-        parameter_name: param.name || `Параметр ${index + 1}`,
-        parameter_value: typeof param.value === 'object' ? JSON.stringify(param.value) : (param.value || ''),
-        xml_path: param.path || `/default/path/${index}`,
-        parameter_type: 'text',
-        parameter_category: param.category || 'parameter',
+        parameter_name: param.parameter_name || `Параметр ${index + 1}`,
+        parameter_value: typeof param.parameter_value === 'object' ? JSON.stringify(param.parameter_value) : (param.parameter_value || ''),
+        xml_path: param.xml_path || `/default/path/${index}`,
+        parameter_type: param.parameter_type || 'text',
+        parameter_category: param.parameter_category || 'parameter',
         multilingual_values: param.multilingual_values || null,
         cdata_content: param.cdata_content || null,
-        element_attributes: param.attributes || null,
+        element_attributes: param.element_attributes || null,
         is_active: true,
         is_required: false,
         display_order: index
@@ -220,8 +223,8 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
           <h3 className="text-lg font-semibold">
             Знайдено параметрів: {parameters.length}
             <span className="text-sm text-gray-500 ml-2">
-              (Параметри: {parameters.filter(p => p.type === 'parameter').length}, 
-              Характеристики: {parameters.filter(p => p.type === 'characteristic').length})
+              (Параметри: {parameters.filter(p => p.parameter_type === 'parameter').length}, 
+              Характеристики: {parameters.filter(p => p.parameter_type === 'characteristic').length})
             </span>
           </h3>
           <div className="flex gap-2">
@@ -262,7 +265,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
               {parameters.map((param, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">
-                    {param.name}
+                    {param.parameter_name}
                     {param.multilingual_values && (
                       <Badge variant="outline" className="ml-2 text-xs">
                         Багатомовний
@@ -275,19 +278,19 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                     )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <div className="max-w-xs truncate" title={formatValue(param.value)}>
-                      {formatValue(param.value) || '-'}
+                    <div className="max-w-xs truncate" title={formatValue(param.parameter_value)}>
+                      {formatValue(param.parameter_value) || '-'}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-sm truncate" title={param.path}>
-                        {getShortPath(param.path)}
+                      <span className="font-mono text-sm truncate" title={param.xml_path}>
+                        {getShortPath(param.xml_path)}
                       </span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => copyFullPath(param.path)}
+                        onClick={() => copyFullPath(param.xml_path)}
                         className="p-1 h-6 w-6 flex-shrink-0"
                         id={`copy-path-${index}`}
                       >
@@ -296,13 +299,13 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Badge className={getTypeColor(param.type)}>
-                      {param.type === 'parameter' ? 'Параметр' : 'Характеристика'}
+                    <Badge className={getTypeColor(param.parameter_type)}>
+                      {param.parameter_type === 'parameter' ? 'Параметр' : 'Характеристика'}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    <Badge className={getCategoryColor(param.category)}>
-                      {param.category}
+                    <Badge className={getCategoryColor(param.parameter_category)}>
+                      {param.parameter_category}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -334,8 +337,8 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                 <TableRow>
                   <TableCell>
                     <Input
-                      value={newParameter.name}
-                      onChange={(e) => setNewParameter(prev => ({...prev, name: e.target.value}))}
+                      value={newParameter.parameter_name}
+                      onChange={(e) => setNewParameter(prev => ({...prev, parameter_name: e.target.value}))}
                       placeholder="Назва параметру"
                       id="new-param-name"
                       className="min-w-[180px]"
@@ -343,8 +346,8 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Input
-                      value={newParameter.value}
-                      onChange={(e) => setNewParameter(prev => ({...prev, value: e.target.value}))}
+                      value={newParameter.parameter_value}
+                      onChange={(e) => setNewParameter(prev => ({...prev, parameter_value: e.target.value}))}
                       placeholder="Значення"
                       id="new-param-value"
                       className="min-w-[180px]"
@@ -352,8 +355,8 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                   </TableCell>
                   <TableCell>
                     <Input
-                      value={newParameter.path}
-                      onChange={(e) => setNewParameter(prev => ({...prev, path: e.target.value}))}
+                      value={newParameter.xml_path}
+                      onChange={(e) => setNewParameter(prev => ({...prev, xml_path: e.target.value}))}
                       placeholder="/shop/offers/offer/name"
                       id="new-param-path"
                       className="min-w-[180px]"
@@ -361,9 +364,9 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <Select 
-                      value={newParameter.type} 
+                      value={newParameter.parameter_type} 
                       onValueChange={(value: 'parameter' | 'characteristic') => 
-                        setNewParameter(prev => ({...prev, type: value}))
+                        setNewParameter(prev => ({...prev, parameter_type: value}))
                       }
                     >
                       <SelectTrigger className="min-w-0">
@@ -377,9 +380,9 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <Select 
-                      value={newParameter.category} 
+                      value={newParameter.parameter_category} 
                       onValueChange={(value: 'shop' | 'currency' | 'category' | 'offer') => 
-                        setNewParameter(prev => ({...prev, category: value}))
+                        setNewParameter(prev => ({...prev, parameter_category: value}))
                       }
                     >
                       <SelectTrigger className="min-w-0">
@@ -398,7 +401,7 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                       <Button
                         size="sm"
                         onClick={handleAddParameter}
-                        disabled={!newParameter.name || !newParameter.path}
+                        disabled={!newParameter.parameter_name || !newParameter.xml_path}
                         id="confirm-add-parameter"
                         className="h-8 w-8 p-0"
                       >
@@ -432,18 +435,18 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
             <div className="space-y-4">
               <div>
                 <label className="font-semibold">Назва:</label>
-                <p className="mt-1">{selectedParameter.name}</p>
+                <p className="mt-1">{selectedParameter.parameter_name}</p>
               </div>
               <div>
                 <label className="font-semibold">Значення:</label>
                 <pre className="mt-1 bg-gray-100 p-2 rounded text-sm overflow-x-auto">
-                  {formatValue(selectedParameter.value)}
+                  {formatValue(selectedParameter.parameter_value)}
                 </pre>
               </div>
               <div>
                 <label className="font-semibold">XML шлях:</label>
                 <p className="mt-1 font-mono text-sm bg-gray-100 p-2 rounded">
-                  {selectedParameter.path}
+                  {selectedParameter.xml_path}
                 </p>
               </div>
               {selectedParameter.multilingual_values && (
@@ -462,11 +465,11 @@ const ParsedStructureTable = ({ structure, onSaveTemplate, isSaving }: ParsedStr
                   </pre>
                 </div>
               )}
-              {selectedParameter.attributes && Object.keys(selectedParameter.attributes).length > 0 && (
+              {selectedParameter.element_attributes && Object.keys(selectedParameter.element_attributes).length > 0 && (
                 <div>
                   <label className="font-semibold">Атрибути:</label>
                   <pre className="mt-1 bg-gray-100 p-2 rounded text-sm">
-                    {JSON.stringify(selectedParameter.attributes, null, 2)}
+                    {JSON.stringify(selectedParameter.element_attributes, null, 2)}
                   </pre>
                 </div>
               )}
